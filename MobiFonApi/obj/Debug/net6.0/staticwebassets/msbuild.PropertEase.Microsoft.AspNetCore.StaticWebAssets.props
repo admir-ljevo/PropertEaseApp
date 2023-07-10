@@ -1,0 +1,36 @@
+﻿<Project>
+  <ItemGroup>
+    <StaticWebAsset Include="$([System.IO.Path]::GetFullPath($(MSBuildThisFileDirectory)..\staticwebassets\uploads\images\CCNovDec21_NA_Astro1_261af3dc-5c3c-4d73-ab5e-bc2287f581e5.jpg))">
+      <SourceType>Package</SourceType>
+      <SourceId>PropertEase</SourceId>
+      <ContentRoot>$(MSBuildThisFileDirectory)..\staticwebassets\</ContentRoot>
+      <BasePath>_content/PropertEase</BasePath>
+      <RelativePath>uploads/images/CCNovDec21_NA_Astro1_261af3dc-5c3c-4d73-ab5e-bc2287f581e5.jpg</RelativePath>
+      <AssetKind>All</AssetKind>
+      <AssetMode>All</AssetMode>
+      <AssetRole>Primary</AssetRole>
+      <RelatedAsset></RelatedAsset>
+      <AssetTraitName></AssetTraitName>
+      <AssetTraitValue></AssetTraitValue>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      <OriginalItemSpec>$([System.IO.Path]::GetFullPath($(MSBuildThisFileDirectory)..\staticwebassets\uploads\images\CCNovDec21_NA_Astro1_261af3dc-5c3c-4d73-ab5e-bc2287f581e5.jpg))</OriginalItemSpec>
+    </StaticWebAsset>
+    <StaticWebAsset Include="$([System.IO.Path]::GetFullPath($(MSBuildThisFileDirectory)..\staticwebassets\uploads\images\Samsung_Galaxy_S23_Ultra_concept_7_379db272-a9d4-4706-955b-17e6d2e354b4.jpg))">
+      <SourceType>Package</SourceType>
+      <SourceId>PropertEase</SourceId>
+      <ContentRoot>$(MSBuildThisFileDirectory)..\staticwebassets\</ContentRoot>
+      <BasePath>_content/PropertEase</BasePath>
+      <RelativePath>uploads/images/Samsung_Galaxy_S23_Ultra_concept_7_379db272-a9d4-4706-955b-17e6d2e354b4.jpg</RelativePath>
+      <AssetKind>All</AssetKind>
+      <AssetMode>All</AssetMode>
+      <AssetRole>Primary</AssetRole>
+      <RelatedAsset></RelatedAsset>
+      <AssetTraitName></AssetTraitName>
+      <AssetTraitValue></AssetTraitValue>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      <OriginalItemSpec>$([System.IO.Path]::GetFullPath($(MSBuildThisFileDirectory)..\staticwebassets\uploads\images\Samsung_Galaxy_S23_Ultra_concept_7_379db272-a9d4-4706-955b-17e6d2e354b4.jpg))</OriginalItemSpec>
+    </StaticWebAsset>
+  </ItemGroup>
+</Project>

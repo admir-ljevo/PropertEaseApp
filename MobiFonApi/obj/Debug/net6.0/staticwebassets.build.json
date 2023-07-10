@@ -1,0 +1,54 @@
+{
+  "Version": 1,
+  "Hash": "Zsg56NVRf2U1CWqodZAIY7cKNrGaWREbVhjlpKiwqrg=",
+  "Source": "PropertEase",
+  "BasePath": "_content/PropertEase",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [
+    {
+      "Name": "PropertEase\\wwwroot",
+      "Source": "PropertEase",
+      "ContentRoot": "C:\\Users\\Adnan\\source\\repos\\MobiFonApi\\MobiFonApi\\wwwroot\\",
+      "BasePath": "_content/PropertEase",
+      "Pattern": "**"
+    }
+  ],
+  "Assets": [
+    {
+      "Identity": "C:\\Users\\Adnan\\source\\repos\\MobiFonApi\\MobiFonApi\\wwwroot\\uploads\\images\\CCNovDec21_NA_Astro1_261af3dc-5c3c-4d73-ab5e-bc2287f581e5.jpg",
+      "SourceId": "PropertEase",
+      "SourceType": "Discovered",
+      "ContentRoot": "C:\\Users\\Adnan\\source\\repos\\MobiFonApi\\MobiFonApi\\wwwroot\\",
+      "BasePath": "_content/PropertEase",
+      "RelativePath": "uploads/images/CCNovDec21_NA_Astro1_261af3dc-5c3c-4d73-ab5e-bc2287f581e5.jpg",
+      "AssetKind": "All",
+      "AssetMode": "All",
+      "AssetRole": "Primary",
+      "RelatedAsset": "",
+      "AssetTraitName": "",
+      "AssetTraitValue": "",
+      "CopyToOutputDirectory": "Never",
+      "CopyToPublishDirectory": "PreserveNewest",
+      "OriginalItemSpec": "wwwroot\\uploads\\images\\CCNovDec21_NA_Astro1_261af3dc-5c3c-4d73-ab5e-bc2287f581e5.jpg"
+    },
+    {
+      "Identity": "C:\\Users\\Adnan\\source\\repos\\MobiFonApi\\MobiFonApi\\wwwroot\\uploads\\images\\Samsung_Galaxy_S23_Ultra_concept_7_379db272-a9d4-4706-955b-17e6d2e354b4.jpg",
+      "SourceId": "PropertEase",
+      "SourceType": "Discovered",
+      "ContentRoot": "C:\\Users\\Adnan\\source\\repos\\MobiFonApi\\MobiFonApi\\wwwroot\\",
+      "BasePath": "_content/PropertEase",
+      "RelativePath": "uploads/images/Samsung_Galaxy_S23_Ultra_concept_7_379db272-a9d4-4706-955b-17e6d2e354b4.jpg",
+      "AssetKind": "All",
+      "AssetMode": "All",
+      "AssetRole": "Primary",
+      "RelatedAsset": "",
+      "AssetTraitName": "",
+      "AssetTraitValue": "",
+      "CopyToOutputDirectory": "Never",
+      "CopyToPublishDirectory": "PreserveNewest",
+      "OriginalItemSpec": "wwwroot\\uploads\\images\\Samsung_Galaxy_S23_Ultra_concept_7_379db272-a9d4-4706-955b-17e6d2e354b4.jpg"
+    }
+  ]
+}

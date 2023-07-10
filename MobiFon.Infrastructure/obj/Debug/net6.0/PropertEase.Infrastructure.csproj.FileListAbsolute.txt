@@ -1,0 +1,17 @@
+C:\Users\Adnan\source\repos\MobiFonApi\MobiFon.Infrastructure\bin\Debug\net6.0\PropertEase.Infrastructure.deps.json
+C:\Users\Adnan\source\repos\MobiFonApi\MobiFon.Infrastructure\bin\Debug\net6.0\PropertEase.Infrastructure.runtimeconfig.json
+C:\Users\Adnan\source\repos\MobiFonApi\MobiFon.Infrastructure\bin\Debug\net6.0\PropertEase.Infrastructure.dll
+C:\Users\Adnan\source\repos\MobiFonApi\MobiFon.Infrastructure\bin\Debug\net6.0\PropertEase.Infrastructure.pdb
+C:\Users\Adnan\source\repos\MobiFonApi\MobiFon.Infrastructure\bin\Debug\net6.0\PropertEase.Core.dll
+C:\Users\Adnan\source\repos\MobiFonApi\MobiFon.Infrastructure\bin\Debug\net6.0\PropertEase.Core.pdb
+C:\Users\Adnan\source\repos\MobiFonApi\MobiFon.Infrastructure\obj\Debug\net6.0\PropertEase.Infrastructure.csproj.AssemblyReference.cache
+C:\Users\Adnan\source\repos\MobiFonApi\MobiFon.Infrastructure\obj\Debug\net6.0\PropertEase.Infrastructure.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Adnan\source\repos\MobiFonApi\MobiFon.Infrastructure\obj\Debug\net6.0\PropertEase.Infrastructure.AssemblyInfoInputs.cache
+C:\Users\Adnan\source\repos\MobiFonApi\MobiFon.Infrastructure\obj\Debug\net6.0\PropertEase.Infrastructure.AssemblyInfo.cs
+C:\Users\Adnan\source\repos\MobiFonApi\MobiFon.Infrastructure\obj\Debug\net6.0\PropertEase.Infrastructure.csproj.CoreCompileInputs.cache
+C:\Users\Adnan\source\repos\MobiFonApi\MobiFon.Infrastructure\obj\Debug\net6.0\PropertEase.Infrastructure.csproj.CopyComplete
+C:\Users\Adnan\source\repos\MobiFonApi\MobiFon.Infrastructure\obj\Debug\net6.0\PropertEase.Infrastructure.dll
+C:\Users\Adnan\source\repos\MobiFonApi\MobiFon.Infrastructure\obj\Debug\net6.0\refint\PropertEase.Infrastructure.dll
+C:\Users\Adnan\source\repos\MobiFonApi\MobiFon.Infrastructure\obj\Debug\net6.0\PropertEase.Infrastructure.pdb
+C:\Users\Adnan\source\repos\MobiFonApi\MobiFon.Infrastructure\obj\Debug\net6.0\PropertEase.Infrastructure.genruntimeconfig.cache
+C:\Users\Adnan\source\repos\MobiFonApi\MobiFon.Infrastructure\obj\Debug\net6.0\ref\PropertEase.Infrastructure.dll

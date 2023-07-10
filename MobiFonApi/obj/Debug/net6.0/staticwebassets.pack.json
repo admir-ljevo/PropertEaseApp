@@ -1,0 +1,29 @@
+{
+  "Files": [
+    {
+      "Id": "C:\\Users\\Adnan\\source\\repos\\MobiFonApi\\MobiFonApi\\wwwroot\\uploads\\images\\CCNovDec21_NA_Astro1_261af3dc-5c3c-4d73-ab5e-bc2287f581e5.jpg",
+      "PackagePath": "staticwebassets\\uploads\\images\\CCNovDec21_NA_Astro1_261af3dc-5c3c-4d73-ab5e-bc2287f581e5.jpg"
+    },
+    {
+      "Id": "C:\\Users\\Adnan\\source\\repos\\MobiFonApi\\MobiFonApi\\wwwroot\\uploads\\images\\Samsung_Galaxy_S23_Ultra_concept_7_379db272-a9d4-4706-955b-17e6d2e354b4.jpg",
+      "PackagePath": "staticwebassets\\uploads\\images\\Samsung_Galaxy_S23_Ultra_concept_7_379db272-a9d4-4706-955b-17e6d2e354b4.jpg"
+    },
+    {
+      "Id": "obj\\Debug\\net6.0\\staticwebassets\\msbuild.PropertEase.Microsoft.AspNetCore.StaticWebAssets.props",
+      "PackagePath": "build\\Microsoft.AspNetCore.StaticWebAssets.props"
+    },
+    {
+      "Id": "obj\\Debug\\net6.0\\staticwebassets\\msbuild.build.PropertEase.props",
+      "PackagePath": "build\\PropertEase.props"
+    },
+    {
+      "Id": "obj\\Debug\\net6.0\\staticwebassets\\msbuild.buildMultiTargeting.PropertEase.props",
+      "PackagePath": "buildMultiTargeting\\PropertEase.props"
+    },
+    {
+      "Id": "obj\\Debug\\net6.0\\staticwebassets\\msbuild.buildTransitive.PropertEase.props",
+      "PackagePath": "buildTransitive\\PropertEase.props"
+    }
+  ],
+  "ElementsToRemove": []
+}

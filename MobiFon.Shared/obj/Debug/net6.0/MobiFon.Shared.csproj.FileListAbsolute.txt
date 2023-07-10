@@ -1,0 +1,17 @@
+C:\Users\Adnan\source\repos\MobiFonApi\MobiFon.Shared\bin\Debug\net6.0\MobiFon.Shared.deps.json
+C:\Users\Adnan\source\repos\MobiFonApi\MobiFon.Shared\bin\Debug\net6.0\MobiFon.Shared.runtimeconfig.json
+C:\Users\Adnan\source\repos\MobiFonApi\MobiFon.Shared\bin\Debug\net6.0\MobiFon.Shared.dll
+C:\Users\Adnan\source\repos\MobiFonApi\MobiFon.Shared\bin\Debug\net6.0\MobiFon.Shared.pdb
+C:\Users\Adnan\source\repos\MobiFonApi\MobiFon.Shared\bin\Debug\net6.0\MobiFon.Core.dll
+C:\Users\Adnan\source\repos\MobiFonApi\MobiFon.Shared\bin\Debug\net6.0\MobiFon.Core.pdb
+C:\Users\Adnan\source\repos\MobiFonApi\MobiFon.Shared\obj\Debug\net6.0\MobiFon.Shared.csproj.AssemblyReference.cache
+C:\Users\Adnan\source\repos\MobiFonApi\MobiFon.Shared\obj\Debug\net6.0\MobiFon.Shared.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Adnan\source\repos\MobiFonApi\MobiFon.Shared\obj\Debug\net6.0\MobiFon.Shared.AssemblyInfoInputs.cache
+C:\Users\Adnan\source\repos\MobiFonApi\MobiFon.Shared\obj\Debug\net6.0\MobiFon.Shared.AssemblyInfo.cs
+C:\Users\Adnan\source\repos\MobiFonApi\MobiFon.Shared\obj\Debug\net6.0\MobiFon.Shared.csproj.CoreCompileInputs.cache
+C:\Users\Adnan\source\repos\MobiFonApi\MobiFon.Shared\obj\Debug\net6.0\MobiFon.Shared.csproj.CopyComplete
+C:\Users\Adnan\source\repos\MobiFonApi\MobiFon.Shared\obj\Debug\net6.0\MobiFon.Shared.dll
+C:\Users\Adnan\source\repos\MobiFonApi\MobiFon.Shared\obj\Debug\net6.0\refint\MobiFon.Shared.dll
+C:\Users\Adnan\source\repos\MobiFonApi\MobiFon.Shared\obj\Debug\net6.0\MobiFon.Shared.pdb
+C:\Users\Adnan\source\repos\MobiFonApi\MobiFon.Shared\obj\Debug\net6.0\MobiFon.Shared.genruntimeconfig.cache
+C:\Users\Adnan\source\repos\MobiFonApi\MobiFon.Shared\obj\Debug\net6.0\ref\MobiFon.Shared.dll
