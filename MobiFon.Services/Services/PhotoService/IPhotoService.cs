@@ -1,4 +1,5 @@
 ﻿using MobiFon.Core.Dto.Photo;
+using MobiFon.Infrastructure;
 using MobiFon.Services.Services.BaseService;
 using System;
 using System.Collections.Generic;
@@ -12,6 +13,8 @@ namespace MobiFon.Services.Services.PhotoService
     {
         Task<List<PhotoDto>> GetByPropertyId(int id);
         Task<PhotoDto> GetSingleImageByProperty(int propertyId, int imageId);
+        Task<PhotoDto> GetFirstImageByProperty(int propertyId);
+        
 
     }
 }

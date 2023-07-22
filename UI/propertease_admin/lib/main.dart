@@ -1,12 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:propertease_admin/models/property_type.dart';
+import 'package:propertease_admin/providers/image_provider.dart';
 import 'package:propertease_admin/providers/property_provider.dart';
+import 'package:propertease_admin/providers/property_type_provider.dart';
 import 'package:propertease_admin/screens/property_list_screen.dart';
 import 'package:propertease_admin/utils/authorization.dart';
 import 'package:provider/provider.dart';
 
 void main() {
   runApp(MultiProvider(
-    providers: [ChangeNotifierProvider(create: (_) => PropertyProvider())],
+    providers: [
+      ChangeNotifierProvider(create: (_) => PropertyProvider()),
+      ChangeNotifierProvider(create: (_) => PhotoProvider()),
+      ChangeNotifierProvider(create: (_) => PropertyTypeProvider())
+    ],
     child: const MyApp(),
   ));
 }
@@ -78,7 +85,7 @@ class LoginWidget extends StatelessWidget {
                     width: 10,
                   ),
                   TextField(
-                    decoration: InputDecoration(
+                    decoration: const InputDecoration(
                         labelText: 'Username', prefixIcon: Icon(Icons.mail)),
                     controller: _usernameController,
                   ),
@@ -87,7 +94,7 @@ class LoginWidget extends StatelessWidget {
                     width: 10,
                   ),
                   TextField(
-                    decoration: InputDecoration(
+                    decoration: const InputDecoration(
                         labelText: "Password",
                         prefixIcon: Icon(Icons.password)),
                     controller: _passwordController,
@@ -106,7 +113,7 @@ class LoginWidget extends StatelessWidget {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => PropertyListWidget(),
+                            builder: (context) => const PropertyListWidget(),
                           ),
                         );
                       },

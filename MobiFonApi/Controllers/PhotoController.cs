@@ -43,5 +43,13 @@ namespace MobiFon.Controllers
         {
             return await photoService.GetSingleImageByProperty(propertyId, imageId);
         }
+
+        [HttpGet("GetFirstImage/propertyId/{propertyId}")]
+        public async Task<PhotoDto> GetFirstImageByProperty(int propertyId)
+        {
+            return await photoService.GetFirstImageByProperty(propertyId);
+        }
+
+
     }
 }

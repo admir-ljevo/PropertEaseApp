@@ -40,6 +40,11 @@ namespace MobiFon.Services.Services.PhotoService
             return await unitOfWork.PhotoRepository.GetByPropertyId(id);
         }
 
+        public async Task<PhotoDto> GetFirstImageByProperty(int propertyId)
+        {
+            return await unitOfWork.PhotoRepository.GetFirstImageByProperty(propertyId);
+        }
+
         public async Task<PhotoDto> GetSingleImageByProperty(int propertyId, int imageId)
         {
             return await unitOfWork.PhotoRepository.GetSingleImageByProperty(propertyId, imageId);

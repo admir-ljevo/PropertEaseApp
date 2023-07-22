@@ -18,6 +18,7 @@ namespace MobiFon.Infrastructure.Repositories.PhotoRepository
         Task<PhotoDto> GetByIdAsync(int id);
         Task<List<PhotoDto>> GetByPropertyId(int id);
         Task<PhotoDto> GetSingleImageByProperty(int propertyId, int imageId);
+        Task<PhotoDto> GetFirstImageByProperty(int propertyId);
         Task<List<PropertyDto>> GetForPaginationAsync(string searchFilter, int pageSize, int offset)
                    => throw new NotImplementedException();
     }

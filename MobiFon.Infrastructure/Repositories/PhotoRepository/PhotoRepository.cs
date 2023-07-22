@@ -34,5 +34,11 @@ namespace MobiFon.Infrastructure.Repositories.PhotoRepository
         {
             return await ProjectToSingleAsync<PhotoDto>(DatabaseContext.Photos.Where(p=>p.PropertyId==propertyId && p.Id == imageId));
         }
+
+        public async Task<PhotoDto> GetFirstImageByProperty(int propertyId)
+        {
+            return await ProjectToFirstOrDefaultAsync<PhotoDto>(DatabaseContext.Photos.Where(p => p.PropertyId == propertyId));
+        }
+
     }
 }

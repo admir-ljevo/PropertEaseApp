@@ -1,6 +1,24 @@
+import 'package:json_annotation/json_annotation.dart';
+
+part 'property.g.dart';
+
+@JsonSerializable()
 class Property {
   int? id;
   String? name;
+  double? averageRating;
+  double? dailyPrice;
+  double? monthlyPrice;
+  String? address;
+
+  Property(this.id, this.name, this.averageRating, this.dailyPrice,
+      this.monthlyPrice, this.address);
+
+  factory Property.fromJson(Map<String, dynamic> json) =>
+      _$PropertyFromJson(json);
+
+  /// Connect the generated [_$PropertyToJson] function to the `toJson` method.
+  Map<String, dynamic> toJson() => _$PropertyToJson(this);
 }
 
 
