@@ -10,4 +10,9 @@ class PropertyProvider extends BaseProvider<Property> {
     // TODO: implement fromJson
     return Property.fromJson(data);
   }
+
+  @override
+  Map<String, dynamic> toJson(Property data) {
+    return data.toJson();
+  }
 }

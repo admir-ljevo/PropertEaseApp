@@ -11,6 +11,8 @@ namespace MobiFon.Core.Entities
     public class PropertyReservation: BaseEntity
     {
         public Property Property { get; set; }
+        public string ReservationNumber { get; set; }
+
         public int PropertyId { get; set; }
         public ApplicationUser Client { get; set; }
         public int ClientId { get; set; }
@@ -23,6 +25,7 @@ namespace MobiFon.Core.Entities
         public bool IsMonthly { get; set; }
         public bool IsDaily { get; set; }  
         public bool IsActive { get; set; }  
+        public string? Description { get;set; }
 
     }
 }

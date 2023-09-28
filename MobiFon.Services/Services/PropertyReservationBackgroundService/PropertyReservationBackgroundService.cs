@@ -39,7 +39,7 @@ namespace MobiFon.Services.Services.PropertyReservationBackgroundService
                 {
                     logger.LogInformation($"Updating reservation: {reservation.Id}");
                     reservation.IsActive = false;
-                    propertyReservationService.Update(reservation);
+                   await propertyReservationService.UpdateAsync(reservation);
                 }
             }
         }

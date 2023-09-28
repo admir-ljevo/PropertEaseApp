@@ -15,6 +15,7 @@ using MobiFon.Core.Dto.PropertyReservation;
 using MobiFon.Core.Dto.Conversation;
 using MobiFon.Core.Dto.Message;
 using MobiFon.Core.Dto.Notification;
+using PropertEase.Core.Dto.City;
 
 namespace MobiFon.Infrastructure.Mapper
 {
@@ -58,6 +59,7 @@ namespace MobiFon.Infrastructure.Mapper
 
             #region City
             CreateMap<City, CityDto>().ReverseMap();
+            CreateMap<CityDto, CityUpsertDto>().ReverseMap();
             #endregion
 
             #region PropertyType

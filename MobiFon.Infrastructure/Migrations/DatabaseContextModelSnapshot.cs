@@ -673,10 +673,22 @@ namespace MobiFon.Infrastructure.Migrations
                     b.Property<bool>("HasCableTV")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("HasGarage")
+                        .HasColumnType("bit");
+
                     b.Property<bool>("HasOwnHeatingSystem")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("HasParking")
+                        .HasColumnType("bit");
+
                     b.Property<bool>("HasPool")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("HasSurveilance")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("HasTV")
                         .HasColumnType("bit");
 
                     b.Property<bool>("HasWiFi")
@@ -805,6 +817,9 @@ namespace MobiFon.Infrastructure.Migrations
                     b.Property<DateTime>("DateOfOccupancyStart")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
@@ -831,6 +846,10 @@ namespace MobiFon.Infrastructure.Migrations
 
                     b.Property<int>("PropertyId")
                         .HasColumnType("int");
+
+                    b.Property<string>("ReservationNumber")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<float>("TotalPrice")
                         .HasColumnType("real");

@@ -11,7 +11,7 @@ using MobiFon.Infrastructure.Repositories.PropertyRatingRepository;
 using MobiFon.Infrastructure.Repositories.PropertyRepository;
 using MobiFon.Infrastructure.Repositories.PropertyReservationRepository;
 using MobiFon.Infrastructure.Repositories.PropertyTypeRepository;
-
+using PropertEase.Infrastructure.Repositories.CityRepository;
 
 namespace MobiFon.Infrastructure.UnitOfWork
 {
@@ -30,6 +30,7 @@ namespace MobiFon.Infrastructure.UnitOfWork
         public readonly IConversationRepository ConversationRepository;
         public readonly IMessageRepository MessageRepository;
         public readonly INotificationRepository NotificationRepository;
+        public readonly ICityRepository CityRepository;
 
 
 
@@ -46,7 +47,8 @@ namespace MobiFon.Infrastructure.UnitOfWork
             IPropertyReservationRepository propertyReservationRepository,
             IConversationRepository conversationRepository,
             IMessageRepository messageRepository,
-            INotificationRepository notificationRepository)
+            INotificationRepository notificationRepository,
+            ICityRepository cityRepository)
         {
             _databaseContext = databaseContext;
             ApplicationUserRolesRepository = applicationUserRolesRepository;
@@ -61,6 +63,7 @@ namespace MobiFon.Infrastructure.UnitOfWork
             ConversationRepository = conversationRepository;
             MessageRepository = messageRepository;
             NotificationRepository = notificationRepository;
+            CityRepository = cityRepository;
 
         }
         public async Task<int> Execute(Action action)

@@ -7,12 +7,12 @@ part of 'property_type.dart';
 // **************************************************************************
 
 PropertyType _$PropertyTypeFromJson(Map<String, dynamic> json) => PropertyType(
-      json['Id'] as int?,
-      json['Name'] as String?,
+      json['id'] as int?,
+      json['name'] as String?,
     );
 
 Map<String, dynamic> _$PropertyTypeToJson(PropertyType instance) =>
     <String, dynamic>{
-      'Id': instance.Id,
-      'Name': instance.Name,
+      'id': instance.id,
+      'name': instance.name,
     };

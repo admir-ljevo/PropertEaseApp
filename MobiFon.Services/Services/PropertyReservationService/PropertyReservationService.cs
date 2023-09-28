@@ -1,7 +1,10 @@
 ﻿using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using MobiFon.Core.Dto.Property;
 using MobiFon.Core.Dto.PropertyReservation;
+using MobiFon.Core.Entities;
 using MobiFon.Infrastructure.UnitOfWork;
+using PropertEase.Core.Filters;
 
 namespace MobiFon.Services.Services.PropertyReservationService
 {
@@ -19,6 +22,14 @@ namespace MobiFon.Services.Services.PropertyReservationService
         public async Task<PropertyReservationDto> AddAsync(PropertyReservationDto entityDto)
         {
             entityDto.IsActive = true;
+            Property property = await unitOfWork.PropertyRepository.GetById(entityDto.PropertyId);
+            if (property.IsDaily)
+                entityDto.TotalPrice = (float)(property.DailyPrice * entityDto.NumberOfDays);
+            if(property.IsMonthly)
+                entityDto.TotalPrice = (float)(property.MonthlyPrice * entityDto.NumberOfMonths);
+
+            entityDto.ReservationNumber = $"#{entityDto.Id:D4}";
+
             await unitOfWork.PropertyReservationRepository.AddAsync(entityDto);
             await unitOfWork.SaveChangesAsync();
             return entityDto;
@@ -53,6 +64,11 @@ namespace MobiFon.Services.Services.PropertyReservationService
             await unitOfWork.SaveChangesAsync();
             return property;
 
+        }
+
+        public async Task<List<PropertyReservationDto>> GetFiltered(PropertyReservationFilter filter)
+        {
+            return await unitOfWork.PropertyReservationRepository.GetFiltered(filter);
         }
 
     }

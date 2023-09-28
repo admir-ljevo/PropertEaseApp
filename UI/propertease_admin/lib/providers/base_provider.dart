@@ -46,6 +46,60 @@ abstract class BaseProvider<T> with ChangeNotifier {
     throw Exception("Something is wrong");
   }
 
+  Future<T> updateAsync(int? id, T data) async {
+    var url = "$_baseUrl$_endpoint/$id";
+    var headers = createHeaders();
+    var requestBody =
+        jsonEncode(toJson(data)); // Make sure data has toJson() method
+
+    var response = await http.put(
+      Uri.parse(url),
+      headers: headers,
+      body: requestBody,
+    );
+
+    if (isValidResponse(response)) {
+      return fromJson(jsonDecode(response.body));
+    } else {
+      throw Exception("Failed to update item");
+    }
+  }
+
+  Future<T> addAsync(T data) async {
+    var url = "$_baseUrl$_endpoint";
+    var headers = createHeaders();
+    var requestBody = jsonEncode(toJson(data));
+
+    var response =
+        await http.post(Uri.parse(url), headers: headers, body: requestBody);
+    print(response.statusCode);
+    if (isValidResponse(response)) {
+      return fromJson(jsonDecode(response.body));
+    } else {
+      // ignore: prefer_interpolation_to_compose_strings
+      throw Exception("Failed to insert item");
+    }
+  }
+
+  Future<void> deleteById(int? id) async {
+    var url = "$_baseUrl$_endpoint/$id";
+    final headers = createHeaders();
+
+    final response = await http.delete(Uri.parse(url), headers: headers);
+    print(url);
+    if (response.statusCode == 200) {
+      // Successful deletion
+      print("Property deleted successfully");
+    } else if (response.statusCode == 404) {
+      // Property not found, handle as needed
+      throw Exception("Property not found");
+    } else {
+      // Handle other error cases
+      throw Exception(
+          "Failed to delete property. Status code: ${response.statusCode}");
+    }
+  }
+
   Future<SearchResult<T>> getFiltered({dynamic filter}) async {
     var url = "$_baseUrl$_endpoint/GetFilteredData";
 
@@ -60,15 +114,15 @@ abstract class BaseProvider<T> with ChangeNotifier {
 
     var result = SearchResult<T>();
 
-    List data = jsonDecode(response.body);
-
-    result.count = data.length;
-
     if (isValidResponse(response)) {
+      List data = jsonDecode(response.body);
+      result.count = data.length;
+
       for (var item in data) {
         result.result.add(fromJson(item));
       }
 
+      print(url);
       return result;
     }
     throw Exception("Something is wrong");
@@ -76,6 +130,11 @@ abstract class BaseProvider<T> with ChangeNotifier {
 
   T fromJson(data) {
     throw Exception("Method not implemented");
+  }
+
+  Map<String, dynamic> toJson(T data) {
+    throw UnimplementedError(
+        "The 'toJson' method is not implemented for this provider.");
   }
 
   bool isValidResponse(Response response) {
@@ -89,11 +148,11 @@ abstract class BaseProvider<T> with ChangeNotifier {
   }
 
   Map<String, String> createHeaders() {
-    String username = Authorization.username ?? "";
-    String password = Authorization.password ?? "";
+    // String username = Authorization.username ?? "";
+    // String password = Authorization.password ?? "";
 
-    String basicAuth =
-        "Basic ${base64Encode(utf8.encode('$username:$password'))}";
+    // String basicAuth =
+    //     "Basic ${base64Encode(utf8.encode('$username:$password'))}";
     var headers = {
       "Content-Type": "application/json",
       // "Authorization": basicAuth,
@@ -101,33 +160,25 @@ abstract class BaseProvider<T> with ChangeNotifier {
     return headers;
   }
 
-  String getQueryString(Map params,
-      {String prefix: '&', bool inRecursion: false}) {
+  String getQueryString(Map params, {String prefix = '&'}) {
     String query = '';
     params.forEach((key, value) {
-      if (inRecursion) {
-        if (key is int) {
-          key = '[$key]';
-        } else if (value is List || value is Map) {
-          key = '.$key';
-        } else {
-          key = '.$key';
+      if (value != null) {
+        if (value is String ||
+            value is int ||
+            value is double ||
+            value is bool) {
+          var encoded = Uri.encodeComponent(value.toString());
+          query += '$prefix$key=$encoded';
+        } else if (value is DateTime) {
+          query += '$prefix$key=${value.toIso8601String()}';
+        } else if (value is List) {
+          for (var item in value) {
+            query += getQueryString({key: item}, prefix: '$prefix$key[]');
+          }
+        } else if (value is Map) {
+          query += getQueryString(value, prefix: '$prefix$key.');
         }
-      }
-      if (value is String || value is int || value is double || value is bool) {
-        var encoded = value;
-        if (value is String) {
-          encoded = Uri.encodeComponent(value);
-        }
-        query += '$prefix$key=$encoded';
-      } else if (value is DateTime) {
-        query += '$prefix$key=${(value as DateTime).toIso8601String()}';
-      } else if (value is List || value is Map) {
-        if (value is List) value = value.asMap();
-        value.forEach((k, v) {
-          query +=
-              getQueryString({k: v}, prefix: '$prefix$key', inRecursion: true);
-        });
       }
     });
     return query;

@@ -35,11 +35,16 @@ namespace MobiFon.Core.Dto.Property
         public bool HasWiFi { get; set; }
         public bool IsFurnished { get; set; }
         public bool HasBalcony { get; set; }
+        public bool HasSurveilance { get; set; }
         public int NumberOfGarages { get; set; }
         public bool HasPool { get; set; }
         public bool HasAirCondition { get; set; }
         public bool HasAlarm { get; set; }
         public bool HasCableTV { get; set; }
+        public bool HasTV { get; set; }
+        public bool HasParking { get; set; }
+        public bool HasGarage { get; set; }
+
         public bool HasOwnHeatingSystem { get; set; }
         public int GardenSize { get; set; }
         public int GarageSize { get; set; }

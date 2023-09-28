@@ -116,7 +116,7 @@ namespace MobiFon.Services.Services.ApplicationUsersService
             newUser.NormalizedEmail = user.Email.ToUpper();
             newUser.UserName = user.UserName;
             newUser.NormalizedUserName = user.UserName.ToUpper();
-            newUser.EmailConfirmed = true;
+             newUser.EmailConfirmed = true;
             newUser.PhoneNumber = user.PhoneNumber;
             newUser.ConcurrencyStamp = Guid.NewGuid().ToString();
             newUser.PasswordHash = _passwordHasher.HashPassword(new ApplicationUser(), passwd);

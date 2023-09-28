@@ -23,7 +23,7 @@ namespace MobiFon.Infrastructure.Repositories.PropertyRepository
 
         public async Task<PropertyDto> GetByIdAsync(int id)
         {
-            var property = await ProjectToFirstOrDefaultAsync<PropertyDto>(DatabaseContext.Properties.Where(p => p.Id == id));
+            var property = await ProjectToFirstOrDefaultAsync<PropertyDto>(DatabaseContext.Properties.Where(p => p.Id == id && !p.IsDeleted));
       //      property.ApplicationUser = await ProjectToFirstOrDefaultAsync<ApplicationUserDto>(DatabaseContext.Persons.Where(p => p.ApplicationUserId == property.ApplicationUserId));
 
             return property;
@@ -46,15 +46,14 @@ namespace MobiFon.Infrastructure.Repositories.PropertyRepository
         .Where(p => !filter.SquareMetersTo.HasValue || p.SquareMeters <= filter.SquareMetersTo.Value)
         .Where(p => !filter.CapacityFrom.HasValue || p.Capacity >= filter.CapacityFrom.Value)
         .Where(p => !filter.CapacityTo.HasValue || p.Capacity <= filter.CapacityTo.Value)
-        .Where(p => !filter.MonthlyPriceFrom.HasValue || p.MonthlyPrice >= filter.MonthlyPriceFrom.Value)
-        .Where(p => !filter.MonthlyPriceTo.HasValue || p.MonthlyPrice <= filter.MonthlyPriceTo.Value)
-        .Where(p => !filter.DailyPriceFrom.HasValue || p.DailyPrice >= filter.DailyPriceFrom.Value)
-        .Where(p => !filter.DailyPriceTo.HasValue || p.DailyPrice <= filter.DailyPriceTo.Value)
+        .Where(p => !filter.PriceFrom.HasValue || p.MonthlyPrice >= filter.PriceFrom.Value || p.DailyPrice >=filter.PriceFrom.Value)
+        .Where(p => !filter.PriceTo.HasValue || p.MonthlyPrice <= filter.PriceTo.Value || p.DailyPrice <= filter.PriceTo.Value)
         .Where(p => !filter.IsMonthly || p.IsMonthly)
         .Where(p => !filter.IsDaily || p.IsDaily)
         .Where(p => !filter.HasWiFi || p.HasWiFi)
         .Where(p => !filter.IsFurnished || p.IsFurnished)
         .Where(p => !filter.HasBalcony || p.HasBalcony)
+        .Where(p => !filter.IsAvailable == null || p.IsAvailable  ==  filter.IsAvailable)
         .Where(p => !filter.MinimalNumberOfGarages.HasValue || p.NumberOfGarages >= filter.MinimalNumberOfGarages.Value)
         .Where(p => !filter.HasPool || p.HasPool)
         .Where(p => !filter.HasAirCondition || p.HasAirCondition)
@@ -65,7 +64,7 @@ namespace MobiFon.Infrastructure.Repositories.PropertyRepository
         .Where(p => !filter.GarageSizeFrom.HasValue || p.GarageSize >= filter.GarageSizeFrom.Value)
         .Where(p => !filter.GarageSizeTo.HasValue || p.GarageSize <= filter.GarageSizeTo.Value)
         .Where(p => !filter.ParkingSizeFrom.HasValue || p.ParkingSize >= filter.ParkingSizeFrom.Value)
-        .Where(p => !filter.ParkingSizeTo.HasValue || p.ParkingSize <= filter.ParkingSizeTo.Value));
+        .Where(p => !filter.ParkingSizeTo.HasValue || p.ParkingSize <= filter.ParkingSizeTo.Value).Where(p=>!p.IsDeleted));
 
             /* query = query.Where(p =>
                 (string.IsNullOrEmpty(filter.Name) || p.Name.Contains(filter.Name)) &&

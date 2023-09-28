@@ -46,6 +46,8 @@ using MobiFon.Infrastructure.Repositories.MessageRepository;
 using MobiFon.Services.Services.MessageService;
 using MobiFon.Infrastructure.Repositories.NotificationRepository;
 using MobiFon.Services.Services.NotificationService;
+using PropertEase.Infrastructure.Repositories.CityRepository;
+using PropertEase.Services.Services.CityService;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -110,6 +112,7 @@ builder.Services.AddScoped<IPhotoRepository, PhotoRepository>();
 builder.Services.AddScoped<IConversationRepository, ConversationRepository>();
 builder.Services.AddScoped<IMessageRepository, MessageRepository>();
 builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
+builder.Services.AddScoped<ICityRepository, CityRepository>();
 
 #endregion
 
@@ -126,6 +129,7 @@ builder.Services.AddScoped<IPhotoService, PhotoService>();
 builder.Services.AddScoped<IConversationService, ConversationService>();
 builder.Services.AddScoped<IMessageService, MessageService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddScoped<ICityService, CityService>();
 builder.Services.AddHostedService<PropertyReservationBackgroundService>();
 
 

@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:propertease_admin/models/property_reservation.dart';
 import 'package:propertease_admin/models/property_type.dart';
+import 'package:propertease_admin/providers/city_provider.dart';
 import 'package:propertease_admin/providers/image_provider.dart';
 import 'package:propertease_admin/providers/property_provider.dart';
+import 'package:propertease_admin/providers/property_reservation_provider.dart';
 import 'package:propertease_admin/providers/property_type_provider.dart';
 import 'package:propertease_admin/screens/property_list_screen.dart';
 import 'package:propertease_admin/utils/authorization.dart';
@@ -12,7 +15,9 @@ void main() {
     providers: [
       ChangeNotifierProvider(create: (_) => PropertyProvider()),
       ChangeNotifierProvider(create: (_) => PhotoProvider()),
-      ChangeNotifierProvider(create: (_) => PropertyTypeProvider())
+      ChangeNotifierProvider(create: (_) => PropertyTypeProvider()),
+      ChangeNotifierProvider(create: (_) => CityProvider()),
+      ChangeNotifierProvider(create: (_) => PropertyReservationProvider()),
     ],
     child: const MyApp(),
   ));

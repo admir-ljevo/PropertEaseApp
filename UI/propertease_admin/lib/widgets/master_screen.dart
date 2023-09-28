@@ -3,6 +3,7 @@ import 'package:flutter/src/widgets/framework.dart';
 import 'package:flutter/src/widgets/placeholder.dart';
 import 'package:propertease_admin/main.dart';
 import 'package:propertease_admin/screens/property_list_screen.dart';
+import 'package:propertease_admin/screens/reservation/reservation_list_screen.dart';
 
 class MasterScreenWidget extends StatefulWidget {
   Widget? child;
@@ -34,6 +35,13 @@ class _MasterScreenWidgetState extends State<MasterScreenWidget> {
             onTap: () {
               Navigator.of(context).push(MaterialPageRoute(
                   builder: (context) => const PropertyListWidget()));
+            },
+          ),
+          ListTile(
+            title: Text("Reservations"),
+            onTap: () {
+              Navigator.of(context).push(MaterialPageRoute(
+                  builder: (context) => const ReservationListWidget()));
             },
           ),
         ]),

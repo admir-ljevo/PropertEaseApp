@@ -5,13 +5,24 @@ part 'property_type.g.dart';
 
 @JsonSerializable()
 class PropertyType {
-  int? Id;
-  String? Name;
+  int? id;
+  String? name;
 
-  PropertyType(this.Id, this.Name);
+  PropertyType(this.id, this.name);
 
   factory PropertyType.fromJson(Map<String, dynamic> json) =>
       _$PropertyTypeFromJson(json);
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PropertyType &&
+          runtimeType == other.runtimeType &&
+          id == other.id;
+
+  // Override hashCode to generate a unique hash code based on the 'id' property
+  @override
+  int get hashCode => id.hashCode;
 
   /// Connect the generated [_$PropertyToJson] function to the `toJson` method.
   Map<String, dynamic> toJson() => _$PropertyTypeToJson(this);

@@ -25,12 +25,13 @@ namespace MobiFon.Core.Filters
         public int? SquareMetersTo { get; set; }
         public int? CapacityFrom { get; set; }
         public int? CapacityTo { get; set; }
-        public float? MonthlyPriceFrom { get; set; }
-        public float? MonthlyPriceTo { get; set; }
-        public float? DailyPriceFrom { get; set; }
-        public float? DailyPriceTo { get; set; }
+       
+        public float? PriceFrom { get; set; }
+        public float? PriceTo { get; set; }
         public bool IsMonthly { get; set; }
         public bool IsDaily { get; set; }
+        public bool? IsAvailable { get; set; }
+
         public bool HasWiFi { get; set; }
         public bool IsFurnished { get; set; }
         public bool HasBalcony { get; set; }
