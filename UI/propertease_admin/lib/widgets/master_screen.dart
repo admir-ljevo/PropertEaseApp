@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/src/widgets/framework.dart';
 import 'package:flutter/src/widgets/placeholder.dart';
 import 'package:propertease_admin/main.dart';
-import 'package:propertease_admin/screens/property_list_screen.dart';
+
 import 'package:propertease_admin/screens/reservation/reservation_list_screen.dart';
+
+import '../screens/property/property_list_screen.dart';
 
 class MasterScreenWidget extends StatefulWidget {
   Widget? child;

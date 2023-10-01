@@ -29,7 +29,6 @@ namespace MobiFon.Services.Services.PropertyReservationService
                 entityDto.TotalPrice = (float)(property.MonthlyPrice * entityDto.NumberOfMonths);
 
             entityDto.ReservationNumber = $"#{entityDto.Id:D4}";
-
             await unitOfWork.PropertyReservationRepository.AddAsync(entityDto);
             await unitOfWork.SaveChangesAsync();
             return entityDto;

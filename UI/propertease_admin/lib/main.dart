@@ -6,7 +6,7 @@ import 'package:propertease_admin/providers/image_provider.dart';
 import 'package:propertease_admin/providers/property_provider.dart';
 import 'package:propertease_admin/providers/property_reservation_provider.dart';
 import 'package:propertease_admin/providers/property_type_provider.dart';
-import 'package:propertease_admin/screens/property_list_screen.dart';
+import 'package:propertease_admin/screens/property/property_list_screen.dart';
 import 'package:propertease_admin/utils/authorization.dart';
 import 'package:provider/provider.dart';
 

@@ -25,58 +25,138 @@ class _ReservationDetailScreenState extends State<ReservationDetailsScreen> {
       ),
       body: SingleChildScrollView(
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Container(
+            Padding(
               padding: const EdgeInsets.all(20.0),
-              color: Colors.grey[200], // Subdued background color
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildDetailRow("Reservation number:",
-                      widget.reservation?.reservationNumber),
-                  _buildDetailRow(
-                      "Property name:", widget.reservation?.property?.name),
-                  _buildDetailRow("Client name:",
-                      "${widget.reservation?.client?.person?.firstName ?? ''} ${widget.reservation?.client?.person?.lastName ?? ''}"),
-                  _buildDetailRow("Number of guests:",
-                      widget.reservation?.numberOfGuests.toString()),
-                  _buildDetailRow(
-                      "Reservation start:",
-                      widget.reservation?.dateOfOccupancyStart != null
-                          ? DateFormat('dd.MM.yyyy')
-                              .format(widget.reservation!.dateOfOccupancyStart!)
-                          : ''),
-                  _buildDetailRow(
-                      "Reservation end:",
-                      widget.reservation?.dateOfOccupancyEnd != null
-                          ? DateFormat('dd.MM.yyyy')
-                              .format(widget.reservation!.dateOfOccupancyEnd!)
-                          : ''),
-                ],
+              child: Card(
+                elevation: 4,
+                color: Colors.transparent, // Transparent background color
+                child: Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Color.fromARGB(255, 219, 219, 219),
+                        Colors.white
+                      ], // Blue to black gradient
+                    ),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildDetailRow("Reservation number:",
+                            widget.reservation?.reservationNumber),
+                        _buildDetailRow("Property name:",
+                            widget.reservation?.property?.name),
+                        _buildDetailRow("Client name:",
+                            "${widget.reservation?.client?.person?.firstName ?? ''} ${widget.reservation?.client?.person?.lastName ?? ''}"),
+                        _buildDetailRow("Number of guests:",
+                            widget.reservation?.numberOfGuests.toString()),
+                        _buildDetailRow(
+                            "Reservation start:",
+                            widget.reservation?.dateOfOccupancyStart != null
+                                ? DateFormat('dd.MM.yyyy').format(
+                                    widget.reservation!.dateOfOccupancyStart!)
+                                : ''),
+                        _buildDetailRow(
+                            "Reservation end:",
+                            widget.reservation?.dateOfOccupancyEnd != null
+                                ? DateFormat('dd.MM.yyyy').format(
+                                    widget.reservation!.dateOfOccupancyEnd!)
+                                : ''),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             ),
-            Container(
+            Padding(
               padding: const EdgeInsets.all(20.0),
-              color: Colors.grey[200], // Subdued background color
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildDetailRow("Number of days:",
-                      widget.reservation?.numberOfDays.toString()),
-                  _buildDetailRow("Number of months:",
-                      widget.reservation?.numberOfMonths.toString() ?? '0'),
-                  _buildDetailRow(
-                      "Total price:",
-                      "${widget.reservation?.totalPrice ?? '0'} BAM" ??
-                          '0 BAM'),
-                  _buildDetailRow("Monthly reservation:",
-                      _buildIcon(widget.reservation?.isMonthly)),
-                  _buildDetailRow("Daily reservation:",
-                      _buildIcon(widget.reservation?.isDaily)),
-                  _buildDetailRow(
-                      "Active:", _buildIcon(widget.reservation?.isActive)),
-                ],
+              child: Card(
+                elevation: 4,
+                color: Colors.transparent, // Transparent background color
+                child: Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.white,
+                        Color.fromARGB(255, 219, 219, 219),
+                      ], // Blue to black gradient
+                    ),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildDetailRow("Number of days:",
+                            widget.reservation?.numberOfDays.toString()),
+                        _buildDetailRow(
+                            "Number of months:",
+                            widget.reservation?.numberOfMonths.toString() ??
+                                '0'),
+                        _buildDetailRow(
+                            "Total price:",
+                            "${widget.reservation?.totalPrice ?? '0'} BAM" ??
+                                '0 BAM'),
+                        _buildDetailRow("Monthly reservation:",
+                            _buildIcon(widget.reservation?.isMonthly)),
+                        _buildDetailRow("Daily reservation:",
+                            _buildIcon(widget.reservation?.isDaily)),
+                        _buildDetailRow("Active:",
+                            _buildIcon(widget.reservation?.isActive)),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20.0),
+            Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Card(
+                elevation: 4,
+                color: Colors.transparent, // Transparent background color
+                child: Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Color.fromARGB(255, 219, 219, 219),
+                        Colors.white
+                      ], // Blue to black gradient
+                    ),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          "Description:",
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 8.0),
+                        Text(
+                          widget.reservation?.description ?? '',
+                          style: const TextStyle(
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             ),
           ],
@@ -115,27 +195,15 @@ class _ReservationDetailScreenState extends State<ReservationDetailsScreen> {
     return isActive == true
         ? const Icon(
             Icons.check,
-            color: Colors.green,
-            size: 24,
+            color: Colors.black,
+            size: 30,
+            weight: 800,
           )
         : const Icon(
             Icons.close,
             color: Colors.red,
-            size: 24,
+            size: 30,
+            weight: 800,
           );
-  }
-
-  @override
-  void didChangeDependencies() {
-    // TODO: implement didChangeDependencies
-    super.didChangeDependencies();
-    _propertyProvider = context.read<PropertyProvider>();
-    _propertyReservationProvider = context.read<PropertyReservationProvider>();
-  }
-
-  @override
-  void initState() {
-    // TODO: implement initState
-    super.initState();
   }
 }

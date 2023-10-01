@@ -26,6 +26,7 @@ class PropertyReservation {
   bool? isActive;
   String? reservationNumber;
   ApplicationUser? client;
+  String? description;
 
   PropertyReservation({
     this.id = 0,
@@ -45,6 +46,7 @@ class PropertyReservation {
     this.isActive = true,
     this.reservationNumber = '',
     this.client,
+    this.description,
   });
 
   factory PropertyReservation.fromJson(Map<String, dynamic> json) =>
