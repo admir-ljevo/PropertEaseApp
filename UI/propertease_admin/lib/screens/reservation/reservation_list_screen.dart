@@ -11,6 +11,7 @@ import 'package:provider/provider.dart';
 import '../../models/property.dart';
 import '../../models/property_type.dart';
 import '../../widgets/master_screen.dart';
+import 'reservation_edit_screen.dart';
 
 class ReservationListWidget extends StatefulWidget {
   const ReservationListWidget({super.key});
@@ -415,7 +416,7 @@ class ReservationListWidgetState extends State<ReservationListWidget> {
                               e.dateOfOccupancyStart ?? DateTime.now()))),
                           DataCell(Text(DateFormat('dd-MM-yyyy')
                               .format(e.dateOfOccupancyEnd ?? DateTime.now()))),
-                          DataCell(Text(e.totalPrice.toString() ?? '0')),
+                          DataCell(Text(e.totalPrice.toString())),
                           if (e.isActive == true) ...[
                             const DataCell(Text('Occupied'))
                           ] else ...[
@@ -424,7 +425,16 @@ class ReservationListWidgetState extends State<ReservationListWidget> {
                           DataCell(Row(
                             children: [
                               InkWell(
-                                onTap: () {},
+                                onTap: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          ReservationEditScreen(
+                                        reservation: e,
+                                      ),
+                                    ),
+                                  );
+                                },
                                 child: const Icon(Icons.edit),
                               ),
                               InkWell(

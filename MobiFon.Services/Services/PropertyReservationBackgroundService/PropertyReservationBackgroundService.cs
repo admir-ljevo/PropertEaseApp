@@ -35,11 +35,11 @@ namespace MobiFon.Services.Services.PropertyReservationBackgroundService
                 var propertyReservationService = scope.ServiceProvider.GetRequiredService<IPropertyReservationService>();
                 //var propertyService = scope.ServiceProvider.GetRequiredService<IPropertyService>();
                 List<PropertyReservationDto> reservations = await propertyReservationService.GetAllAsync();
-                foreach (var reservation in reservations.Where(r => r.DateOfOccupancyEnd <= DateTime.Now && !r.IsActive))
+                foreach (var reservation in reservations.Where(r => r.DateOfOccupancyEnd <= DateTime.Now && r.IsActive))
                 {
                     logger.LogInformation($"Updating reservation: {reservation.Id}");
                     reservation.IsActive = false;
-                   await propertyReservationService.UpdateAsync(reservation);
+                    propertyReservationService.Update(reservation);
                 }
             }
         }

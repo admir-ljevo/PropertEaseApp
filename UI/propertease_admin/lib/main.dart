@@ -3,6 +3,7 @@ import 'package:propertease_admin/models/property_reservation.dart';
 import 'package:propertease_admin/models/property_type.dart';
 import 'package:propertease_admin/providers/city_provider.dart';
 import 'package:propertease_admin/providers/image_provider.dart';
+import 'package:propertease_admin/providers/notification_provider.dart';
 import 'package:propertease_admin/providers/property_provider.dart';
 import 'package:propertease_admin/providers/property_reservation_provider.dart';
 import 'package:propertease_admin/providers/property_type_provider.dart';
@@ -18,6 +19,7 @@ void main() {
       ChangeNotifierProvider(create: (_) => PropertyTypeProvider()),
       ChangeNotifierProvider(create: (_) => CityProvider()),
       ChangeNotifierProvider(create: (_) => PropertyReservationProvider()),
+      ChangeNotifierProvider(create: (_) => NotificationProvider())
     ],
     child: const MyApp(),
   ));

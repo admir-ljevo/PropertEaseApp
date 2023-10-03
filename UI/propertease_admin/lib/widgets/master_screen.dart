@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/src/widgets/framework.dart';
 import 'package:flutter/src/widgets/placeholder.dart';
 import 'package:propertease_admin/main.dart';
+import 'package:propertease_admin/screens/notifications/notification-list-screen.dart';
 
 import 'package:propertease_admin/screens/reservation/reservation_list_screen.dart';
 
@@ -44,6 +45,13 @@ class _MasterScreenWidgetState extends State<MasterScreenWidget> {
             onTap: () {
               Navigator.of(context).push(MaterialPageRoute(
                   builder: (context) => const ReservationListWidget()));
+            },
+          ),
+          ListTile(
+            title: Text("News"),
+            onTap: () {
+              Navigator.of(context).push(MaterialPageRoute(
+                  builder: (context) => const NewsListWidget()));
             },
           ),
         ]),

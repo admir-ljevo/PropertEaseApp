@@ -9,4 +9,9 @@ class PropertyReservationProvider extends BaseProvider<PropertyReservation> {
     // TODO: implement fromJson
     return PropertyReservation.fromJson(data);
   }
+
+  @override
+  Map<String, dynamic> toJson(PropertyReservation data) {
+    return data.toJson();
+  }
 }

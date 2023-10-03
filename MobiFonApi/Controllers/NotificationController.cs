@@ -1,10 +1,14 @@
 ﻿using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
 using MobiFon.Core.Dto.Notification;
+using MobiFon.Core.Filters;
 using MobiFon.Core.SearchObjects;
 using MobiFon.Services.FileManager;
 using MobiFon.Services.Services.BaseService;
 using MobiFon.Services.Services.NotificationService;
+using MobiFon.Services.Services.PropertyService;
+using PropertEase.Core.Filters;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace MobiFon.Controllers
 {
@@ -41,6 +45,21 @@ namespace MobiFon.Controllers
             return await notificationService.UpdateAsync(mapper.Map<NotificationDto>(notification));
 
         }
+        [HttpGet("GetFilteredData")]
+        [SwaggerOperation(OperationId = "GetFilteredData")]
+        public async Task<IActionResult> GetDataByFilter([FromQuery] NotificationFilter filter)
+        {
+            try
+            {
+                var properties = await notificationService.GetFiltered(filter);
+                return Ok(properties);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
+            }
+        }
+
 
     }
 }

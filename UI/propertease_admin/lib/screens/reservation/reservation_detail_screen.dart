@@ -16,7 +16,6 @@ class ReservationDetailsScreen extends StatefulWidget {
 class _ReservationDetailScreenState extends State<ReservationDetailsScreen> {
   late PropertyProvider _propertyProvider;
   late PropertyReservationProvider _propertyReservationProvider;
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -136,11 +135,11 @@ class _ReservationDetailScreenState extends State<ReservationDetailsScreen> {
                   ),
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
-                    child: Column(
+                    child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
-                          "Description:",
+                          "Description:  ",
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,

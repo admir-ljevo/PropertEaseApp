@@ -1,20 +1,20 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\PC\\Desktop\\rs2\\PropertEaseApp\\MobiFonApi\\PropertEase.csproj": {}
+    "C:\\Users\\Admir\\Desktop\\PropertEaseApp\\MobiFonApi\\PropertEase.csproj": {}
   },
   "projects": {
-    "C:\\Users\\PC\\Desktop\\rs2\\PropertEaseApp\\MobiFon.Core\\PropertEase.Core.csproj": {
+    "C:\\Users\\Admir\\Desktop\\PropertEaseApp\\MobiFon.Core\\PropertEase.Core.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\PC\\Desktop\\rs2\\PropertEaseApp\\MobiFon.Core\\PropertEase.Core.csproj",
+        "projectUniqueName": "C:\\Users\\Admir\\Desktop\\PropertEaseApp\\MobiFon.Core\\PropertEase.Core.csproj",
         "projectName": "PropertEase.Core",
-        "projectPath": "C:\\Users\\PC\\Desktop\\rs2\\PropertEaseApp\\MobiFon.Core\\PropertEase.Core.csproj",
-        "packagesPath": "C:\\Users\\PC\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\PC\\Desktop\\rs2\\PropertEaseApp\\MobiFon.Core\\obj\\",
+        "projectPath": "C:\\Users\\Admir\\Desktop\\PropertEaseApp\\MobiFon.Core\\PropertEase.Core.csproj",
+        "packagesPath": "C:\\Users\\Admir\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\Admir\\Desktop\\PropertEaseApp\\MobiFon.Core\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "C:\\Users\\PC\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Users\\Admir\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
@@ -107,21 +107,21 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\7.0.400\\RuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\7.0.401\\RuntimeIdentifierGraph.json"
         }
       }
     },
-    "C:\\Users\\PC\\Desktop\\rs2\\PropertEaseApp\\MobiFon.Infrastructure\\PropertEase.Infrastructure.csproj": {
+    "C:\\Users\\Admir\\Desktop\\PropertEaseApp\\MobiFon.Infrastructure\\PropertEase.Infrastructure.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\PC\\Desktop\\rs2\\PropertEaseApp\\MobiFon.Infrastructure\\PropertEase.Infrastructure.csproj",
+        "projectUniqueName": "C:\\Users\\Admir\\Desktop\\PropertEaseApp\\MobiFon.Infrastructure\\PropertEase.Infrastructure.csproj",
         "projectName": "PropertEase.Infrastructure",
-        "projectPath": "C:\\Users\\PC\\Desktop\\rs2\\PropertEaseApp\\MobiFon.Infrastructure\\PropertEase.Infrastructure.csproj",
-        "packagesPath": "C:\\Users\\PC\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\PC\\Desktop\\rs2\\PropertEaseApp\\MobiFon.Infrastructure\\obj\\",
+        "projectPath": "C:\\Users\\Admir\\Desktop\\PropertEaseApp\\MobiFon.Infrastructure\\PropertEase.Infrastructure.csproj",
+        "packagesPath": "C:\\Users\\Admir\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\Admir\\Desktop\\PropertEaseApp\\MobiFon.Infrastructure\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "C:\\Users\\PC\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Users\\Admir\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
@@ -135,8 +135,8 @@
           "net6.0": {
             "targetAlias": "net6.0",
             "projectReferences": {
-              "C:\\Users\\PC\\Desktop\\rs2\\PropertEaseApp\\MobiFon.Core\\PropertEase.Core.csproj": {
-                "projectPath": "C:\\Users\\PC\\Desktop\\rs2\\PropertEaseApp\\MobiFon.Core\\PropertEase.Core.csproj"
+              "C:\\Users\\Admir\\Desktop\\PropertEaseApp\\MobiFon.Core\\PropertEase.Core.csproj": {
+                "projectPath": "C:\\Users\\Admir\\Desktop\\PropertEaseApp\\MobiFon.Core\\PropertEase.Core.csproj"
               }
             }
           }
@@ -222,21 +222,21 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\7.0.400\\RuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\7.0.401\\RuntimeIdentifierGraph.json"
         }
       }
     },
-    "C:\\Users\\PC\\Desktop\\rs2\\PropertEaseApp\\MobiFon.Services\\PropertEase.Services.csproj": {
+    "C:\\Users\\Admir\\Desktop\\PropertEaseApp\\MobiFon.Services\\PropertEase.Services.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\PC\\Desktop\\rs2\\PropertEaseApp\\MobiFon.Services\\PropertEase.Services.csproj",
+        "projectUniqueName": "C:\\Users\\Admir\\Desktop\\PropertEaseApp\\MobiFon.Services\\PropertEase.Services.csproj",
         "projectName": "PropertEase.Services",
-        "projectPath": "C:\\Users\\PC\\Desktop\\rs2\\PropertEaseApp\\MobiFon.Services\\PropertEase.Services.csproj",
-        "packagesPath": "C:\\Users\\PC\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\PC\\Desktop\\rs2\\PropertEaseApp\\MobiFon.Services\\obj\\",
+        "projectPath": "C:\\Users\\Admir\\Desktop\\PropertEaseApp\\MobiFon.Services\\PropertEase.Services.csproj",
+        "packagesPath": "C:\\Users\\Admir\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\Admir\\Desktop\\PropertEaseApp\\MobiFon.Services\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "C:\\Users\\PC\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Users\\Admir\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
@@ -250,14 +250,14 @@
           "net6.0": {
             "targetAlias": "net6.0",
             "projectReferences": {
-              "C:\\Users\\PC\\Desktop\\rs2\\PropertEaseApp\\MobiFon.Core\\PropertEase.Core.csproj": {
-                "projectPath": "C:\\Users\\PC\\Desktop\\rs2\\PropertEaseApp\\MobiFon.Core\\PropertEase.Core.csproj"
+              "C:\\Users\\Admir\\Desktop\\PropertEaseApp\\MobiFon.Core\\PropertEase.Core.csproj": {
+                "projectPath": "C:\\Users\\Admir\\Desktop\\PropertEaseApp\\MobiFon.Core\\PropertEase.Core.csproj"
               },
-              "C:\\Users\\PC\\Desktop\\rs2\\PropertEaseApp\\MobiFon.Infrastructure\\PropertEase.Infrastructure.csproj": {
-                "projectPath": "C:\\Users\\PC\\Desktop\\rs2\\PropertEaseApp\\MobiFon.Infrastructure\\PropertEase.Infrastructure.csproj"
+              "C:\\Users\\Admir\\Desktop\\PropertEaseApp\\MobiFon.Infrastructure\\PropertEase.Infrastructure.csproj": {
+                "projectPath": "C:\\Users\\Admir\\Desktop\\PropertEaseApp\\MobiFon.Infrastructure\\PropertEase.Infrastructure.csproj"
               },
-              "C:\\Users\\PC\\Desktop\\rs2\\PropertEaseApp\\MobiFon.Shared\\PropertEase.Shared.csproj": {
-                "projectPath": "C:\\Users\\PC\\Desktop\\rs2\\PropertEaseApp\\MobiFon.Shared\\PropertEase.Shared.csproj"
+              "C:\\Users\\Admir\\Desktop\\PropertEaseApp\\MobiFon.Shared\\PropertEase.Shared.csproj": {
+                "projectPath": "C:\\Users\\Admir\\Desktop\\PropertEaseApp\\MobiFon.Shared\\PropertEase.Shared.csproj"
               }
             }
           }
@@ -339,21 +339,21 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\7.0.400\\RuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\7.0.401\\RuntimeIdentifierGraph.json"
         }
       }
     },
-    "C:\\Users\\PC\\Desktop\\rs2\\PropertEaseApp\\MobiFon.Shared\\PropertEase.Shared.csproj": {
+    "C:\\Users\\Admir\\Desktop\\PropertEaseApp\\MobiFon.Shared\\PropertEase.Shared.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\PC\\Desktop\\rs2\\PropertEaseApp\\MobiFon.Shared\\PropertEase.Shared.csproj",
+        "projectUniqueName": "C:\\Users\\Admir\\Desktop\\PropertEaseApp\\MobiFon.Shared\\PropertEase.Shared.csproj",
         "projectName": "PropertEase.Shared",
-        "projectPath": "C:\\Users\\PC\\Desktop\\rs2\\PropertEaseApp\\MobiFon.Shared\\PropertEase.Shared.csproj",
-        "packagesPath": "C:\\Users\\PC\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\PC\\Desktop\\rs2\\PropertEaseApp\\MobiFon.Shared\\obj\\",
+        "projectPath": "C:\\Users\\Admir\\Desktop\\PropertEaseApp\\MobiFon.Shared\\PropertEase.Shared.csproj",
+        "packagesPath": "C:\\Users\\Admir\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\Admir\\Desktop\\PropertEaseApp\\MobiFon.Shared\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "C:\\Users\\PC\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Users\\Admir\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
@@ -367,8 +367,8 @@
           "net6.0": {
             "targetAlias": "net6.0",
             "projectReferences": {
-              "C:\\Users\\PC\\Desktop\\rs2\\PropertEaseApp\\MobiFon.Core\\PropertEase.Core.csproj": {
-                "projectPath": "C:\\Users\\PC\\Desktop\\rs2\\PropertEaseApp\\MobiFon.Core\\PropertEase.Core.csproj"
+              "C:\\Users\\Admir\\Desktop\\PropertEaseApp\\MobiFon.Core\\PropertEase.Core.csproj": {
+                "projectPath": "C:\\Users\\Admir\\Desktop\\PropertEaseApp\\MobiFon.Core\\PropertEase.Core.csproj"
               }
             }
           }
@@ -454,21 +454,21 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\7.0.400\\RuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\7.0.401\\RuntimeIdentifierGraph.json"
         }
       }
     },
-    "C:\\Users\\PC\\Desktop\\rs2\\PropertEaseApp\\MobiFonApi\\PropertEase.csproj": {
+    "C:\\Users\\Admir\\Desktop\\PropertEaseApp\\MobiFonApi\\PropertEase.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\PC\\Desktop\\rs2\\PropertEaseApp\\MobiFonApi\\PropertEase.csproj",
+        "projectUniqueName": "C:\\Users\\Admir\\Desktop\\PropertEaseApp\\MobiFonApi\\PropertEase.csproj",
         "projectName": "PropertEase",
-        "projectPath": "C:\\Users\\PC\\Desktop\\rs2\\PropertEaseApp\\MobiFonApi\\PropertEase.csproj",
-        "packagesPath": "C:\\Users\\PC\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\PC\\Desktop\\rs2\\PropertEaseApp\\MobiFonApi\\obj\\",
+        "projectPath": "C:\\Users\\Admir\\Desktop\\PropertEaseApp\\MobiFonApi\\PropertEase.csproj",
+        "packagesPath": "C:\\Users\\Admir\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\Admir\\Desktop\\PropertEaseApp\\MobiFonApi\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "C:\\Users\\PC\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Users\\Admir\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
@@ -482,17 +482,17 @@
           "net6.0": {
             "targetAlias": "net6.0",
             "projectReferences": {
-              "C:\\Users\\PC\\Desktop\\rs2\\PropertEaseApp\\MobiFon.Core\\PropertEase.Core.csproj": {
-                "projectPath": "C:\\Users\\PC\\Desktop\\rs2\\PropertEaseApp\\MobiFon.Core\\PropertEase.Core.csproj"
+              "C:\\Users\\Admir\\Desktop\\PropertEaseApp\\MobiFon.Core\\PropertEase.Core.csproj": {
+                "projectPath": "C:\\Users\\Admir\\Desktop\\PropertEaseApp\\MobiFon.Core\\PropertEase.Core.csproj"
               },
-              "C:\\Users\\PC\\Desktop\\rs2\\PropertEaseApp\\MobiFon.Infrastructure\\PropertEase.Infrastructure.csproj": {
-                "projectPath": "C:\\Users\\PC\\Desktop\\rs2\\PropertEaseApp\\MobiFon.Infrastructure\\PropertEase.Infrastructure.csproj"
+              "C:\\Users\\Admir\\Desktop\\PropertEaseApp\\MobiFon.Infrastructure\\PropertEase.Infrastructure.csproj": {
+                "projectPath": "C:\\Users\\Admir\\Desktop\\PropertEaseApp\\MobiFon.Infrastructure\\PropertEase.Infrastructure.csproj"
               },
-              "C:\\Users\\PC\\Desktop\\rs2\\PropertEaseApp\\MobiFon.Services\\PropertEase.Services.csproj": {
-                "projectPath": "C:\\Users\\PC\\Desktop\\rs2\\PropertEaseApp\\MobiFon.Services\\PropertEase.Services.csproj"
+              "C:\\Users\\Admir\\Desktop\\PropertEaseApp\\MobiFon.Services\\PropertEase.Services.csproj": {
+                "projectPath": "C:\\Users\\Admir\\Desktop\\PropertEaseApp\\MobiFon.Services\\PropertEase.Services.csproj"
               },
-              "C:\\Users\\PC\\Desktop\\rs2\\PropertEaseApp\\MobiFon.Shared\\PropertEase.Shared.csproj": {
-                "projectPath": "C:\\Users\\PC\\Desktop\\rs2\\PropertEaseApp\\MobiFon.Shared\\PropertEase.Shared.csproj"
+              "C:\\Users\\Admir\\Desktop\\PropertEaseApp\\MobiFon.Shared\\PropertEase.Shared.csproj": {
+                "projectPath": "C:\\Users\\Admir\\Desktop\\PropertEaseApp\\MobiFon.Shared\\PropertEase.Shared.csproj"
               }
             }
           }
@@ -597,7 +597,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\7.0.400\\RuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\7.0.401\\RuntimeIdentifierGraph.json"
         }
       }
     }

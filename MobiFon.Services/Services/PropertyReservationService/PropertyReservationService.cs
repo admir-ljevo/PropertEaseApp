@@ -59,7 +59,7 @@ namespace MobiFon.Services.Services.PropertyReservationService
 
         public async Task<PropertyReservationDto> UpdateAsync(PropertyReservationDto property)
         {
-            unitOfWork.PropertyRatingRepository.Update(property);
+            unitOfWork.PropertyReservationRepository.Update(property);
             await unitOfWork.SaveChangesAsync();
             return property;
 
