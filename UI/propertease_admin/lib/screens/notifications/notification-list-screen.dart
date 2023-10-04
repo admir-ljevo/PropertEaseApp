@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:propertease_admin/providers/notification_provider.dart';
+import 'package:propertease_admin/screens/notifications/notification-detail-screen.dart';
+import 'package:propertease_admin/screens/notifications/notification_add_screen.dart';
 import 'package:propertease_admin/widgets/master_screen.dart';
 import 'package:provider/provider.dart';
 
@@ -106,7 +108,6 @@ class NewsListWidgetState extends State<NewsListWidget> {
                     controller: _searchController,
                     decoration: const InputDecoration(
                       hintText: 'Search by headline',
-
                       prefixIcon:
                           Icon(Icons.search), // Add the search icon here
                     ),
@@ -132,6 +133,25 @@ class NewsListWidgetState extends State<NewsListWidget> {
               ),
             ],
           ),
+
+          // Add the "Add notification" button here
+          Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const NotificationAddScreen(),
+                  ),
+                );
+              },
+              child: const Padding(
+                padding: EdgeInsets.all(20.0),
+                child: Text("Add notification"),
+              ),
+            ),
+          ),
+
           // Second child: Your existing MasterScreenWidget
           Expanded(
             child: Padding(
@@ -157,10 +177,9 @@ class NewsListWidgetState extends State<NewsListWidget> {
                                 color: Color(0xFF115892),
                               ),
                             ),
-                            Spacer(), // To push the icon to the right side
+                            Spacer(),
                             Icon(
-                              Icons
-                                  .article, // You can replace this with the building icon you want
+                              Icons.article,
                               size: 80,
                               color: Color(0xFF115892),
                             ),
@@ -173,7 +192,7 @@ class NewsListWidgetState extends State<NewsListWidget> {
                           thickness: 2,
                           color: Colors.blue,
                         ),
-                        SizedBox(height: 10.0), // Add some spacing
+                        SizedBox(height: 10.0),
                       ],
                     );
                   }
@@ -187,8 +206,13 @@ class NewsListWidgetState extends State<NewsListWidget> {
 
                   return InkWell(
                     onTap: () {
-                      // Handle the click action here
-                      // You can navigate to a new screen or perform any other action
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => NotificationDetailScreen(
+                            notification: currentNews,
+                          ),
+                        ),
+                      );
                     },
                     onHover: (hover) {
                       setState(() {
@@ -201,10 +225,10 @@ class NewsListWidgetState extends State<NewsListWidget> {
                         borderRadius: BorderRadius.circular(10.0),
                         border: index - 1 == hoveredIndex
                             ? Border.all(
-                                color: Colors.blue, // Border color when hovered
-                                width: 2.0, // Border thickness when hovered
+                                color: Colors.blue,
+                                width: 2.0,
                               )
-                            : null, // No border when not hovered
+                            : null,
                       ),
                       child: Padding(
                         padding: const EdgeInsets.all(8.0),
@@ -227,11 +251,19 @@ class NewsListWidgetState extends State<NewsListWidget> {
                                   ),
                                   child: FittedBox(
                                     fit: BoxFit.cover,
+                                    alignment: Alignment
+                                        .center, // Center the image within the box
                                     child: SizedBox(
-                                      width: 250,
-                                      height: 170,
+                                      width: 250, // Set the maximum width
+                                      height: 120, // Set the maximum height
                                       child: Image.network(
                                         'https://localhost:44340/${currentNews.image}',
+                                        alignment: Alignment
+                                            .center, // Center the image within its box
+                                        width: double
+                                            .infinity, // Allow the image to take the maximum width
+                                        height:
+                                            110, // Allow the image to take the maximum height
                                       ),
                                     ),
                                   ),
@@ -283,16 +315,13 @@ class NewsListWidgetState extends State<NewsListWidget> {
                                 padding: const EdgeInsets.all(8.0),
                                 child: Row(
                                   children: [
-                                    const Icon(
-                                        Icons.calendar_today), // Date icon
+                                    const Icon(Icons.calendar_today),
                                     const SizedBox(width: 8.0),
                                     Text(
-                                      'Posted at: ${currentNews.createdAt}', // Add createdAt here
+                                      'Posted at: ${currentNews.createdAt}',
                                       style: const TextStyle(
-                                        color: Colors
-                                            .grey, // Adjust the color as needed
-                                        fontSize:
-                                            12.0, // Adjust the font size as needed
+                                        color: Colors.grey,
+                                        fontSize: 12.0,
                                       ),
                                     ),
                                   ],

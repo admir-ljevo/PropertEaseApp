@@ -39,12 +39,12 @@ class NotificationProvider with ChangeNotifier {
       request.fields['Id'] = notification.id.toString();
       request.fields['CreatedAt'] = notification.createdAt!.toIso8601String();
       request.fields['IsDeleted'] = notification.isDeleted.toString();
+      request.fields['UserId'] = notification.userId.toString();
       request.fields['TotalRecordsCount'] =
           notification.totalRecordsCount.toString();
       request.fields['Text'] = notification.text ?? '';
       request.fields['Image'] = notification.image ?? '';
-      request.fields['Text'] = notification.text ?? '';
-
+      request.fields['Name'] = notification.name ?? '';
       request.files.add(
         await http.MultipartFile.fromPath('file', notification.file!.path,
             contentType: http_parser.MediaType(

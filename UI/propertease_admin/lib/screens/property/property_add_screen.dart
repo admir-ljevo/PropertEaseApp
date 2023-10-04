@@ -264,7 +264,7 @@ class _PropertyAddScreenState extends State<PropertyAddScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Property Edit Screen'),
+        title: const Text('Property add Screen'),
       ),
       body: SingleChildScrollView(
         child: Column(
