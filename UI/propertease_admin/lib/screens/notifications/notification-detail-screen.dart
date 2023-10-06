@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:propertease_admin/models/new.dart';
+import 'package:propertease_admin/screens/notifications/notification_edit_screen.dart';
 import 'package:propertease_admin/widgets/master_screen.dart';
 
 class NotificationDetailScreen extends StatefulWidget {
@@ -13,13 +14,56 @@ class NotificationDetailScreen extends StatefulWidget {
 
 class NotificationDetailScreenState extends State<NotificationDetailScreen> {
   final TextEditingController _contentController = TextEditingController();
+  void _navigateToEditScreen(BuildContext context, New notification) {
+    Navigator.of(context).push(MaterialPageRoute(builder: (context) {
+      return NotificationEditScreen(notification: notification);
+    })).then((updatedNotification) {
+      // Handle the returned updated notification here
+      if (updatedNotification != null) {
+        // Update the UI with the updated notification data
+        setState(() {
+          notification = updatedNotification;
+        });
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    // TODO: implement build
-    return MasterScreenWidget(
-      title_widget: const Text('News details'),
-      child: SingleChildScrollView(
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('News details'),
+        actions: <Widget>[
+          // Add an "Edit" button to the AppBar
+          Row(
+            children: [
+              const Text(
+                "Edit notification",
+                style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20),
+              ),
+              IconButton(
+                icon: const Icon(Icons.edit),
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => NotificationEditScreen(
+                        notification: widget.notification,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+          const SizedBox(
+            width: 50,
+          ),
+        ],
+      ),
+      body: SingleChildScrollView(
         child: Column(
           children: [
             Padding(

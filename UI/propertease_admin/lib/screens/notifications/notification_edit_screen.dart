@@ -1,31 +1,43 @@
-import 'package:flutter/material.dart';
-import 'package:propertease_admin/models/new.dart';
-import 'package:propertease_admin/providers/notification_provider.dart';
-import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 
+import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:propertease_admin/models/new.dart';
 import 'package:provider/provider.dart';
 
-class NotificationAddScreen extends StatefulWidget {
-  const NotificationAddScreen({Key? key}) : super(key: key);
+import '../../providers/notification_provider.dart';
+
+class NotificationEditScreen extends StatefulWidget {
+  New? notification;
+  NotificationEditScreen({super.key, this.notification});
 
   @override
-  State<StatefulWidget> createState() => NotificationAddScreenState();
+  State<StatefulWidget> createState() => NotificationEditScreenState();
 }
 
-class NotificationAddScreenState extends State<NotificationAddScreen> {
+class NotificationEditScreenState extends State<NotificationEditScreen> {
   late NotificationProvider _notificationProvider;
-  New? notification = New();
-  File? selectedImage = File('assets/images/house_placeholder.jpg');
+  New? notification;
+  File? selectedImage;
 
   final TextEditingController textController = TextEditingController();
   final TextEditingController nameController = TextEditingController();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
   @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    textController.text = widget.notification?.text ?? '';
+    nameController.text = widget.notification?.name ?? '';
+    notification = widget.notification!;
+  }
+
+  @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _notificationProvider = context.read<NotificationProvider>();
+    notification = widget.notification!;
   }
 
   Future<void> _pickImage() async {
@@ -49,7 +61,22 @@ class NotificationAddScreenState extends State<NotificationAddScreen> {
       notification?.image = notification?.file?.path;
 
       await _notificationProvider.addNotification(notification!);
+
       // Show a success message using a SnackBar
+      showSuccessSnackBar();
+    }
+  }
+
+  Future updateNotification() async {
+    if (_formKey.currentState!.validate()) {
+      notification?.file = selectedImage;
+      notification?.text = textController.text;
+      notification?.name = nameController.text;
+      notification?.image = notification?.file?.path;
+      print(notification?.file?.path);
+      await _notificationProvider.updateNotification(
+          notification!, notification!.id!);
+
       showSuccessSnackBar();
     }
   }
@@ -59,7 +86,7 @@ class NotificationAddScreenState extends State<NotificationAddScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         backgroundColor: Colors.green,
-        content: Text('Notification added successfully!'),
+        content: Text('Notification updated successfully!'),
         duration: Duration(seconds: 2), // Adjust the duration as needed
       ),
     );
@@ -68,7 +95,7 @@ class NotificationAddScreenState extends State<NotificationAddScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Add notification screen')),
+      appBar: AppBar(title: const Text('Edit notification screen')),
       body: SingleChildScrollView(
         child: Form(
           key: _formKey,
@@ -88,17 +115,17 @@ class NotificationAddScreenState extends State<NotificationAddScreen> {
                       mainAxisAlignment: MainAxisAlignment
                           .center, // Center the content vertically
                       children: [
-                        if (selectedImage != null)
+                        if (selectedImage == null)
+                          Image.network(
+                            "https://localhost:44340${widget.notification!.image}",
+                            width: 700,
+                            height: 400,
+                          )
+                        else if (selectedImage != null)
                           Image.file(
                             selectedImage!,
                             width: 700,
                             height: 400,
-                          )
-                        else
-                          Image.asset(
-                            'assets/images/house_placeholder.jpg',
-                            height: 400,
-                            width: 700,
                           ),
                         ElevatedButton(
                           onPressed: _pickImage,
@@ -157,7 +184,7 @@ class NotificationAddScreenState extends State<NotificationAddScreen> {
               // Save Button
               ElevatedButton(
                 onPressed: () async {
-                  await addNotification();
+                  await updateNotification();
                 },
                 child: const Text('Save Notification'),
               ),

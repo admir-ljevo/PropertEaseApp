@@ -31,6 +31,37 @@ class NotificationProvider with ChangeNotifier {
     return headers;
   }
 
+  Future<void> updateNotification(New notification, int id) async {
+    try {
+      final url = Uri.parse('$_baseUrl$_endpoint/Edit/$id');
+      final request = http.MultipartRequest('PUT', url);
+
+      request.fields['Id'] = notification.id.toString();
+      request.fields['CreatedAt'] = notification.createdAt!.toIso8601String();
+      request.fields['IsDeleted'] = notification.isDeleted.toString();
+      request.fields['UserId'] = notification.userId.toString();
+      request.fields['TotalRecordsCount'] =
+          notification.totalRecordsCount.toString();
+      request.fields['Text'] = notification.text ?? '';
+      request.fields['Image'] = notification.image ?? '';
+      request.fields['Name'] = notification.name ?? '';
+      request.files.add(
+        await http.MultipartFile.fromPath('file', notification.file!.path,
+            contentType: http_parser.MediaType(
+                'image', 'jpeg')), // Set content type as needed
+      );
+      final response = await request.send();
+      if (response.statusCode == 200) {
+        // Photo uploaded successfully, you can handle the response here
+        // You may also want to parse the response as needed
+      } else {
+        print('Error: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error: ${e.toString()}');
+    }
+  }
+
   Future<void> addNotification(New notification) async {
     try {
       final url = Uri.parse('$_baseUrl$_endpoint/Add');
