@@ -58,7 +58,7 @@ class NotificationProvider with ChangeNotifier {
         print('Error: ${response.statusCode}');
       }
     } catch (e) {
-      print('Error: ${e.toString()}');
+      print('Err: ${e.toString()}');
     }
   }
 

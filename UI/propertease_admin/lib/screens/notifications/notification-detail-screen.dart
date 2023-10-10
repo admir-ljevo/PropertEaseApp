@@ -2,30 +2,42 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:propertease_admin/models/new.dart';
 import 'package:propertease_admin/screens/notifications/notification_edit_screen.dart';
-import 'package:propertease_admin/widgets/master_screen.dart';
 
 class NotificationDetailScreen extends StatefulWidget {
   New? notification;
-  NotificationDetailScreen({super.key, this.notification});
+
+  NotificationDetailScreen({required this.notification});
 
   @override
-  State<StatefulWidget> createState() => NotificationDetailScreenState();
+  _NotificationDetailScreenState createState() =>
+      _NotificationDetailScreenState();
 }
 
-class NotificationDetailScreenState extends State<NotificationDetailScreen> {
+class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
   final TextEditingController _contentController = TextEditingController();
-  void _navigateToEditScreen(BuildContext context, New notification) {
-    Navigator.of(context).push(MaterialPageRoute(builder: (context) {
-      return NotificationEditScreen(notification: notification);
-    })).then((updatedNotification) {
-      // Handle the returned updated notification here
-      if (updatedNotification != null) {
-        // Update the UI with the updated notification data
-        setState(() {
-          notification = updatedNotification;
-        });
-      }
-    });
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _contentController.text = widget.notification?.text ?? '';
+  }
+
+  void _navigateToEditScreen(BuildContext context) async {
+    final updatedNotification = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => NotificationEditScreen(
+          notification: widget.notification,
+        ),
+      ),
+    );
+
+    if (updatedNotification != null) {
+      setState(() {
+        widget.notification = updatedNotification;
+        _contentController.text = widget.notification!.text!;
+      });
+    }
   }
 
   @override
@@ -34,7 +46,6 @@ class NotificationDetailScreenState extends State<NotificationDetailScreen> {
       appBar: AppBar(
         title: const Text('News details'),
         actions: <Widget>[
-          // Add an "Edit" button to the AppBar
           Row(
             children: [
               const Text(
@@ -47,13 +58,7 @@ class NotificationDetailScreenState extends State<NotificationDetailScreen> {
               IconButton(
                 icon: const Icon(Icons.edit),
                 onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => NotificationEditScreen(
-                        notification: widget.notification,
-                      ),
-                    ),
-                  );
+                  _navigateToEditScreen(context);
                 },
               ),
             ],
@@ -77,9 +82,8 @@ class NotificationDetailScreenState extends State<NotificationDetailScreen> {
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(
                       minWidth: 300,
-                      maxWidth: 600, // Replace with your desired maxWidth
-                      maxHeight: double
-                          .infinity, // Replace with your desired maxHeight
+                      maxWidth: 600,
+                      maxHeight: double.infinity,
                     ),
                     child: Padding(
                       padding: const EdgeInsets.all(8.0),
@@ -135,8 +139,7 @@ class NotificationDetailScreenState extends State<NotificationDetailScreen> {
                         Icons.calendar_today,
                         color: Colors.white,
                       ),
-                      const SizedBox(
-                          width: 8), // Add spacing between the icon and text
+                      const SizedBox(width: 8),
                       Text(
                         'Created at: ${DateFormat('yyyy-MM-dd HH:mm').format(widget.notification?.createdAt ?? DateTime.now())}',
                         style: const TextStyle(
@@ -155,8 +158,7 @@ class NotificationDetailScreenState extends State<NotificationDetailScreen> {
                         Icons.edit,
                         color: Colors.white,
                       ),
-                      const SizedBox(
-                          width: 8), // Add spacing between the icon and text
+                      const SizedBox(width: 8),
                       Text(
                         'Author: ${widget.notification?.user?.person?.firstName} ${widget.notification?.user?.person?.lastName}',
                         style: const TextStyle(
@@ -175,13 +177,13 @@ class NotificationDetailScreenState extends State<NotificationDetailScreen> {
                 child: TextField(
                   style: const TextStyle(color: Colors.black),
                   controller: _contentController,
-                  enabled: false, // Make the text area disabled
+                  enabled: false,
                   decoration: const InputDecoration(
                     labelText: 'News content',
                     border: OutlineInputBorder(),
                   ),
                   minLines: 10,
-                  maxLines: null, // Allow multiple lines of text
+                  maxLines: null,
                   keyboardType: TextInputType.multiline,
                 ),
               ),
@@ -190,19 +192,5 @@ class NotificationDetailScreenState extends State<NotificationDetailScreen> {
         ),
       ),
     );
-  }
-
-  @override
-  void didChangeDependencies() {
-    // TODO: implement didChangeDependencies
-    super.didChangeDependencies();
-    _contentController.text = widget.notification?.text ?? '';
-  }
-
-  @override
-  void initState() {
-    // TODO: implement initState
-    super.initState();
-    _contentController.text = widget.notification?.text ?? '';
   }
 }
