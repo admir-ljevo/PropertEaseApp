@@ -5,6 +5,7 @@ import 'package:propertease_admin/main.dart';
 import 'package:propertease_admin/screens/notifications/notification-list-screen.dart';
 
 import 'package:propertease_admin/screens/reservation/reservation_list_screen.dart';
+import 'package:propertease_admin/screens/users/user_list_screen.dart';
 
 import '../screens/property/property_list_screen.dart';
 
@@ -52,6 +53,13 @@ class _MasterScreenWidgetState extends State<MasterScreenWidget> {
             onTap: () {
               Navigator.of(context).push(MaterialPageRoute(
                   builder: (context) => const NewsListWidget()));
+            },
+          ),
+          ListTile(
+            title: Text("Users"),
+            onTap: () {
+              Navigator.of(context).push(MaterialPageRoute(
+                  builder: (context) => const UserListWidget()));
             },
           ),
         ]),

@@ -11,6 +11,8 @@ import 'package:propertease_admin/screens/property/property_list_screen.dart';
 import 'package:propertease_admin/utils/authorization.dart';
 import 'package:provider/provider.dart';
 
+import 'providers/application_user_provider.dart';
+
 void main() {
   runApp(MultiProvider(
     providers: [
@@ -19,7 +21,8 @@ void main() {
       ChangeNotifierProvider(create: (_) => PropertyTypeProvider()),
       ChangeNotifierProvider(create: (_) => CityProvider()),
       ChangeNotifierProvider(create: (_) => PropertyReservationProvider()),
-      ChangeNotifierProvider(create: (_) => NotificationProvider())
+      ChangeNotifierProvider(create: (_) => NotificationProvider()),
+      ChangeNotifierProvider(create: (_) => UserProvider()),
     ],
     child: const MyApp(),
   ));

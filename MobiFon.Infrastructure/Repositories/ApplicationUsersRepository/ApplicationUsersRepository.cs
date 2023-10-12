@@ -2,6 +2,7 @@
 using MobiFon.Core.Dto.ApplicationUser;
 using MobiFon.Core.Entities.Identity;
 using MobiFon.Infrastructure.Repositories.BaseRepository;
+using PropertEase.Core.Filters;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -20,7 +21,10 @@ namespace MobiFon.Infrastructure.Repositories.ApplicationUsersRepository
         {
             return await ProjectToFirstOrDefaultAsync<ApplicationUserDto>(DatabaseContext.Users.Where(c => (c.UserName == UserName || c.Email == UserName) && c.Active == true));
         }
-
+        public async Task<List<ApplicationUserDto>> GetAllAsync()
+        {
+            return await ProjectToListAsync<ApplicationUserDto>(DatabaseContext.Users.Where(u => !u.IsDeleted));
+        }
         public async Task<ApplicationUserDto> GetByIdAsync(int id)
         {
             ApplicationUserDto user = await ProjectToFirstOrDefaultAsync<ApplicationUserDto>(DatabaseContext.Users.Where(x => !x.IsDeleted && x.Id == id));
@@ -43,6 +47,17 @@ namespace MobiFon.Infrastructure.Repositories.ApplicationUsersRepository
                 item.Person.PositionName = item.Person.Position.ToString();
             }
             return employees;
+        }
+
+        public async Task<List<ApplicationUserDto>> GetFiltered(UserFilter filter)
+        {
+            var users = await ProjectToListAsync<ApplicationUserDto>(DatabaseContext.Users.Where(u => (string.IsNullOrEmpty(filter.SearchField) || u.UserName.Contains(filter.SearchField) || u.Email.Contains(filter.SearchField))
+            && (filter.CityId == u.Person.PlaceOfResidenceId || !filter.CityId.HasValue)
+            && (filter.RoleId == u.Roles.FirstOrDefault().RoleId || !filter.RoleId.HasValue)
+            ));
+
+            return users;
+
         }
     }
 }

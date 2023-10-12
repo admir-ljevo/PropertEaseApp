@@ -11,6 +11,7 @@ namespace MobiFon.Core.Dto.ApplicationRole
     public class ApplicationRoleDto: IdentityRole<int>, IBaseEntity
     {
         public int? RoleLevel { get; set; }
+        public string Name { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.Now;
         public DateTime? ModifiedAt { get; set; }
         public bool IsDeleted { get; set; }

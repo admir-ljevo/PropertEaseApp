@@ -9,7 +9,7 @@ part of 'new.dart';
 New _$NewFromJson(Map<String, dynamic> json) => New(
       id: json['id'] as int? ?? 0,
       name: json['name'] as String?,
-      userId: json['userId'] as int?,
+      userId: json['userId'] as int? ?? 1,
       image: json['image'] as String?,
       text: json['text'] as String?,
       createdAt: json['createdAt'] == null
@@ -18,7 +18,7 @@ New _$NewFromJson(Map<String, dynamic> json) => New(
       modifiedAt: json['modifiedAt'] == null
           ? null
           : DateTime.parse(json['modifiedAt'] as String),
-      totalRecordsCount: json['totalRecordsCount'] as int?,
+      totalRecordsCount: json['totalRecordsCount'] as int? ?? 0,
       isDeleted: json['isDeleted'] as bool? ?? false,
     )
       ..user = json['user'] == null

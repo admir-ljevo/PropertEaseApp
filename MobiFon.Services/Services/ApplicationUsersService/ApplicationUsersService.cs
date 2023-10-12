@@ -15,6 +15,7 @@ using System.Net.Mail;
 using System.Text;
 using System.Threading.Tasks;
 using System.Globalization;
+using PropertEase.Core.Filters;
 
 namespace MobiFon.Services.Services.ApplicationUsersService
 {
@@ -69,7 +70,7 @@ namespace MobiFon.Services.Services.ApplicationUsersService
             newUser = await _unitOfWork.ApplicationUsersRepository.AddAsync(newUser);
             await _unitOfWork.SaveChangesAsync();
 
-            var role = await _applicationRolesRepository.GetByRoleLevelOrName((int)Role.Employee, Role.Employee.ToString());
+            var role = await _applicationRolesRepository.GetByRoleLevelOrName((int)Role.Client, Role.Client.ToString());
             await _applicationUserRolesRepository.AddAsync(new ApplicationUserRoleDto
             {
                 UserId = newUser.Id,
@@ -206,9 +207,9 @@ namespace MobiFon.Services.Services.ApplicationUsersService
             return await _unitOfWork.ApplicationUsersRepository.FindByUserNameOrEmailAsync(pUserName);
         }
 
-        public Task<List<ApplicationUserDto>> GetAllAsync()
+        public async Task<List<ApplicationUserDto>> GetAllAsync()
         {
-            throw new NotImplementedException();
+            return await _unitOfWork.ApplicationUsersRepository.GetAllAsync();
         }
 
         public async Task<ApplicationUserDto> GetByIdAsync(int id)
@@ -224,6 +225,11 @@ namespace MobiFon.Services.Services.ApplicationUsersService
         public async Task<List<ApplicationUserDto>> GetEmployees()
         {
             return await _unitOfWork.ApplicationUsersRepository.GetEmployees();
+        }
+
+        public async Task<List<ApplicationUserDto>> GetFiltered(UserFilter filter)
+        {
+            return await _unitOfWork.ApplicationUsersRepository.GetFiltered(filter);
         }
 
         public Task RemoveByIdAsync(int id, bool isSoft = true)
