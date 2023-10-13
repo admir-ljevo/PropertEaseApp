@@ -232,9 +232,10 @@ namespace MobiFon.Services.Services.ApplicationUsersService
             return await _unitOfWork.ApplicationUsersRepository.GetFiltered(filter);
         }
 
-        public Task RemoveByIdAsync(int id, bool isSoft = true)
+        public async Task RemoveByIdAsync(int id, bool isSoft = true)
         {
-            throw new NotImplementedException();
+            await _unitOfWork.ApplicationUsersRepository.RemoveByIdAsync(id, isSoft);
+            await _unitOfWork.SaveChangesAsync();
         }
 
         public void Update(ApplicationUserDto entity)

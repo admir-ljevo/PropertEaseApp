@@ -51,6 +51,13 @@ namespace PropertEase.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
             }
         }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            await ApplicationUsersService.RemoveByIdAsync(id);
+            return Ok();
+        }
     }
 
 }

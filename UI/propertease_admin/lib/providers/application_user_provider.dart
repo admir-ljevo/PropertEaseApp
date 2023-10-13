@@ -32,6 +32,25 @@ class UserProvider with ChangeNotifier {
     }
   }
 
+  Future<void> deleteById(int? id) async {
+    var url = "$_baseUrl$_endpoint/$id";
+    final headers = createHeaders();
+
+    final response = await http.delete(Uri.parse(url), headers: headers);
+    print(url);
+    if (response.statusCode == 200) {
+      // Successful deletion
+      print("User deleted successfully");
+    } else if (response.statusCode == 404) {
+      // Property not found, handle as needed
+      throw Exception("User not found");
+    } else {
+      // Handle other error cases
+      throw Exception(
+          "Failed to delete user. Status code: ${response.statusCode}");
+    }
+  }
+
   Future<List<ApplicationUser>> getAllUsers() async {
     var url = '$_baseUrl$_endpoint/GetAllUsers';
     var uri = Uri.parse(url);

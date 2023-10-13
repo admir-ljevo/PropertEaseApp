@@ -53,7 +53,7 @@ namespace MobiFon.Infrastructure.Repositories.ApplicationUsersRepository
         {
             var users = await ProjectToListAsync<ApplicationUserDto>(DatabaseContext.Users.Where(u => (string.IsNullOrEmpty(filter.SearchField) || u.UserName.Contains(filter.SearchField) || u.Email.Contains(filter.SearchField))
             && (filter.CityId == u.Person.PlaceOfResidenceId || !filter.CityId.HasValue)
-            && (string.IsNullOrEmpty(filter.Role) || u.Roles.First().Role.Name.Contains(filter.Role))
+            && (string.IsNullOrEmpty(filter.Role) || u.Roles.First().Role.Name.Contains(filter.Role) ) && !u.IsDeleted
             ));
 
             return users;

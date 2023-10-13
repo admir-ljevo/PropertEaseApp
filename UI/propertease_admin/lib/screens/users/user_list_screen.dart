@@ -283,9 +283,32 @@ class UserListWidgetState extends State<UserListWidget> {
                                   child: const Icon(Icons.edit),
                                 ),
                                 const SizedBox(width: 16),
-                                InkWell(
+                                GestureDetector(
                                   onTap: () {
-                                    print('Delete');
+                                    showDialog(
+                                      context: context,
+                                      builder: (BuildContext context) {
+                                        return AlertDialog(
+                                          title: const Text("Confirm Delete"),
+                                          content: const Text(
+                                              "Are you sure you want to delete this user?"),
+                                          actions: <Widget>[
+                                            TextButton(
+                                              child: const Text("Cancel"),
+                                              onPressed: () {
+                                                Navigator.of(context).pop();
+                                              },
+                                            ),
+                                            TextButton(
+                                              child: const Text("Delete"),
+                                              onPressed: () async {
+                                                _handleDeleteUser(e.id);
+                                              },
+                                            ),
+                                          ],
+                                        );
+                                      },
+                                    );
                                   },
                                   child: const Icon(Icons.delete),
                                 ),
@@ -322,6 +345,23 @@ class UserListWidgetState extends State<UserListWidget> {
     setState(() {
       users = fetchedUsers;
     });
+  }
+
+  Future<void> _handleDeleteUser(int? userId) async {
+    try {
+      await _userProvider.deleteById(userId);
+      await fetchUsers();
+      Navigator.of(context).pop();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('User deleted successfully'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      print("Error deleting user: $e ");
+    }
   }
 
   Future<void> fetchData() async {
