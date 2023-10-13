@@ -47,6 +47,32 @@ class UserProvider with ChangeNotifier {
     throw Exception("Something is wrong");
   }
 
+  Future<List<ApplicationUser>> get({dynamic filter}) async {
+    var url = "$_baseUrl$_endpoint/GetFilteredData";
+
+    if (filter != null) {
+      var queryString = getQueryString(filter);
+      url = "$url?$queryString";
+    }
+
+    var uri = Uri.parse(url);
+    var headers = createHeaders();
+    var response = await http.get(uri, headers: headers);
+    print(url);
+
+    try {
+      if (isValidResponse(response)) {
+        return (jsonDecode(response.body) as List)
+            .map((item) => ApplicationUser.fromJson(item))
+            .toList();
+      } else {
+        throw Exception("Not valid response: ");
+      }
+    } catch (e) {
+      throw Exception(response.statusCode);
+    }
+  }
+
   String getQueryString(Map params, {String prefix = '&'}) {
     String query = '';
     params.forEach((key, value) {
