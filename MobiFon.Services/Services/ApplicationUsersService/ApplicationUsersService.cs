@@ -104,7 +104,7 @@ namespace MobiFon.Services.Services.ApplicationUsersService
                 Nationality = user.Nationality,
                 Pay = user.Pay,
                 PlaceOfResidenceId = user.PlaceOfResidenceId,
-                Position = user.Position,
+                Position = Position.Renter,
                 ProfilePhoto = user.ProfilePhoto,
                 ProfilePhotoThumbnail = user.ProfilePhoto,
                 Qualifications = user.Qualifications,

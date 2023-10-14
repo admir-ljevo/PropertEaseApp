@@ -3,6 +3,7 @@ import 'package:propertease_admin/models/application_user.dart';
 import 'package:propertease_admin/models/city.dart';
 import 'package:propertease_admin/models/search_result.dart';
 import 'package:propertease_admin/providers/application_user_provider.dart';
+import 'package:propertease_admin/screens/users/user_detail_screen.dart';
 import 'package:propertease_admin/widgets/master_screen.dart';
 import 'package:provider/provider.dart';
 
@@ -30,13 +31,16 @@ class UserListWidgetState extends State<UserListWidget> {
   @override
   Widget build(BuildContext context) {
     return MasterScreenWidget(
-      title_widget: const Text("Users list"),
-      child: Column(children: [
-        _buildContent(),
-        _buildSearchBar(),
-        _buildDataListView(),
-      ]),
-    );
+        title_widget: const Text("Users list"),
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              _buildContent(),
+              _buildSearchBar(),
+              _buildDataListView(),
+            ],
+          ),
+        ));
   }
 
   @override
@@ -48,15 +52,15 @@ class UserListWidgetState extends State<UserListWidget> {
   }
 
   Widget _buildContent() {
-    return const Column(
+    return Column(
       children: [
-        Row(
+        const Row(
           children: [
             SizedBox(
               width: 100,
             ),
             Text(
-              "Users list view",
+              "Users",
               style: TextStyle(
                   fontSize: 30,
                   fontWeight: FontWeight.bold,
@@ -73,7 +77,51 @@ class UserListWidgetState extends State<UserListWidget> {
             ),
           ],
         ),
-        Divider(
+        const Divider(
+          thickness: 2,
+          color: Colors.blue,
+        ),
+        const SizedBox(
+          height: 50,
+        ),
+        Row(
+          children: [
+            const SizedBox(
+              width: 100,
+            ),
+            const Text(
+              "Users list view",
+              style: TextStyle(
+                  fontSize: 30,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF115892)),
+            ),
+            const Spacer(),
+            Container(
+              height: 50,
+              child: ElevatedButton(
+                onPressed: () {
+                  // Add your button's onPressed logic here
+                },
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.add), // Add your desired icon
+                    SizedBox(width: 8), // Adjust the width as needed
+                    Text("Add new user"), // Text for the button
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(
+              width: 100,
+            ),
+          ],
+        ),
+        const SizedBox(
+          height: 50,
+        ),
+        const Divider(
           thickness: 2,
           color: Colors.blue,
         ),
@@ -174,7 +222,7 @@ class UserListWidgetState extends State<UserListWidget> {
   }
 
   Widget _buildDataListView() {
-    return Row(
+    return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         SingleChildScrollView(
@@ -271,7 +319,13 @@ class UserListWidgetState extends State<UserListWidget> {
                               children: [
                                 InkWell(
                                   onTap: () {
-                                    print('Details');
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (context) => UserDetailScreen(
+                                          user: e,
+                                        ),
+                                      ),
+                                    );
                                   },
                                   child: const Icon(Icons.info),
                                 ),
