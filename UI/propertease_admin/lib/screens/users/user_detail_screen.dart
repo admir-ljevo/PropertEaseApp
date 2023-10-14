@@ -75,94 +75,100 @@ class UserDetailScreenState extends State<UserDetailScreen> {
                   Column(
                     children: [
                       Column(
+                        mainAxisAlignment: MainAxisAlignment.start,
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          const Text(
-                            'Position',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                            ),
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              const Text(
+                                'Position',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Container(
+                                  width: 200.0,
+                                  decoration: BoxDecoration(
+                                    border: Border.all(
+                                      color: Colors.grey,
+                                    ),
+                                    borderRadius: BorderRadius.circular(5.0),
+                                  ),
+                                  padding: const EdgeInsets.all(10.0),
+                                  margin: const EdgeInsets.all(10.0),
+                                  alignment: Alignment
+                                      .center, // Set the fixed width you desire
+                                  child: Text(
+                                    widget.user?.person?.position == 0
+                                        ? 'Client'
+                                        : widget.user?.person?.position == 1
+                                            ? 'Renter'
+                                            : '',
+                                    style: const TextStyle(
+                                      color: Colors.black,
+                                    ),
+                                  )),
+                            ],
                           ),
-                          Container(
-                              width: 200.0,
-                              decoration: BoxDecoration(
-                                border: Border.all(
-                                  color: Colors.grey,
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              const Text(
+                                'Qualifications',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
                                 ),
-                                borderRadius: BorderRadius.circular(5.0),
                               ),
-                              padding: const EdgeInsets.all(10.0),
-                              margin: const EdgeInsets.all(10.0),
-                              alignment: Alignment
-                                  .center, // Set the fixed width you desire
-                              child: Text(
-                                widget.user?.person?.position == 0
-                                    ? 'Client'
-                                    : widget.user?.person?.position == 1
-                                        ? 'Renter'
-                                        : '',
-                                style: const TextStyle(
-                                  color: Colors.black,
-                                ),
-                              )),
-                        ],
-                      ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          const Text(
-                            'Qualifications',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                            ),
+                              Container(
+                                  width: 200.0,
+                                  decoration: BoxDecoration(
+                                    border: Border.all(
+                                      color: Colors.grey,
+                                    ),
+                                    borderRadius: BorderRadius.circular(5.0),
+                                  ),
+                                  padding: const EdgeInsets.all(10.0),
+                                  margin: const EdgeInsets.all(10.0),
+                                  alignment: Alignment
+                                      .center, // Set the fixed width you desire
+                                  child: Text(
+                                    widget.user?.person?.qualifications ?? '',
+                                    style: const TextStyle(
+                                      color: Colors.black,
+                                    ),
+                                  )),
+                            ],
                           ),
-                          Container(
-                              width: 200.0,
-                              decoration: BoxDecoration(
-                                border: Border.all(
-                                  color: Colors.grey,
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              const Text(
+                                'Date of employment (MM-dd-yyyy)',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
                                 ),
-                                borderRadius: BorderRadius.circular(5.0),
                               ),
-                              padding: const EdgeInsets.all(10.0),
-                              margin: const EdgeInsets.all(10.0),
-                              alignment: Alignment
-                                  .center, // Set the fixed width you desire
-                              child: Text(
-                                widget.user?.person?.qualifications ?? '',
-                                style: const TextStyle(
-                                  color: Colors.black,
+                              Container(
+                                width: 200.0,
+                                decoration: BoxDecoration(
+                                  border: Border.all(
+                                    color: Colors.grey,
+                                  ),
+                                  borderRadius: BorderRadius.circular(5.0),
                                 ),
-                              )),
-                        ],
-                      ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          const Text(
-                            'Date of employment (MM-dd-yyyy)',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Container(
-                            width: 200.0,
-                            decoration: BoxDecoration(
-                              border: Border.all(
-                                color: Colors.grey,
+                                padding: const EdgeInsets.all(10.0),
+                                margin: const EdgeInsets.all(10.0),
+                                alignment: Alignment.center,
+                                child: Text(
+                                  formatBirthDate(
+                                      widget.user?.person?.dateOfEmployment),
+                                  style: const TextStyle(
+                                    color: Colors.black,
+                                  ),
+                                ),
                               ),
-                              borderRadius: BorderRadius.circular(5.0),
-                            ),
-                            padding: const EdgeInsets.all(10.0),
-                            margin: const EdgeInsets.all(10.0),
-                            alignment: Alignment.center,
-                            child: Text(
-                              formatBirthDate(
-                                  widget.user?.person?.dateOfEmployment),
-                              style: const TextStyle(
-                                color: Colors.black,
-                              ),
-                            ),
+                            ],
                           ),
                         ],
                       ),
@@ -261,7 +267,8 @@ class UserDetailScreenState extends State<UserDetailScreen> {
                             margin: const EdgeInsets.all(10.0),
                             alignment: Alignment.center,
                             child: TextFormField(
-                              maxLines: 8,
+                              maxLines: 30,
+                              minLines: 8,
                               enabled: false,
                               controller: _biographyController,
                               style: const TextStyle(color: Colors.black),
@@ -273,7 +280,6 @@ class UserDetailScreenState extends State<UserDetailScreen> {
                           ),
                         ],
                       ),
-                      // Add more columns for other input fields
                     ],
                   )
                 ],
@@ -288,6 +294,404 @@ class UserDetailScreenState extends State<UserDetailScreen> {
     }
   }
 
+  Widget buildUserDetailsRow() {
+    return Row(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Container(
+            constraints: const BoxConstraints(
+              maxWidth: 600, // Set the maximum width for the image
+              maxHeight: 600, // Set the maximum height for the image
+            ),
+            child: Image.network(
+              "https://localhost:44340/${widget.user?.person?.profilePhoto}",
+              fit: BoxFit.cover,
+            ),
+          ),
+        ),
+        Expanded(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              Column(
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      const Text(
+                        'First name',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Container(
+                        width: 200.0,
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: Colors.grey,
+                          ),
+                          borderRadius: BorderRadius.circular(5.0),
+                        ),
+                        padding: const EdgeInsets.all(10.0),
+                        margin: const EdgeInsets.all(10.0),
+                        alignment:
+                            Alignment.center, // Set the fixed width you desire
+                        child: Text(
+                          widget.user?.person?.firstName ?? '',
+                          style: const TextStyle(
+                            color: Colors.black,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      const Text(
+                        'Last name',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Container(
+                        width: 200.0,
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: Colors.grey,
+                          ),
+                          borderRadius: BorderRadius.circular(5.0),
+                        ),
+                        padding: const EdgeInsets.all(10.0),
+                        margin: const EdgeInsets.all(10.0),
+                        alignment:
+                            Alignment.center, // Set the fixed width you desire
+                        child: Text(
+                          widget.user?.person?.lastName ?? '',
+                          style: const TextStyle(
+                            color: Colors.black,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      const Text(
+                        'Username',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Container(
+                        width: 200.0,
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: Colors.grey,
+                          ),
+                          borderRadius: BorderRadius.circular(5.0),
+                        ),
+                        padding: const EdgeInsets.all(10.0),
+                        margin: const EdgeInsets.all(10.0),
+                        alignment:
+                            Alignment.center, // Set the fixed width you desire
+                        child: Text(
+                          widget.user?.userName ?? '',
+                          style: const TextStyle(
+                            color: Colors.black,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      const Text(
+                        'Email',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Container(
+                        width: 200.0,
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: Colors.grey,
+                          ),
+                          borderRadius: BorderRadius.circular(5.0),
+                        ),
+                        padding: const EdgeInsets.all(10.0),
+                        margin: const EdgeInsets.all(10.0),
+                        alignment:
+                            Alignment.center, // Set the fixed width you desire
+                        child: Text(
+                          widget.user?.email ?? '',
+                          style: const TextStyle(
+                            color: Colors.black,
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
+                ],
+              ),
+              Column(
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      const Text(
+                        'Phone number',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Container(
+                        width: 200.0,
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: Colors.grey,
+                          ),
+                          borderRadius: BorderRadius.circular(5.0),
+                        ),
+                        padding: const EdgeInsets.all(10.0),
+                        margin: const EdgeInsets.all(10.0),
+                        alignment:
+                            Alignment.center, // Set the fixed width you desire
+                        child: Text(
+                          widget.user?.phoneNumber ?? '',
+                          style: const TextStyle(
+                            color: Colors.black,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      const Text(
+                        'Residence',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Container(
+                        width: 200.0,
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: Colors.grey,
+                          ),
+                          borderRadius: BorderRadius.circular(5.0),
+                        ),
+                        padding: const EdgeInsets.all(10.0),
+                        margin: const EdgeInsets.all(10.0),
+                        alignment:
+                            Alignment.center, // Set the fixed width you desire
+                        child: Text(
+                          widget.user?.person?.placeOfResidence?.name ?? '',
+                          style: const TextStyle(
+                            color: Colors.black,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      const Text(
+                        'Address',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Container(
+                        width: 200.0,
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: Colors.grey,
+                          ),
+                          borderRadius: BorderRadius.circular(5.0),
+                        ),
+                        padding: const EdgeInsets.all(10.0),
+                        margin: const EdgeInsets.all(10.0),
+                        alignment:
+                            Alignment.center, // Set the fixed width you desire
+                        child: Text(
+                          widget.user?.person?.address ?? '',
+                          style: const TextStyle(
+                            color: Colors.black,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      const Text(
+                        'Postcode',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Container(
+                        width: 200.0,
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: Colors.grey,
+                          ),
+                          borderRadius: BorderRadius.circular(5.0),
+                        ),
+                        padding: const EdgeInsets.all(10.0),
+                        margin: const EdgeInsets.all(10.0),
+                        alignment:
+                            Alignment.center, // Set the fixed width you desire
+                        child: Text(
+                          widget.user?.person?.postCode ?? '',
+                          style: const TextStyle(
+                            color: Colors.black,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              Column(
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      const Text(
+                        'Role',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Container(
+                        width: 200.0,
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: Colors.grey,
+                          ),
+                          borderRadius: BorderRadius.circular(5.0),
+                        ),
+                        padding: const EdgeInsets.all(10.0),
+                        margin: const EdgeInsets.all(10.0),
+                        alignment:
+                            Alignment.center, // Set the fixed width you desire
+                        child: Text(
+                          widget.user?.userRoles?[0].role?.name ?? '',
+                          style: const TextStyle(
+                            color: Colors.black,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      const Text(
+                        'JMBG',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Container(
+                        width: 200.0,
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: Colors.grey,
+                          ),
+                          borderRadius: BorderRadius.circular(5.0),
+                        ),
+                        padding: const EdgeInsets.all(10.0),
+                        margin: const EdgeInsets.all(10.0),
+                        alignment:
+                            Alignment.center, // Set the fixed width you desire
+                        child: Text(
+                          widget.user?.person?.jmbg ?? '',
+                          style: const TextStyle(
+                            color: Colors.black,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      const Text(
+                        'Date of birth (MM-dd-yyyy)',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Container(
+                        width: 200.0,
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: Colors.grey,
+                          ),
+                          borderRadius: BorderRadius.circular(5.0),
+                        ),
+                        padding: const EdgeInsets.all(10.0),
+                        margin: const EdgeInsets.all(10.0),
+                        alignment: Alignment.center,
+                        child: Text(
+                          formatBirthDate(widget.user?.person?.birthDate),
+                          style: const TextStyle(
+                            color: Colors.black,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      const Text(
+                        'Gender',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Container(
+                        width: 200.0,
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: Colors.grey,
+                          ),
+                          borderRadius: BorderRadius.circular(5.0),
+                        ),
+                        padding: const EdgeInsets.all(10.0),
+                        margin: const EdgeInsets.all(10.0),
+                        alignment:
+                            Alignment.center, // Set the fixed width you desire
+                        child: Text(
+                          widget.user?.person?.genderName ?? '',
+                          style: const TextStyle(
+                            color: Colors.black,
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
+                ],
+              ),
+            ],
+          ),
+        )
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // TODO: implement build
@@ -297,405 +701,7 @@ class UserDetailScreenState extends State<UserDetailScreen> {
       ),
       body: SingleChildScrollView(
           child: Column(
-        children: [
-          Row(
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: Container(
-                  constraints: const BoxConstraints(
-                    maxWidth: 600, // Set the maximum width for the image
-                    maxHeight: 600, // Set the maximum height for the image
-                  ),
-                  child: Image.network(
-                    "https://localhost:44340/${widget.user?.person?.profilePhoto}",
-                    fit: BoxFit.cover,
-                  ),
-                ),
-              ),
-              Expanded(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    Column(
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            const Text(
-                              'First name',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Container(
-                              width: 200.0,
-                              decoration: BoxDecoration(
-                                border: Border.all(
-                                  color: Colors.grey,
-                                ),
-                                borderRadius: BorderRadius.circular(5.0),
-                              ),
-                              padding: const EdgeInsets.all(10.0),
-                              margin: const EdgeInsets.all(10.0),
-                              alignment: Alignment
-                                  .center, // Set the fixed width you desire
-                              child: Text(
-                                widget.user?.person?.firstName ?? '',
-                                style: const TextStyle(
-                                  color: Colors.black,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            const Text(
-                              'Last name',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Container(
-                              width: 200.0,
-                              decoration: BoxDecoration(
-                                border: Border.all(
-                                  color: Colors.grey,
-                                ),
-                                borderRadius: BorderRadius.circular(5.0),
-                              ),
-                              padding: const EdgeInsets.all(10.0),
-                              margin: const EdgeInsets.all(10.0),
-                              alignment: Alignment
-                                  .center, // Set the fixed width you desire
-                              child: Text(
-                                widget.user?.person?.lastName ?? '',
-                                style: const TextStyle(
-                                  color: Colors.black,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            const Text(
-                              'Username',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Container(
-                              width: 200.0,
-                              decoration: BoxDecoration(
-                                border: Border.all(
-                                  color: Colors.grey,
-                                ),
-                                borderRadius: BorderRadius.circular(5.0),
-                              ),
-                              padding: const EdgeInsets.all(10.0),
-                              margin: const EdgeInsets.all(10.0),
-                              alignment: Alignment
-                                  .center, // Set the fixed width you desire
-                              child: Text(
-                                widget.user?.userName ?? '',
-                                style: const TextStyle(
-                                  color: Colors.black,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            const Text(
-                              'Email',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Container(
-                              width: 200.0,
-                              decoration: BoxDecoration(
-                                border: Border.all(
-                                  color: Colors.grey,
-                                ),
-                                borderRadius: BorderRadius.circular(5.0),
-                              ),
-                              padding: const EdgeInsets.all(10.0),
-                              margin: const EdgeInsets.all(10.0),
-                              alignment: Alignment
-                                  .center, // Set the fixed width you desire
-                              child: Text(
-                                widget.user?.email ?? '',
-                                style: const TextStyle(
-                                  color: Colors.black,
-                                ),
-                              ),
-                            ),
-                          ],
-                        )
-                      ],
-                    ),
-                    Column(
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            const Text(
-                              'Phone number',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Container(
-                              width: 200.0,
-                              decoration: BoxDecoration(
-                                border: Border.all(
-                                  color: Colors.grey,
-                                ),
-                                borderRadius: BorderRadius.circular(5.0),
-                              ),
-                              padding: const EdgeInsets.all(10.0),
-                              margin: const EdgeInsets.all(10.0),
-                              alignment: Alignment
-                                  .center, // Set the fixed width you desire
-                              child: Text(
-                                widget.user?.phoneNumber ?? '',
-                                style: const TextStyle(
-                                  color: Colors.black,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            const Text(
-                              'Residence',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Container(
-                              width: 200.0,
-                              decoration: BoxDecoration(
-                                border: Border.all(
-                                  color: Colors.grey,
-                                ),
-                                borderRadius: BorderRadius.circular(5.0),
-                              ),
-                              padding: const EdgeInsets.all(10.0),
-                              margin: const EdgeInsets.all(10.0),
-                              alignment: Alignment
-                                  .center, // Set the fixed width you desire
-                              child: Text(
-                                widget.user?.person?.placeOfResidence?.name ??
-                                    '',
-                                style: const TextStyle(
-                                  color: Colors.black,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            const Text(
-                              'Address',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Container(
-                              width: 200.0,
-                              decoration: BoxDecoration(
-                                border: Border.all(
-                                  color: Colors.grey,
-                                ),
-                                borderRadius: BorderRadius.circular(5.0),
-                              ),
-                              padding: const EdgeInsets.all(10.0),
-                              margin: const EdgeInsets.all(10.0),
-                              alignment: Alignment
-                                  .center, // Set the fixed width you desire
-                              child: Text(
-                                widget.user?.person?.address ?? '',
-                                style: const TextStyle(
-                                  color: Colors.black,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            const Text(
-                              'Postcode',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Container(
-                              width: 200.0,
-                              decoration: BoxDecoration(
-                                border: Border.all(
-                                  color: Colors.grey,
-                                ),
-                                borderRadius: BorderRadius.circular(5.0),
-                              ),
-                              padding: const EdgeInsets.all(10.0),
-                              margin: const EdgeInsets.all(10.0),
-                              alignment: Alignment
-                                  .center, // Set the fixed width you desire
-                              child: Text(
-                                widget.user?.person?.postCode ?? '',
-                                style: const TextStyle(
-                                  color: Colors.black,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    Column(
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            const Text(
-                              'Role',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Container(
-                              width: 200.0,
-                              decoration: BoxDecoration(
-                                border: Border.all(
-                                  color: Colors.grey,
-                                ),
-                                borderRadius: BorderRadius.circular(5.0),
-                              ),
-                              padding: const EdgeInsets.all(10.0),
-                              margin: const EdgeInsets.all(10.0),
-                              alignment: Alignment
-                                  .center, // Set the fixed width you desire
-                              child: Text(
-                                widget.user?.userRoles?[0].role?.name ?? '',
-                                style: const TextStyle(
-                                  color: Colors.black,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            const Text(
-                              'JMBG',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Container(
-                              width: 200.0,
-                              decoration: BoxDecoration(
-                                border: Border.all(
-                                  color: Colors.grey,
-                                ),
-                                borderRadius: BorderRadius.circular(5.0),
-                              ),
-                              padding: const EdgeInsets.all(10.0),
-                              margin: const EdgeInsets.all(10.0),
-                              alignment: Alignment
-                                  .center, // Set the fixed width you desire
-                              child: Text(
-                                widget.user?.person?.jmbg ?? '',
-                                style: const TextStyle(
-                                  color: Colors.black,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            const Text(
-                              'Date of birth (MM-dd-yyyy)',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Container(
-                              width: 200.0,
-                              decoration: BoxDecoration(
-                                border: Border.all(
-                                  color: Colors.grey,
-                                ),
-                                borderRadius: BorderRadius.circular(5.0),
-                              ),
-                              padding: const EdgeInsets.all(10.0),
-                              margin: const EdgeInsets.all(10.0),
-                              alignment: Alignment.center,
-                              child: Text(
-                                formatBirthDate(widget.user?.person?.birthDate),
-                                style: const TextStyle(
-                                  color: Colors.black,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            const Text(
-                              'Gender',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Container(
-                              width: 200.0,
-                              decoration: BoxDecoration(
-                                border: Border.all(
-                                  color: Colors.grey,
-                                ),
-                                borderRadius: BorderRadius.circular(5.0),
-                              ),
-                              padding: const EdgeInsets.all(10.0),
-                              margin: const EdgeInsets.all(10.0),
-                              alignment: Alignment
-                                  .center, // Set the fixed width you desire
-                              child: Text(
-                                widget.user?.person?.genderName ?? '',
-                                style: const TextStyle(
-                                  color: Colors.black,
-                                ),
-                              ),
-                            ),
-                          ],
-                        )
-                      ],
-                    ),
-                  ],
-                ),
-              )
-            ],
-          ),
-          buildUserRoleRow(widget.user!)
-        ],
+        children: [buildUserDetailsRow(), buildUserRoleRow(widget.user!)],
       )),
     );
   }
