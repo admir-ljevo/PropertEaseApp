@@ -25,6 +25,7 @@ class UserEditScreenState extends State<UserEditScreen> {
   File? selectedImage;
   SearchResult<City>? cityResult;
   SearchResult<ApplicationRole>? roleResult;
+  final _formKey = GlobalKey<FormState>();
 
   late CityProvider _cityProvider;
   late RoleProvider _roleProvider;
@@ -97,7 +98,17 @@ class UserEditScreenState extends State<UserEditScreen> {
     editedUser.person?.biography = _biographyController.text;
     editedUser.person?.qualifications = _qualificationsController.text;
     editedUser.email = _emailController.text;
-    await _userProvider.updateEmployee(editedUser, editedUser.id!);
+    if (_formKey.currentState!.validate()) {
+      await _userProvider.updateEmployee(editedUser, editedUser.id!);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+              'User ${editedUser.person?.firstName} ${editedUser.person?.lastName} edited successfully'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      Navigator.of(context).pop();
+    }
   }
 
   Future<void> _fetchRoles() async {
@@ -240,6 +251,12 @@ class UserEditScreenState extends State<UserEditScreen> {
                               alignment: Alignment.center,
                               child: TextFormField(
                                 controller: _qualificationsController,
+                                validator: (value) {
+                                  if (value!.isEmpty) {
+                                    return 'This field is required.';
+                                  }
+                                  return null;
+                                },
                                 style: const TextStyle(
                                   color: Colors.black,
                                 ),
@@ -321,6 +338,12 @@ class UserEditScreenState extends State<UserEditScreen> {
                       alignment: Alignment.center,
                       child: TextFormField(
                         controller: _payController,
+                        validator: (value) {
+                          if (value!.isEmpty) {
+                            return 'This field is required.';
+                          }
+                          return null;
+                        },
                         style: const TextStyle(
                           color: Colors.black,
                         ),
@@ -355,6 +378,12 @@ class UserEditScreenState extends State<UserEditScreen> {
                         maxLines: 35,
                         minLines: 8,
                         controller: _biographyController,
+                        validator: (value) {
+                          if (value!.isEmpty) {
+                            return 'This field is required.';
+                          }
+                          return null;
+                        },
                         style: const TextStyle(color: Colors.black),
                         decoration: const InputDecoration(
                           hintText: 'Enter additional information',
@@ -386,330 +415,381 @@ class UserEditScreenState extends State<UserEditScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('User edit screen')),
-      body: SingleChildScrollView(
-          child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      if (selectedImage == null)
-                        Image.network(
-                          "https://localhost:44340${widget.user!.person?.profilePhoto}",
-                          width: 700,
-                          height: 400,
-                        )
-                      else if (selectedImage != null)
-                        Image.file(
-                          selectedImage!,
-                          width: 700,
-                          height: 400,
-                        ),
-                      ElevatedButton(
-                        onPressed: _pickImage,
-                        child: const Text('Select Image'),
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                    child: Padding(
-                  padding: const EdgeInsets.all(30.0),
-                  child: Column(
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'First Name', // Your label text
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-                          TextFormField(
-                            controller: _firstNameController,
-                          ),
-                        ],
-                      ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Last Name', // Your label text
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-                          TextFormField(
-                            controller: _lastNameController,
-                          ),
-                        ],
-                      ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Username', // Your label text
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-                          TextFormField(
-                            controller: _userNameController,
-                          ),
-                        ],
-                      ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Email', // Your label text
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-                          TextFormField(
-                            controller: _emailController,
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                )),
-                Expanded(
-                    child: Column(
+      body: Form(
+          key: _formKey, // Attach the GlobalKey to the Form
+
+          child: SingleChildScrollView(
+              child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: Row(
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Phone number', // Your label text
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          if (selectedImage == null)
+                            Image.network(
+                              "https://localhost:44340${widget.user!.person?.profilePhoto}",
+                              width: 700,
+                              height: 400,
+                            )
+                          else if (selectedImage != null)
+                            Image.file(
+                              selectedImage!,
+                              width: 700,
+                              height: 400,
+                            ),
+                          ElevatedButton(
+                            onPressed: _pickImage,
+                            child: const Text('Select Image'),
                           ),
-                        ),
-                        TextFormField(
-                          controller: _phoneNumberController,
-                        ),
-                      ],
-                    ),
-                    DropdownButtonFormField<String>(
-                      value: widget.user?.userRoles?.isNotEmpty == true
-                          ? widget.user!.userRoles![0].role?.id.toString()
-                          : null, // Set the initial value (if userRoles is not empty)
-                      onChanged: (String? newValue) {
-                        setState(() {
-                          if (widget.user?.userRoles?.isNotEmpty == true) {
-                            // Find the corresponding ApplicationRole object
-                            widget.user!.userRoles![0].role =
-                                roleResult?.result.firstWhere(
-                              (role) => role.id.toString() == newValue,
-                              orElse: () =>
-                                  ApplicationRole(), // Provide a default value
-                            );
-                          }
-                        });
-                      },
-                      items: (roleResult?.result ?? [])
-                          .map<DropdownMenuItem<String>>(
-                              (ApplicationRole? role) {
-                        if (role != null && role.name != null) {
-                          return DropdownMenuItem<String>(
-                            value: role.id.toString(),
-                            child: Text(role.name!),
-                          );
-                        } else {
-                          return const DropdownMenuItem<String>(
-                            value: null,
-                            child: Text('Undefined'),
-                          );
-                        }
-                      }).toList(),
-                      decoration: const InputDecoration(
-                        labelText: 'Role',
+                        ],
                       ),
                     ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Address', // Your label text
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
-                        TextFormField(
-                          controller: _addressController,
-                        ),
-                      ],
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Postal code', // Your label text
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
-                        TextFormField(
-                          controller: _postalCodeController,
-                        ),
-                      ],
-                    ),
-                  ],
-                )),
-                const SizedBox(
-                  width: 20,
-                ),
-                Expanded(
-                    child: Column(
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'JMBG', // Your label text
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
-                        TextFormField(
-                          controller: _jmbgController,
-                        ),
-                      ],
-                    ),
-                    DropdownButtonFormField<City?>(
-                      value: widget.user?.person
-                          ?.placeOfResidence, // Set the initial value (selectedCity is a City? variable)
-                      onChanged: (City? newValue) {
-                        setState(() {
-                          // Update the selected value when the user makes a selection
-                          widget.user?.person?.placeOfResidence = newValue;
-                          widget.user?.person?.placeOfResidence?.id =
-                              newValue?.id;
-                          widget.user?.person?.placeOfResidenceId =
-                              newValue?.id;
-                        });
-                      },
-                      items: (cityResult?.result ?? [])
-                          .map<DropdownMenuItem<City?>>(
-                        (City? city) {
-                          if (city != null && city.name != null) {
-                            return DropdownMenuItem<City?>(
-                              value: city, // Ensure each value is unique
-                              child: Text(city.name!),
-                            );
-                          } else {
-                            return const DropdownMenuItem<City?>(
-                              value:
-                                  null, // Provide a default value or handle null differently
-                              child: Text(
-                                'Undefined', // Display something meaningful for null values
+                    Expanded(
+                        child: Padding(
+                      padding: const EdgeInsets.all(30.0),
+                      child: Column(
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'First Name', // Your label text
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
                               ),
-                            );
-                          }
-                        },
-                      ).toList(),
-                      decoration: const InputDecoration(
-                        labelText: 'City of residence',
+                              TextFormField(
+                                controller: _firstNameController,
+                                validator: (value) {
+                                  if (value!.isEmpty) {
+                                    return 'This field is required.';
+                                  }
+                                  return null;
+                                },
+                              ),
+                            ],
+                          ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Last Name', // Your label text
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
+                              TextFormField(
+                                controller: _lastNameController,
+                                validator: (value) {
+                                  if (value!.isEmpty) {
+                                    return 'This field is required.';
+                                  }
+                                  return null;
+                                },
+                              ),
+                            ],
+                          ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Username', // Your label text
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
+                              TextFormField(
+                                controller: _userNameController,
+                                validator: (value) {
+                                  if (value!.isEmpty) {
+                                    return 'This field is required.';
+                                  }
+                                  return null;
+                                },
+                              ),
+                            ],
+                          ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Email', // Your label text
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
+                              TextFormField(
+                                controller: _emailController,
+                                validator: (value) {
+                                  if (value!.isEmpty) {
+                                    return 'This field is required.';
+                                  }
+                                  return null;
+                                },
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
-                    ),
-                    Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        const Text(
-                          'Date of Birth',
-                          style: TextStyle(fontSize: 20),
-                        ),
-                        const SizedBox(
-                          height: 5.0,
-                        ),
-                        Text(
-                          "${widget.user?.person?.birthDate?.toLocal()}"
-                              .split(' ')[0],
-                          style: const TextStyle(
-                              fontSize: 18, fontWeight: FontWeight.bold),
-                        ),
-                        ElevatedButton(
-                          onPressed: () => _selectDate(
-                              context, widget.user?.person?.birthDate),
-                          child: const Text('Select Date'),
-                        ),
-                      ],
-                    ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    )),
+                    Expanded(
+                        child: Column(
                       children: [
                         Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
-                              'Gender:',
+                              'Phone number',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                            TextFormField(
+                              controller: _phoneNumberController,
+                              validator: (value) {
+                                if (value!.isEmpty) {
+                                  return 'This field is required.';
+                                }
+                                return null;
+                              },
+                            ),
+                          ],
+                        ),
+                        DropdownButtonFormField<String>(
+                          value: widget.user?.userRoles?.isNotEmpty == true
+                              ? widget.user!.userRoles![0].role?.id.toString()
+                              : null, // Set the initial value (if userRoles is not empty)
+                          onChanged: (String? newValue) {
+                            setState(() {
+                              if (widget.user?.userRoles?.isNotEmpty == true) {
+                                // Find the corresponding ApplicationRole object
+                                widget.user!.userRoles![0].role =
+                                    roleResult?.result.firstWhere(
+                                  (role) => role.id.toString() == newValue,
+                                  orElse: () =>
+                                      ApplicationRole(), // Provide a default value
+                                );
+                              }
+                            });
+                          },
+                          items: (roleResult?.result ?? [])
+                              .map<DropdownMenuItem<String>>(
+                                  (ApplicationRole? role) {
+                            if (role != null && role.name != null) {
+                              return DropdownMenuItem<String>(
+                                value: role.id.toString(),
+                                child: Text(role.name!),
+                              );
+                            } else {
+                              return const DropdownMenuItem<String>(
+                                value: null,
+                                child: Text('Undefined'),
+                              );
+                            }
+                          }).toList(),
+                          decoration: const InputDecoration(
+                            labelText: 'Role',
+                          ),
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Address', // Your label text
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                            TextFormField(
+                              controller: _addressController,
+                              validator: (value) {
+                                if (value!.isEmpty) {
+                                  return 'This field is required.';
+                                }
+                                return null;
+                              },
+                            ),
+                          ],
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Postal code', // Your label text
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                            TextFormField(
+                              controller: _postalCodeController,
+                              validator: (value) {
+                                if (value!.isEmpty) {
+                                  return 'This field is required.';
+                                }
+                                return null;
+                              },
+                            ),
+                          ],
+                        ),
+                      ],
+                    )),
+                    const SizedBox(
+                      width: 20,
+                    ),
+                    Expanded(
+                        child: Column(
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'JMBG', // Your label text
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                            TextFormField(
+                              controller: _jmbgController,
+                              validator: (value) {
+                                if (value!.isEmpty) {
+                                  return 'This field is required.';
+                                }
+                                return null;
+                              },
+                            ),
+                          ],
+                        ),
+                        DropdownButtonFormField<City?>(
+                          value: widget.user?.person
+                              ?.placeOfResidence, // Set the initial value (selectedCity is a City? variable)
+                          onChanged: (City? newValue) {
+                            setState(() {
+                              // Update the selected value when the user makes a selection
+                              widget.user?.person?.placeOfResidence = newValue;
+                              widget.user?.person?.placeOfResidence?.id =
+                                  newValue?.id;
+                              widget.user?.person?.placeOfResidenceId =
+                                  newValue?.id;
+                            });
+                          },
+                          items: (cityResult?.result ?? [])
+                              .map<DropdownMenuItem<City?>>(
+                            (City? city) {
+                              if (city != null && city.name != null) {
+                                return DropdownMenuItem<City?>(
+                                  value: city, // Ensure each value is unique
+                                  child: Text(city.name!),
+                                );
+                              } else {
+                                return const DropdownMenuItem<City?>(
+                                  value:
+                                      null, // Provide a default value or handle null differently
+                                  child: Text(
+                                    'Undefined', // Display something meaningful for null values
+                                  ),
+                                );
+                              }
+                            },
+                          ).toList(),
+                          decoration: const InputDecoration(
+                            labelText: 'City of residence',
+                          ),
+                        ),
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            const Text(
+                              'Date of Birth',
                               style: TextStyle(fontSize: 20),
                             ),
-                            const SizedBox(height: 5.0),
-                            DropdownButton<int>(
-                              value: widget.user?.person?.gender,
-                              onChanged: (int? newValue) {
-                                if (newValue != null) {
-                                  _onGenderChanged(newValue);
-                                }
-                              },
-                              items: const [
-                                DropdownMenuItem<int>(
-                                  value: 0,
-                                  child: Text('Male'),
+                            const SizedBox(
+                              height: 5.0,
+                            ),
+                            Text(
+                              "${widget.user?.person?.birthDate?.toLocal()}"
+                                  .split(' ')[0],
+                              style: const TextStyle(
+                                  fontSize: 18, fontWeight: FontWeight.bold),
+                            ),
+                            ElevatedButton(
+                              onPressed: () => _selectDate(
+                                  context, widget.user?.person?.birthDate),
+                              child: const Text('Select Date'),
+                            ),
+                          ],
+                        ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Column(
+                              children: [
+                                const Text(
+                                  'Gender:',
+                                  style: TextStyle(fontSize: 20),
                                 ),
-                                DropdownMenuItem<int>(
-                                  value: 1,
-                                  child: Text('Female'),
+                                const SizedBox(height: 5.0),
+                                DropdownButton<int>(
+                                  value: widget.user?.person?.gender,
+                                  onChanged: (int? newValue) {
+                                    if (newValue != null) {
+                                      _onGenderChanged(newValue);
+                                    }
+                                  },
+                                  items: const [
+                                    DropdownMenuItem<int>(
+                                      value: 0,
+                                      child: Text('Male'),
+                                    ),
+                                    DropdownMenuItem<int>(
+                                      value: 1,
+                                      child: Text('Female'),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
                           ],
                         ),
                       ],
-                    ),
-                  ],
-                ))
-              ],
-            ),
-          ),
-          buildUserRoleRow(widget.user!),
-          Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: SizedBox(
-              height: 50,
-              width: 90,
-              child: ElevatedButton(
-                onPressed: () async {
-                  await _updateEmployee();
-                },
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.edit), // Edit icon
-                    SizedBox(width: 8),
-                    Text('Edit'),
+                    ))
                   ],
                 ),
               ),
-            ),
-          ),
-        ],
-      )),
+              buildUserRoleRow(widget.user!),
+              Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: SizedBox(
+                  height: 50,
+                  width: 90,
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      await _updateEmployee();
+                    },
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.edit), // Edit icon
+                        SizedBox(width: 8),
+                        Text('Edit'),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ))),
     );
   }
 }
