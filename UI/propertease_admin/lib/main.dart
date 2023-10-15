@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:propertease_admin/models/property_reservation.dart';
 import 'package:propertease_admin/models/property_type.dart';
+import 'package:propertease_admin/providers/application_role_provider.dart';
 import 'package:propertease_admin/providers/city_provider.dart';
 import 'package:propertease_admin/providers/image_provider.dart';
 import 'package:propertease_admin/providers/notification_provider.dart';
@@ -23,6 +24,7 @@ void main() {
       ChangeNotifierProvider(create: (_) => PropertyReservationProvider()),
       ChangeNotifierProvider(create: (_) => NotificationProvider()),
       ChangeNotifierProvider(create: (_) => UserProvider()),
+      ChangeNotifierProvider(create: (_) => RoleProvider()),
     ],
     child: const MyApp(),
   ));

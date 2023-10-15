@@ -4,6 +4,7 @@ import 'package:propertease_admin/models/city.dart';
 import 'package:propertease_admin/models/search_result.dart';
 import 'package:propertease_admin/providers/application_user_provider.dart';
 import 'package:propertease_admin/screens/users/user_detail_screen.dart';
+import 'package:propertease_admin/screens/users/user_edit_screen.dart';
 import 'package:propertease_admin/widgets/master_screen.dart';
 import 'package:provider/provider.dart';
 
@@ -97,21 +98,44 @@ class UserListWidgetState extends State<UserListWidget> {
                   color: Color(0xFF115892)),
             ),
             const Spacer(),
-            Container(
-              height: 50,
-              child: ElevatedButton(
-                onPressed: () {
-                  // Add your button's onPressed logic here
-                },
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.add), // Add your desired icon
-                    SizedBox(width: 8), // Adjust the width as needed
-                    Text("Add new user"), // Text for the button
-                  ],
+            Row(
+              children: [
+                Container(
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      // Add your button's onPressed logic here
+                    },
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.add), // Add your desired icon
+                        SizedBox(width: 8), // Adjust the width as needed
+                        Text("Add new renter"), // Text for the button
+                      ],
+                    ),
+                  ),
                 ),
-              ),
+                SizedBox(
+                  width: 15,
+                ),
+                Container(
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      // Add your button's onPressed logic here
+                    },
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.add), // Add your desired icon
+                        SizedBox(width: 8), // Adjust the width as needed
+                        Text("Add new client"), // Text for the button
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(
               width: 100,
@@ -332,7 +356,13 @@ class UserListWidgetState extends State<UserListWidget> {
                                 const SizedBox(width: 16),
                                 InkWell(
                                   onTap: () {
-                                    print('Edit');
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (context) => UserEditScreen(
+                                          user: e,
+                                        ),
+                                      ),
+                                    );
                                   },
                                   child: const Icon(Icons.edit),
                                 ),

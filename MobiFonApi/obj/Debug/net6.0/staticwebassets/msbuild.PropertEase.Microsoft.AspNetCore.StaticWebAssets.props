@@ -592,6 +592,22 @@
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
       <OriginalItemSpec>$([System.IO.Path]::GetFullPath($(MSBuildThisFileDirectory)..\staticwebassets\uploads\images\istockphoto-1183338499-612x612_f345da28-3259-446d-b17c-15f28560d1d3.jpg))</OriginalItemSpec>
     </StaticWebAsset>
+    <StaticWebAsset Include="$([System.IO.Path]::GetFullPath($(MSBuildThisFileDirectory)..\staticwebassets\uploads\images\istockphoto-1183338499-612x612_fe1b54f3-2cfb-4ea6-bfe4-f3593b5d66cc.jpg))">
+      <SourceType>Package</SourceType>
+      <SourceId>PropertEase</SourceId>
+      <ContentRoot>$(MSBuildThisFileDirectory)..\staticwebassets\</ContentRoot>
+      <BasePath>_content/PropertEase</BasePath>
+      <RelativePath>uploads/images/istockphoto-1183338499-612x612_fe1b54f3-2cfb-4ea6-bfe4-f3593b5d66cc.jpg</RelativePath>
+      <AssetKind>All</AssetKind>
+      <AssetMode>All</AssetMode>
+      <AssetRole>Primary</AssetRole>
+      <RelatedAsset></RelatedAsset>
+      <AssetTraitName></AssetTraitName>
+      <AssetTraitValue></AssetTraitValue>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      <OriginalItemSpec>$([System.IO.Path]::GetFullPath($(MSBuildThisFileDirectory)..\staticwebassets\uploads\images\istockphoto-1183338499-612x612_fe1b54f3-2cfb-4ea6-bfe4-f3593b5d66cc.jpg))</OriginalItemSpec>
+    </StaticWebAsset>
     <StaticWebAsset Include="$([System.IO.Path]::GetFullPath($(MSBuildThisFileDirectory)..\staticwebassets\uploads\images\leads check_2e09c9cc-7d56-4535-ab86-ea32a3098a7f.png))">
       <SourceType>Package</SourceType>
       <SourceId>PropertEase</SourceId>

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/http.dart';
+import 'package:http_parser/http_parser.dart' as http_parser;
 import 'package:propertease_admin/models/application_user.dart';
 import 'package:propertease_admin/providers/base_provider.dart';
 
@@ -89,6 +90,61 @@ class UserProvider with ChangeNotifier {
       }
     } catch (e) {
       throw Exception(response.statusCode);
+    }
+  }
+
+  Future<void> updateEmployee(ApplicationUser employee, int id) async {
+    try {
+      final url = Uri.parse("https://localhost:44340/api/Employee/Edit/$id");
+      final request = http.MultipartRequest('PUT', url);
+
+      request.fields['Id'] = employee.id.toString();
+      request.fields['Email'] = employee.email ?? '';
+      request.fields['UserName'] = employee.userName ?? '';
+      request.fields['FirstName'] = employee.person?.firstName ?? '';
+      request.fields['LastName'] = employee.person?.lastName ?? '';
+      request.fields['BirthDate'] =
+          employee.person?.birthDate?.toIso8601String() ?? '';
+      request.fields['Gender'] = employee.person?.gender?.toString() ?? '';
+      request.fields['ProfilePhoto'] = employee.person?.profilePhoto ?? '';
+      request.fields['ProfilePhotoThumbnail'] =
+          employee.person?.profilePhotoThumbnail ?? '';
+      request.fields['BirthPlaceId'] =
+          employee.person?.birthPlaceId?.toString() ?? '';
+      request.fields['Jmbg'] = employee.person?.jmbg ?? '';
+      request.fields['Qualifications'] = employee.person?.qualifications ?? '';
+      request.fields['PlaceOfResidenceId'] =
+          employee.person?.placeOfResidenceId?.toString() ?? '';
+      request.fields['MarriageStatus'] =
+          employee.person?.marriageStatus?.toString() ?? '';
+      request.fields['Nationality'] = employee.person?.nationality ?? '';
+      request.fields['Citizenship'] = employee.person?.citizenship ?? '';
+      request.fields['WorkExperience'] =
+          employee.person?.workExperience.toString() ?? '';
+      request.fields['Address'] = employee.person?.address ?? '';
+      request.fields['PostCode'] = employee.person?.postCode ?? '';
+      request.fields['PhoneNumber'] = employee.phoneNumber ?? '';
+      request.fields['Biography'] = employee.person?.biography ?? '';
+      request.fields['Position'] = employee.person?.position.toString() ?? '';
+      request.fields['DateOfEmployment'] =
+          employee.person?.dateOfEmployment!.toIso8601String() ?? '';
+      request.fields['Pay'] = employee.person?.pay.toString() ?? '';
+
+      if (employee.file != null) {
+        request.files.add(
+          await http.MultipartFile.fromPath('File', employee.file!.path,
+              contentType: http_parser.MediaType('image', 'jpeg')),
+        );
+      }
+
+      final response = await request.send();
+      if (response.statusCode == 200) {
+        // Handle a successful response, if needed
+      } else {
+        print('Error: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Err: ${e.toString()}');
     }
   }
 
