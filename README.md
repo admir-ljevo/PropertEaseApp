@@ -16,5 +16,9 @@ The application is yet to be finished, there are still some major features left 
 
 ![image](https://github.com/admir-ljevo/PropertEaseApp/assets/82807221/d27915ff-8f34-47c6-8639-1b95eedaed5a)
 ![image](https://github.com/admir-ljevo/PropertEaseApp/assets/82807221/cb94c4fc-b75a-4950-a2a3-8eceef42e8c2)
-![image](https://github.com/admir-ljevo/PropertEaseApp/assets/82807221/a0d25e7f-7895-4d39-8ffb-3558f5e660b9)
-![image](https://github.com/admir-ljevo/PropertEaseApp/assets/82807221/19e1569d-ee0d-4bcd-9cd6-de10a554752c)
+
+![image](https://github.com/admir-ljevo/PropertEaseApp/assets/82807221/b349e206-b8c1-4b79-8b42-9b7fa3450861)
+
+
+![image](https://github.com/admir-ljevo/PropertEaseApp/assets/82807221/84721b4f-2214-4598-aa71-06153d3fc7ba)
+
