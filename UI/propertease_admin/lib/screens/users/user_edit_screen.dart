@@ -434,10 +434,18 @@ class UserEditScreenState extends State<UserEditScreen> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          if (selectedImage == null)
+                          if (selectedImage == null &&
+                              widget.user?.person?.profilePhoto != null)
                             Image.network(
                               "https://localhost:44340${widget.user!.person?.profilePhoto}",
                               width: 700,
+                              height: 400,
+                            )
+                          else if (selectedImage == null &&
+                              widget.user?.person?.profilePhoto == null)
+                            Image.asset(
+                              "assets/images/user_placeholder.jpg",
+                              width: 600,
                               height: 400,
                             )
                           else if (selectedImage != null)

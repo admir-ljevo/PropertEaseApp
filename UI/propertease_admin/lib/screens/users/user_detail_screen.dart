@@ -302,12 +302,15 @@ class UserDetailScreenState extends State<UserDetailScreen> {
           child: Container(
             constraints: const BoxConstraints(
               maxWidth: 600, // Set the maximum width for the image
-              maxHeight: 600, // Set the maximum height for the image
+              maxHeight: 400, // Set the maximum height for the image
             ),
-            child: Image.network(
-              "https://localhost:44340/${widget.user?.person?.profilePhoto}",
-              fit: BoxFit.cover,
-            ),
+            child: widget.user?.person?.profilePhoto != null
+                ? Image.network(
+                    "https://localhost:44340/${widget.user?.person?.profilePhoto}",
+                    fit: BoxFit.cover,
+                  )
+                : Image.asset("assets/images/user_placeholder.jpg",
+                    fit: BoxFit.cover),
           ),
         ),
         Expanded(
@@ -672,10 +675,9 @@ class UserDetailScreenState extends State<UserDetailScreen> {
                         ),
                         padding: const EdgeInsets.all(10.0),
                         margin: const EdgeInsets.all(10.0),
-                        alignment:
-                            Alignment.center, // Set the fixed width you desire
+                        alignment: Alignment.center,
                         child: Text(
-                          widget.user?.person?.genderName ?? '',
+                          widget.user?.person?.gender == 0 ? 'Male' : 'Female',
                           style: const TextStyle(
                             color: Colors.black,
                           ),
@@ -694,15 +696,52 @@ class UserDetailScreenState extends State<UserDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // TODO: implement build
     return Scaffold(
       appBar: AppBar(
-        title: const Text("User edit screen"),
+        title: const Text("User detail screen"),
       ),
       body: SingleChildScrollView(
-          child: Column(
-        children: [buildUserDetailsRow(), buildUserRoleRow(widget.user!)],
-      )),
+        child: Column(
+          children: [
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.all(8.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.info, // Replace this with the icon of your choice
+                      color: Colors.blue, // Customize the icon color
+                      size: 24.0, // Adjust the icon size as needed
+                    ),
+                    SizedBox(
+                        width: 5), // Add spacing between the icon and the text
+                    Text(
+                      'User information',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 24, // Adjust the font size as needed
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const Divider(
+              // Add a divider
+              thickness: 2, // Customize the thickness of the divider
+              color: Colors.grey, // Customize the color of the divider
+            ),
+            buildUserDetailsRow(),
+            const Divider(
+              // Add a divider
+              thickness: 2, // Customize the thickness of the divider
+              color: Colors.grey, // Customize the color of the divider
+            ),
+            buildUserRoleRow(widget.user!),
+          ],
+        ),
+      ),
     );
   }
 }

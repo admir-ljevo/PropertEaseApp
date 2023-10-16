@@ -45,8 +45,13 @@ namespace MobiFon.Controllers
             return Ok(await ApplicationUsersService.EditClient(entity));
         }
         [HttpPost("Add")]
-        public async Task<IActionResult> Add(ClientInsertDto entity)
+        public async Task<IActionResult> Add([FromForm]ClientInsertDto entity)
         {
+            var file = entity.File;
+            if (file != null)
+            {
+                entity.ProfilePhoto = await _fileManager.UploadFile(file);
+            }
             var newClient = await ApplicationUsersService.AddClientAsync(entity);
             return Ok(newClient);
         }

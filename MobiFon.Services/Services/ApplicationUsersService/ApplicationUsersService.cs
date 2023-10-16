@@ -43,47 +43,7 @@ namespace MobiFon.Services.Services.ApplicationUsersService
             return user;
         }
 
-        public async Task<ApplicationUserDto> AddClientAsync(ClientInsertDto user)
-        {
-            var newUser = new ApplicationUserDto();
-            newUser.Person = new PersonDto
-            {
-                FirstName = user.FirstName,
-                LastName = user.LastName,
-                Address = user.Address,
-                BirthDate = user.BirthDate,
-                MarriageStatus = user.MarriageStatus,
-                PostCode = user.PostCode,
-                Gender = user.Gender,
-                Biography = "",
-            };
-            newUser.Active = true;
-            newUser.Email = user.Email;
-            newUser.NormalizedEmail = user.Email.ToUpper();
-            newUser.UserName = user.UserName;
-            newUser.NormalizedUserName = user.UserName.ToUpper();
-            newUser.PhoneNumber = user.PhoneNumber;
-            newUser.EmailConfirmed = true;
-            newUser.ConcurrencyStamp = Guid.NewGuid().ToString();
-            newUser.PasswordHash = _passwordHasher.HashPassword(new ApplicationUser(), user.Password);
-            newUser.IsClient = true;
-            
-            newUser = await _unitOfWork.ApplicationUsersRepository.AddAsync(newUser);
-            await _unitOfWork.SaveChangesAsync();
-
-            var role = await _applicationRolesRepository.GetByRoleLevelOrName((int)Role.Client, Role.Client.ToString());
-            await _applicationUserRolesRepository.AddAsync(new ApplicationUserRoleDto
-            {
-                UserId = newUser.Id,
-                RoleId = role.Id
-            });
-            await _unitOfWork.SaveChangesAsync();
-
-            return newUser;
-
-
-        }
-
+      
         public async Task<ApplicationUserDto> AddEmployeeAsync(EmployeeInsertDto user)
         {
             var newUser = new ApplicationUserDto();
@@ -142,6 +102,60 @@ namespace MobiFon.Services.Services.ApplicationUsersService
         {
             _unitOfWork.PersonsRepository.Update(entityDto.Person);
             await _unitOfWork.SaveChangesAsync();
+        }
+          public async Task<ApplicationUserDto> AddClientAsync(ClientInsertDto user)
+        {
+            var newUser = new ApplicationUserDto();
+            newUser.Person = new PersonDto();
+            newUser.Person.FirstName = user.FirstName;
+            newUser.Person.LastName = user.LastName;
+            newUser.Person.MarriageStatus = 0;
+            newUser.Person.Citizenship = "";
+            newUser.Person.Biography = "";
+            newUser.Person.MembershipCard = false;
+            newUser.Person.BirthDate = user.BirthDate;
+            newUser.Person.Address = user.Address;
+            newUser.Person.PostCode = user.PostCode;
+            newUser.Person.BirthPlaceId = user.BirthPlaceId;
+            newUser.Person.DateOfEmployment = null;
+            newUser.Person.Gender = user.Gender;
+            newUser.Person.JMBG = user.Jmbg;
+            newUser.Person.Nationality = null;
+            newUser.Person.Pay = 0;
+            newUser.Person.PlaceOfResidenceId = user.PlaceOfResidenceId;
+            newUser.Person.Position = 0;
+            newUser.Person.ProfilePhoto = user.ProfilePhoto;
+            newUser.Person.ProfilePhotoThumbnail = user.ProfilePhoto;
+            newUser.Person.Qualifications = "";
+            newUser.Person.WorkExperience = false;
+
+            newUser.Person.PlaceOfResidence = null;
+            newUser.Person.BirthPlace = null;
+            newUser.Active = true;
+            newUser.Email = user.Email;
+            newUser.NormalizedEmail = user.Email.ToUpper();
+            newUser.UserName = user.UserName;
+            newUser.NormalizedUserName = user.UserName.ToUpper();
+            newUser.PhoneNumber = user.PhoneNumber;
+            newUser.EmailConfirmed = true;
+            newUser.ConcurrencyStamp = Guid.NewGuid().ToString();
+            newUser.PasswordHash = _passwordHasher.HashPassword(new ApplicationUser(), user.Password);
+            newUser.IsClient = true;
+            
+            newUser = await _unitOfWork.ApplicationUsersRepository.AddAsync(newUser);
+            await _unitOfWork.SaveChangesAsync();
+
+            var role = await _applicationRolesRepository.GetByRoleLevelOrName((int)Role.Client, Role.Client.ToString());
+            await _applicationUserRolesRepository.AddAsync(new ApplicationUserRoleDto
+            {
+                UserId = newUser.Id,
+                RoleId = role.Id
+            });
+            await _unitOfWork.SaveChangesAsync();
+
+            return newUser;
+
+
         }
 
         public async Task<ApplicationUserDto> EditClient(ClientUpdateDto user)
