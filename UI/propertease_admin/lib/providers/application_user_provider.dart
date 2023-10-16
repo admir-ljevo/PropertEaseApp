@@ -93,6 +93,47 @@ class UserProvider with ChangeNotifier {
     }
   }
 
+  Future<void> updateClient(ApplicationUser client, int id) async {
+    try {
+      final url = Uri.parse("https://localhost:44340/api/Clients/Edit/$id");
+      final request = http.MultipartRequest('PUT', url);
+      request.fields['Id'] = client.id.toString();
+      request.fields['Email'] = client.email ?? '';
+      request.fields['UserName'] = client.userName ?? '';
+      request.fields['FirstName'] = client.person?.firstName ?? '';
+      request.fields['LastName'] = client.person?.lastName ?? '';
+      request.fields['BirthDate'] =
+          client.person?.birthDate?.toIso8601String() ?? '';
+      request.fields['Gender'] = client.person?.gender?.toString() ?? '';
+      request.fields['ProfilePhoto'] = client.person?.profilePhoto ?? '';
+      request.fields['ProfilePhotoThumbnail'] =
+          client.person?.profilePhotoThumbnail ?? '';
+      request.fields['BirthPlaceId'] =
+          client.person?.birthPlaceId?.toString() ?? '';
+      request.fields['Jmbg'] = client.person?.jmbg ?? '';
+      request.fields['PlaceOfResidenceId'] =
+          client.person?.placeOfResidenceId?.toString() ?? '';
+
+      request.fields['Address'] = client.person?.address ?? '';
+      request.fields['PostCode'] = client.person?.postCode ?? '';
+      request.fields['PhoneNumber'] = client.phoneNumber ?? '';
+      request.fields['Position'] = client.person?.position.toString() ?? '';
+
+      if (client.file != null) {
+        request.files.add(
+          await http.MultipartFile.fromPath('File', client.file!.path,
+              contentType: http_parser.MediaType('image', 'jpeg')),
+        );
+      }
+      final response = await request.send();
+      if (response.statusCode != 200) {
+        print('Error: ${response.statusCode} ${response.toString()}');
+      }
+    } catch (e) {
+      print('Err: ${e.toString()}');
+    }
+  }
+
   Future<void> updateEmployee(ApplicationUser employee, int id) async {
     try {
       final url = Uri.parse("https://localhost:44340/api/Employee/Edit/$id");

@@ -29,7 +29,7 @@ namespace MobiFon.Controllers
         [HttpPost("Add")]
         public async Task<NotificationDto> Add([FromForm] NotificationUpsertDto notification)
         {
-            var file = notification.file;
+            var file = notification.File;
             if(file!=null)
                 notification.Image = await fileManager.UploadFile(file);
             
@@ -39,7 +39,7 @@ namespace MobiFon.Controllers
         [HttpPut("Edit/{id}")]
         public async Task<NotificationDto> Edit([FromForm] NotificationUpsertDto notification)
         {
-            var file = notification.file;
+            var file = notification.File;
             if (file != null)
                 notification.Image = await fileManager.UploadFile(file);
             return await notificationService.UpdateAsync(mapper.Map<NotificationDto>(notification));

@@ -1,5 +1,6 @@
 ﻿using MobiFon.Core.Dto.ApplicationUser;
 using MobiFon.Services.Services.BaseService;
+using PropertEase.Core.Dto.ApplicationUser;
 using PropertEase.Core.Filters;
 
 namespace MobiFon.Services.Services.ApplicationUsersService
@@ -14,6 +15,8 @@ namespace MobiFon.Services.Services.ApplicationUsersService
         Task<List<ApplicationUserDto>> GetEmployees();
         Task<List<ApplicationUserDto>> GetClients();
         Task<ApplicationUserDto> EditEmployee(EmployeeInsertDto user);
+        Task<ApplicationUserDto> EditClient(ClientUpdateDto user);
+
         Task ChangePhoto(ApplicationUserDto entityDto);
     }
 }

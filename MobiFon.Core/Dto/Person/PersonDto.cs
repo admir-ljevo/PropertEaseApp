@@ -34,7 +34,7 @@ namespace MobiFon.Core.Dto.Person
         public Position Position { get; set; }
         public string PositionName { get; set; }
    
-        public DateTime DateOfEmployment { get; set; }
+        public DateTime? DateOfEmployment { get; set; }
         public float Pay { get; set; }
         public bool MembershipCard { get; set; }
         public int ApplicationUserId { get; set; }

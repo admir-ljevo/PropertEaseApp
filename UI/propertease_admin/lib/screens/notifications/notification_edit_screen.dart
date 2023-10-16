@@ -1,7 +1,10 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:propertease_admin/models/new.dart';
+import 'package:propertease_admin/providers/notification_provider.dart';
+import 'package:provider/provider.dart';
 
 class NotificationEditScreen extends StatefulWidget {
   final New? notification;
@@ -15,13 +18,36 @@ class NotificationEditScreen extends StatefulWidget {
 class _NotificationEditScreenState extends State<NotificationEditScreen> {
   final TextEditingController textController = TextEditingController();
   final TextEditingController nameController = TextEditingController();
+  late NotificationProvider _notificationProvider;
   File? selectedImage;
+  late String imageUrl;
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _notificationProvider = context.read<NotificationProvider>();
+    imageUrl = "https://localhost:44340${widget.notification!.image}";
+  }
+
+  Future<File> downloadFile(String url, String localPath) async {
+    final response = await http.get(Uri.parse(url));
+
+    if (response.statusCode == 200) {
+      final file = File(localPath);
+      await file.writeAsBytes(response.bodyBytes);
+      return file;
+    } else {
+      throw Exception('Failed to download file from the URL');
+    }
+  }
 
   @override
   void initState() {
     super.initState();
     textController.text = widget.notification?.text ?? '';
     nameController.text = widget.notification?.name ?? '';
+    imageUrl = "https://localhost:44340${widget.notification!.image}";
+
+    _notificationProvider = context.read<NotificationProvider>();
   }
 
   Future<void> _pickImage() async {
@@ -35,25 +61,36 @@ class _NotificationEditScreenState extends State<NotificationEditScreen> {
     }
   }
 
-  void saveAndReturn() {
+  void saveAndReturn() async {
+    if (nameController.text.isEmpty || textController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Title and Notification Text cannot be empty'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     New updatedNotification = widget.notification!;
     updatedNotification.text = textController.text;
     updatedNotification.name = nameController.text;
+    updatedNotification.file = widget.notification!.file;
+    updatedNotification.image = widget.notification!.image;
 
-    // If a new image is selected, update it
     if (selectedImage != null) {
       updatedNotification.file = selectedImage;
       updatedNotification.image = selectedImage?.path;
     }
-
-    // Use Navigator.pop to return the updated notification to the detail screen
+    await _notificationProvider.updateNotification(
+        updatedNotification, updatedNotification.id!);
     Navigator.pop(context, updatedNotification);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Edit notification screen')),
+      appBar: AppBar(title: const Text('Edit notification screen')),
       body: SingleChildScrollView(
         child: Column(
           children: [

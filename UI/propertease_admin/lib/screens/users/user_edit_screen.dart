@@ -45,7 +45,7 @@ class UserEditScreenState extends State<UserEditScreen> {
 
   DateTime selectedDate = DateTime.now();
   int selectedGender = 0; // 0 for Male, 1 for Female
-
+  int selectedRole = 0;
   void _onGenderChanged(int newValue) {
     setState(() {
       selectedGender = newValue;
@@ -99,7 +99,12 @@ class UserEditScreenState extends State<UserEditScreen> {
     editedUser.person?.qualifications = _qualificationsController.text;
     editedUser.email = _emailController.text;
     if (_formKey.currentState!.validate()) {
-      await _userProvider.updateEmployee(editedUser, editedUser.id!);
+      if (widget.user?.userRoles?[0].role?.id == 3) {
+        await _userProvider.updateEmployee(editedUser, editedUser.id!);
+      }
+      if (widget.user?.userRoles?[0].role?.id == 4) {
+        await _userProvider.updateClient(editedUser, editedUser.id!);
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -564,40 +569,26 @@ class UserEditScreenState extends State<UserEditScreen> {
                             ),
                           ],
                         ),
-                        DropdownButtonFormField<String>(
-                          value: widget.user?.userRoles?.isNotEmpty == true
-                              ? widget.user!.userRoles![0].role?.id.toString()
-                              : null, // Set the initial value (if userRoles is not empty)
-                          onChanged: (String? newValue) {
-                            setState(() {
-                              if (widget.user?.userRoles?.isNotEmpty == true) {
-                                // Find the corresponding ApplicationRole object
-                                widget.user!.userRoles![0].role =
-                                    roleResult?.result.firstWhere(
-                                  (role) => role.id.toString() == newValue,
-                                  orElse: () =>
-                                      ApplicationRole(), // Provide a default value
-                                );
-                              }
-                            });
-                          },
-                          items: (roleResult?.result ?? [])
-                              .map<DropdownMenuItem<String>>(
-                                  (ApplicationRole? role) {
-                            if (role != null && role.name != null) {
-                              return DropdownMenuItem<String>(
-                                value: role.id.toString(),
-                                child: Text(role.name!),
-                              );
-                            } else {
-                              return const DropdownMenuItem<String>(
-                                value: null,
-                                child: Text('Undefined'),
-                              );
-                            }
-                          }).toList(),
-                          decoration: const InputDecoration(
-                            labelText: 'Role',
+                        Padding(
+                          padding: const EdgeInsets.all(10.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              const Text(
+                                'Role',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
+                              Text(
+                                widget.user?.userRoles?.isNotEmpty == true
+                                    ? widget.user!.userRoles![0].role?.name ??
+                                        'No Role Selected'
+                                    : 'No Role Selected',
+                                style: TextStyle(fontSize: 16),
+                              ),
+                            ],
                           ),
                         ),
                         Column(

@@ -1,6 +1,6 @@
 {
   "Version": 1,
-  "Hash": "KwnmeSMrJ/YQNwR+I196kbr5wxDFcrUXKoNKgDp+nOg=",
+  "Hash": "W3xjwyTDeaROc6YBRlBYO3X3Ho3vTTVQZwK4BSW5+YE=",
   "Source": "PropertEase",
   "BasePath": "_content/PropertEase",
   "Mode": "Default",
@@ -527,6 +527,23 @@
       "OriginalItemSpec": "wwwroot\\uploads\\images\\istockphoto-1183338499-612x612_71b8dc53-b39a-4bbd-b105-7dc4328d6737.jpg"
     },
     {
+      "Identity": "C:\\Users\\Admir\\Desktop\\PropertEaseApp\\MobiFonApi\\wwwroot\\uploads\\images\\istockphoto-1183338499-612x612_85edd96c-9ced-4692-9dfe-b0c51d0d2d46.jpg",
+      "SourceId": "PropertEase",
+      "SourceType": "Discovered",
+      "ContentRoot": "C:\\Users\\Admir\\Desktop\\PropertEaseApp\\MobiFonApi\\wwwroot\\",
+      "BasePath": "_content/PropertEase",
+      "RelativePath": "uploads/images/istockphoto-1183338499-612x612_85edd96c-9ced-4692-9dfe-b0c51d0d2d46.jpg",
+      "AssetKind": "All",
+      "AssetMode": "All",
+      "AssetRole": "Primary",
+      "RelatedAsset": "",
+      "AssetTraitName": "",
+      "AssetTraitValue": "",
+      "CopyToOutputDirectory": "Never",
+      "CopyToPublishDirectory": "PreserveNewest",
+      "OriginalItemSpec": "wwwroot\\uploads\\images\\istockphoto-1183338499-612x612_85edd96c-9ced-4692-9dfe-b0c51d0d2d46.jpg"
+    },
+    {
       "Identity": "C:\\Users\\Admir\\Desktop\\PropertEaseApp\\MobiFonApi\\wwwroot\\uploads\\images\\istockphoto-1183338499-612x612_bdfc6d37-4c41-4eb8-b9b8-faabf09e00fc.jpg",
       "SourceId": "PropertEase",
       "SourceType": "Discovered",
@@ -542,6 +559,23 @@
       "CopyToOutputDirectory": "Never",
       "CopyToPublishDirectory": "PreserveNewest",
       "OriginalItemSpec": "wwwroot\\uploads\\images\\istockphoto-1183338499-612x612_bdfc6d37-4c41-4eb8-b9b8-faabf09e00fc.jpg"
+    },
+    {
+      "Identity": "C:\\Users\\Admir\\Desktop\\PropertEaseApp\\MobiFonApi\\wwwroot\\uploads\\images\\istockphoto-1183338499-612x612_ca41727d-36fa-488d-a76f-9f4f2c1f46a2.jpg",
+      "SourceId": "PropertEase",
+      "SourceType": "Discovered",
+      "ContentRoot": "C:\\Users\\Admir\\Desktop\\PropertEaseApp\\MobiFonApi\\wwwroot\\",
+      "BasePath": "_content/PropertEase",
+      "RelativePath": "uploads/images/istockphoto-1183338499-612x612_ca41727d-36fa-488d-a76f-9f4f2c1f46a2.jpg",
+      "AssetKind": "All",
+      "AssetMode": "All",
+      "AssetRole": "Primary",
+      "RelatedAsset": "",
+      "AssetTraitName": "",
+      "AssetTraitValue": "",
+      "CopyToOutputDirectory": "Never",
+      "CopyToPublishDirectory": "PreserveNewest",
+      "OriginalItemSpec": "wwwroot\\uploads\\images\\istockphoto-1183338499-612x612_ca41727d-36fa-488d-a76f-9f4f2c1f46a2.jpg"
     },
     {
       "Identity": "C:\\Users\\Admir\\Desktop\\PropertEaseApp\\MobiFonApi\\wwwroot\\uploads\\images\\istockphoto-1183338499-612x612_caf1180d-3cbc-47fc-a92c-5a8943b29b9e.jpg",
@@ -935,6 +969,23 @@
       "OriginalItemSpec": "wwwroot\\uploads\\images\\w575_2286caee-02e6-4a01-b8c2-d3113b4bd154.jpg"
     },
     {
+      "Identity": "C:\\Users\\Admir\\Desktop\\PropertEaseApp\\MobiFonApi\\wwwroot\\uploads\\images\\w575_3ac91004-19b0-445f-8840-49c527756f52.jpg",
+      "SourceId": "PropertEase",
+      "SourceType": "Discovered",
+      "ContentRoot": "C:\\Users\\Admir\\Desktop\\PropertEaseApp\\MobiFonApi\\wwwroot\\",
+      "BasePath": "_content/PropertEase",
+      "RelativePath": "uploads/images/w575_3ac91004-19b0-445f-8840-49c527756f52.jpg",
+      "AssetKind": "All",
+      "AssetMode": "All",
+      "AssetRole": "Primary",
+      "RelatedAsset": "",
+      "AssetTraitName": "",
+      "AssetTraitValue": "",
+      "CopyToOutputDirectory": "Never",
+      "CopyToPublishDirectory": "PreserveNewest",
+      "OriginalItemSpec": "wwwroot\\uploads\\images\\w575_3ac91004-19b0-445f-8840-49c527756f52.jpg"
+    },
+    {
       "Identity": "C:\\Users\\Admir\\Desktop\\PropertEaseApp\\MobiFonApi\\wwwroot\\uploads\\images\\w575_3d66cf92-6eb4-4e77-8815-e8f9a3693f1e.jpg",
       "SourceId": "PropertEase",
       "SourceType": "Discovered",
@@ -986,6 +1037,23 @@
       "OriginalItemSpec": "wwwroot\\uploads\\images\\w575_69a3af1f-a702-4290-b357-69e2c2b8ef0b.jpg"
     },
     {
+      "Identity": "C:\\Users\\Admir\\Desktop\\PropertEaseApp\\MobiFonApi\\wwwroot\\uploads\\images\\w575_6d01d39d-119e-4647-9b0c-4a657e0e350a.jpg",
+      "SourceId": "PropertEase",
+      "SourceType": "Discovered",
+      "ContentRoot": "C:\\Users\\Admir\\Desktop\\PropertEaseApp\\MobiFonApi\\wwwroot\\",
+      "BasePath": "_content/PropertEase",
+      "RelativePath": "uploads/images/w575_6d01d39d-119e-4647-9b0c-4a657e0e350a.jpg",
+      "AssetKind": "All",
+      "AssetMode": "All",
+      "AssetRole": "Primary",
+      "RelatedAsset": "",
+      "AssetTraitName": "",
+      "AssetTraitValue": "",
+      "CopyToOutputDirectory": "Never",
+      "CopyToPublishDirectory": "PreserveNewest",
+      "OriginalItemSpec": "wwwroot\\uploads\\images\\w575_6d01d39d-119e-4647-9b0c-4a657e0e350a.jpg"
+    },
+    {
       "Identity": "C:\\Users\\Admir\\Desktop\\PropertEaseApp\\MobiFonApi\\wwwroot\\uploads\\images\\w575_7156bf5f-6090-4967-8825-42a7635819b7.jpg",
       "SourceId": "PropertEase",
       "SourceType": "Discovered",
@@ -1035,6 +1103,23 @@
       "CopyToOutputDirectory": "Never",
       "CopyToPublishDirectory": "PreserveNewest",
       "OriginalItemSpec": "wwwroot\\uploads\\images\\w575_85803811-92d8-406d-880f-9e75df5880f8.jpg"
+    },
+    {
+      "Identity": "C:\\Users\\Admir\\Desktop\\PropertEaseApp\\MobiFonApi\\wwwroot\\uploads\\images\\w575_d7210449-5a5d-473e-916a-1afe71b534c4.jpg",
+      "SourceId": "PropertEase",
+      "SourceType": "Discovered",
+      "ContentRoot": "C:\\Users\\Admir\\Desktop\\PropertEaseApp\\MobiFonApi\\wwwroot\\",
+      "BasePath": "_content/PropertEase",
+      "RelativePath": "uploads/images/w575_d7210449-5a5d-473e-916a-1afe71b534c4.jpg",
+      "AssetKind": "All",
+      "AssetMode": "All",
+      "AssetRole": "Primary",
+      "RelatedAsset": "",
+      "AssetTraitName": "",
+      "AssetTraitValue": "",
+      "CopyToOutputDirectory": "Never",
+      "CopyToPublishDirectory": "PreserveNewest",
+      "OriginalItemSpec": "wwwroot\\uploads\\images\\w575_d7210449-5a5d-473e-916a-1afe71b534c4.jpg"
     },
     {
       "Identity": "C:\\Users\\Admir\\Desktop\\PropertEaseApp\\MobiFonApi\\wwwroot\\uploads\\images\\w575_df3f9367-4f1c-447f-b48c-50e7cc7c3fcb.jpg",

@@ -16,6 +16,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Globalization;
 using PropertEase.Core.Filters;
+using PropertEase.Core.Dto.ApplicationUser;
 
 namespace MobiFon.Services.Services.ApplicationUsersService
 {
@@ -141,6 +142,68 @@ namespace MobiFon.Services.Services.ApplicationUsersService
         {
             _unitOfWork.PersonsRepository.Update(entityDto.Person);
             await _unitOfWork.SaveChangesAsync();
+        }
+
+        public async Task<ApplicationUserDto> EditClient(ClientUpdateDto user)
+        {
+            try
+            {
+                var editedUser = await _unitOfWork.ApplicationUsersRepository.GetByIdAsync(user.Id);
+                var editUser = await _unitOfWork.ApplicationUsersRepository.GetByIdAsync(user.Id);
+                editUser.Person.FirstName = user.FirstName;
+                editUser.Person.LastName = user.LastName;
+                editUser.Person.MarriageStatus = 0;
+                editUser.Person.Citizenship = "";
+                editUser.Person.Biography = "";
+                editUser.Person.MembershipCard = false;
+                editUser.Person.BirthDate = user.BirthDate;
+                editUser.Person.Address = user.Address;
+                editUser.Person.PostCode = user.PostCode;
+                editUser.Person.BirthPlaceId = user.BirthPlaceId;
+                editUser.Person.DateOfEmployment = null;
+                editUser.Person.Gender = user.Gender;
+                editUser.Person.JMBG = user.Jmbg;
+                editUser.Person.Nationality = null;
+                editUser.Person.Pay = 0;
+                editUser.Person.PlaceOfResidenceId = user.PlaceOfResidenceId;
+                editUser.Person.Position = 0;
+                editUser.Person.ProfilePhoto = user.ProfilePhoto;
+                editUser.Person.ProfilePhotoThumbnail = user.ProfilePhoto;
+                editUser.Person.Qualifications = "";
+                editUser.Person.WorkExperience = false;
+
+                editUser.Person.PlaceOfResidence = null;
+                editUser.Person.BirthPlace = null;
+
+                if (editUser.Person.PlaceOfResidenceId == 0)
+                {
+                    editUser.Person.PlaceOfResidenceId = null;
+                }
+                if (editUser.Person.BirthPlaceId == 0)
+                {
+                    editUser.Person.BirthPlaceId = null;
+                }
+                _unitOfWork.PersonsRepository.Update(editUser.Person);
+
+                editUser.Email = user.Email;
+                editUser.NormalizedEmail = user.Email.ToUpper();
+                editUser.UserName = user.UserName;
+                editUser.NormalizedUserName = user.UserName.ToUpper();
+                editUser.IsEmployee = false;
+                editedUser.IsClient = true;
+                editUser.PhoneNumber = user.PhoneNumber;
+                editUser.UserRoles = null;
+                editUser.Person = null;
+                _unitOfWork.ApplicationUsersRepository.Update(editUser);
+                await _unitOfWork.SaveChangesAsync();
+
+                return editUser;
+            }
+            catch (Exception ex)
+            {
+
+                throw new Exception(ex.Message);
+            }
         }
 
         public async Task<ApplicationUserDto> EditEmployee(EmployeeInsertDto user)

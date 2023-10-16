@@ -45,11 +45,14 @@ class NotificationProvider with ChangeNotifier {
       request.fields['Text'] = notification.text ?? '';
       request.fields['Image'] = notification.image ?? '';
       request.fields['Name'] = notification.name ?? '';
-      request.files.add(
-        await http.MultipartFile.fromPath('file', notification.file!.path,
-            contentType: http_parser.MediaType(
-                'image', 'jpeg')), // Set content type as needed
-      );
+      if (notification.file != null) {
+        request.files.add(
+          await http.MultipartFile.fromPath('file', notification.file!.path,
+              contentType: http_parser.MediaType(
+                  'image', 'jpeg')), // Set content type as needed
+        );
+      }
+
       final response = await request.send();
       if (response.statusCode == 200) {
         // Photo uploaded successfully, you can handle the response here
@@ -76,11 +79,14 @@ class NotificationProvider with ChangeNotifier {
       request.fields['Text'] = notification.text ?? '';
       request.fields['Image'] = notification.image ?? '';
       request.fields['Name'] = notification.name ?? '';
-      request.files.add(
-        await http.MultipartFile.fromPath('file', notification.file!.path,
-            contentType: http_parser.MediaType(
-                'image', 'jpeg')), // Set content type as needed
-      );
+
+      if (notification.file != null) {
+        request.files.add(
+          await http.MultipartFile.fromPath('file', notification.file!.path,
+              contentType: http_parser.MediaType(
+                  'image', 'jpeg')), // Set content type as needed
+        );
+      }
       final response = await request.send();
       if (response.statusCode == 200) {
         // Photo uploaded successfully, you can handle the response here
