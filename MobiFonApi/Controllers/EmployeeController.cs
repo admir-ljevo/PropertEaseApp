@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using MobiFon.Core.Dto.ApplicationUser;
 using MobiFon.Services.FileManager;
 using MobiFon.Services.Services.ApplicationUsersService;
+using PropertEase.Core.Dto.ApplicationUser;
 
 namespace PropertEase.Controllers
 {
@@ -31,7 +32,7 @@ namespace PropertEase.Controllers
         }
 
         [HttpPut("Edit/{id}")]
-        public async Task<IActionResult> Put(int id, [FromForm] EmployeeInsertDto entity)
+        public async Task<IActionResult> Put(int id, [FromForm] EmployeeUpdateDto entity)
         {
             var file = entity.File;
             if (file != null)

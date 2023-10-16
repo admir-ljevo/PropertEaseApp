@@ -478,7 +478,7 @@ class ClientAddScreenState extends State<ClientAddScreen> {
                             Text(
                               DateFormat('MM-dd-yyyy')
                                   .format(selectedDate), // Format the date
-                              style: TextStyle(
+                              style: const TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
                               ),

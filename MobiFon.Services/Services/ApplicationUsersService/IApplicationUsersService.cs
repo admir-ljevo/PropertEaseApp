@@ -14,7 +14,7 @@ namespace MobiFon.Services.Services.ApplicationUsersService
         Task<List<ApplicationUserDto>> GetFiltered(UserFilter filter);
         Task<List<ApplicationUserDto>> GetEmployees();
         Task<List<ApplicationUserDto>> GetClients();
-        Task<ApplicationUserDto> EditEmployee(EmployeeInsertDto user);
+        Task<ApplicationUserDto> EditEmployee(EmployeeUpdateDto user);
         Task<ApplicationUserDto> EditClient(ClientUpdateDto user);
 
         Task ChangePhoto(ApplicationUserDto entityDto);

@@ -4,6 +4,7 @@ import 'package:propertease_admin/models/city.dart';
 import 'package:propertease_admin/models/search_result.dart';
 import 'package:propertease_admin/providers/application_user_provider.dart';
 import 'package:propertease_admin/screens/users/client_add_screen.dart';
+import 'package:propertease_admin/screens/users/renter_add_screen.dart';
 import 'package:propertease_admin/screens/users/user_detail_screen.dart';
 import 'package:propertease_admin/screens/users/user_edit_screen.dart';
 import 'package:propertease_admin/widgets/master_screen.dart';
@@ -105,7 +106,11 @@ class UserListWidgetState extends State<UserListWidget> {
                   height: 50,
                   child: ElevatedButton(
                     onPressed: () {
-                      // Add your button's onPressed logic here
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => const RenterAddScreen(),
+                        ),
+                      );
                     },
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,

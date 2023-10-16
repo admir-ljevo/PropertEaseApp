@@ -81,7 +81,7 @@ namespace MobiFon.Services.Services.ApplicationUsersService
              newUser.EmailConfirmed = true;
             newUser.PhoneNumber = user.PhoneNumber;
             newUser.ConcurrencyStamp = Guid.NewGuid().ToString();
-            newUser.PasswordHash = _passwordHasher.HashPassword(new ApplicationUser(), passwd);
+            newUser.PasswordHash = _passwordHasher.HashPassword(new ApplicationUser(), user.Password);
             newUser.IsEmployee = true;
             newUser = await _unitOfWork.ApplicationUsersRepository.AddAsync(newUser);
             await _unitOfWork.SaveChangesAsync();
@@ -220,7 +220,7 @@ namespace MobiFon.Services.Services.ApplicationUsersService
             }
         }
 
-        public async Task<ApplicationUserDto> EditEmployee(EmployeeInsertDto user)
+        public async Task<ApplicationUserDto> EditEmployee(EmployeeUpdateDto user)
         {
             try
             {

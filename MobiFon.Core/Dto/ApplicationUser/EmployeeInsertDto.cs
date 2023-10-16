@@ -36,5 +36,6 @@ namespace MobiFon.Core.Dto.ApplicationUser
         public Position Position { get; set; }
         public DateTime DateOfEmployment { get; set; }
         public float Pay { get; set; }
+        public string Password { get; set; }
     }
 }
