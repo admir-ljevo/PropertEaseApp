@@ -7,7 +7,7 @@ The application is developed using following tech stack:
 
 The application is yet to be finished, there are still some major features left to be implemented. However, some of the screenshots of the application in its current state are listed below:
 
- ![image](https://github.com/admir-ljevo/PropertEaseApp/assets/82807221/7c2ad614-6e77-4c18-b9f8-87b4f0e31d13)
+![image](https://github.com/admir-ljevo/PropertEaseApp/assets/82807221/cdad422e-02fd-4273-966f-98a70bcd0fbe)
 ![image](https://github.com/admir-ljevo/PropertEaseApp/assets/82807221/13ffbac0-8985-4812-a98a-19f948adbfe8)
 ![image](https://github.com/admir-ljevo/PropertEaseApp/assets/82807221/a7bfb8c6-a91f-435b-8b6d-f9cb4251bf80)
 ![image](https://github.com/admir-ljevo/PropertEaseApp/assets/82807221/28082332-0cd7-4eac-9296-d9b545f63a7f)
