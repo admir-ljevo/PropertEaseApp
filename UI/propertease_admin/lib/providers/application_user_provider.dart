@@ -93,6 +93,37 @@ class UserProvider with ChangeNotifier {
     }
   }
 
+  Future<String?> signIn(String userName, String password) async {
+    try {
+      final url = Uri.parse("https://localhost:44340/Access/SignIn");
+      final response = await http.post(
+        url,
+        body: jsonEncode({
+          'userName': userName,
+          'password': password,
+          'rememberMe': false,
+        }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        // Successful login
+        final Map<String, dynamic> data = jsonDecode(response.body);
+        final String accessToken = data['token'];
+        final int roleId = data['user']['userRoles'][0]['role']['id'];
+        if (roleId == 3 || roleId == 1) {
+          return accessToken; // Return the access token
+        }
+      } else {
+        return null;
+      }
+    } catch (e) {
+      return null;
+    }
+  }
+
   Future<void> addClient(ApplicationUser client, String password) async {
     try {
       final url = Uri.parse("https://localhost:44340/api/Clients/Add");

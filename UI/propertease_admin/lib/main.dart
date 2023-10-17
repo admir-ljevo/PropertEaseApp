@@ -12,6 +12,7 @@ import 'package:propertease_admin/screens/property/property_list_screen.dart';
 import 'package:propertease_admin/screens/users/renter_add_screen.dart';
 import 'package:propertease_admin/utils/authorization.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'providers/application_user_provider.dart';
 
@@ -67,11 +68,68 @@ class MyApp extends StatelessWidget {
 //   }
 // }
 
-class LoginWidget extends StatelessWidget {
+class LoginWidget extends StatefulWidget {
   LoginWidget({super.key});
 
+  @override
+  State<StatefulWidget> createState() => LoginWidgetState();
+}
+
+class LoginWidgetState extends State<LoginWidget> {
   TextEditingController _usernameController = new TextEditingController();
   TextEditingController _passwordController = new TextEditingController();
+  late UserProvider _userProvider;
+  bool isObscure = true;
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    _userProvider = context.read<UserProvider>();
+  }
+
+  @override
+  void didChangeDependencies() {
+    // TODO: implement didChangeDependencies
+    super.didChangeDependencies();
+    _userProvider = context.read<UserProvider>();
+  }
+
+  void showUnsucessfullLoginMessage() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Wrong username and/or password '),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+
+  void showSucessfullLoginMessage(String username) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: <Widget>[
+            const Icon(
+              Icons.check_circle,
+              color: Colors.white,
+            ),
+            const SizedBox(width: 8),
+            Text('Welcome, $username',
+                style: const TextStyle(color: Colors.white)),
+          ],
+        ),
+        duration: const Duration(seconds: 10), // Show for 3 seconds
+        backgroundColor: Colors.green,
+        action: SnackBarAction(
+          label: 'Dismiss',
+          textColor: Colors.white,
+          onPressed: () {
+            // Handle the action if needed
+          },
+        ),
+        behavior: SnackBarBehavior.floating, // Adds a floating animation
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -89,7 +147,7 @@ class LoginWidget extends StatelessWidget {
               child: Column(
                 children: [
                   Image.asset(
-                    "assets/images/OIP.jpg",
+                    "assets/images/user_placeholder.jpg",
                     height: 100,
                     width: 100,
                   ),
@@ -106,31 +164,72 @@ class LoginWidget extends StatelessWidget {
                     height: 10,
                     width: 10,
                   ),
-                  TextField(
-                    decoration: const InputDecoration(
-                        labelText: "Password",
-                        prefixIcon: Icon(Icons.password)),
-                    controller: _passwordController,
+                  Stack(
+                    alignment:
+                        Alignment.centerRight, // Align the icon to the right
+                    children: [
+                      TextField(
+                        decoration: const InputDecoration(
+                          labelText: "Password",
+                          prefixIcon: Icon(Icons.password),
+                        ),
+                        controller: _passwordController,
+                        obscureText:
+                            isObscure, // Set obscureText based on the isObscure variable
+                      ),
+                      GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            isObscure =
+                                !isObscure; // Toggle the obscureText property
+                          });
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.only(
+                              right: 12.0), // Adjust the padding as needed
+                          child: Icon(
+                            isObscure
+                                ? Icons.visibility_off
+                                : Icons
+                                    .visibility, // Toggle between showing/hiding the password
+                            color: Colors.grey, // Customize the icon's color
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(
                     height: 10,
                     width: 10,
                   ),
                   ElevatedButton(
-                      onPressed: () {
-                        var password = _passwordController.text;
-                        var username = _usernameController.text;
-                        Authorization.username = username;
-                        Authorization.password = password;
-                        print(username + "  " + password);
+                    onPressed: () async {
+                      var password = _passwordController.text;
+                      var username = _usernameController.text;
+
+                      // Call the signIn function to authenticate
+                      final String? authToken = await _userProvider.signIn(
+                        _usernameController.text,
+                        _passwordController.text,
+                      );
+
+                      if (authToken != null) {
+                        final SharedPreferences prefs =
+                            await SharedPreferences.getInstance();
+                        prefs.setString('authToken', authToken);
+                        showSucessfullLoginMessage(username);
                         Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (context) => const PropertyListWidget(),
                           ),
                         );
-                      },
-                      child: const Text("Login")),
+                      } else {
+                        showUnsucessfullLoginMessage();
+                      }
+                    },
+                    child: const Text("Login"),
+                  ),
                   TextButton(
                     onPressed: () {
                       Navigator.of(context).push(
