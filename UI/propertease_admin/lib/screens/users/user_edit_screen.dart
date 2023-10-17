@@ -44,6 +44,7 @@ class UserEditScreenState extends State<UserEditScreen> {
   final TextEditingController _payController = TextEditingController();
 
   DateTime selectedDate = DateTime.now();
+  DateTime selectedEmploymentDate = DateTime.now();
   int selectedGender = 0; // 0 for Male, 1 for Female
   int selectedRole = 0;
   void _onGenderChanged(int newValue) {
@@ -54,19 +55,14 @@ class UserEditScreenState extends State<UserEditScreen> {
     });
   }
 
-  Future<void> _selectDate(BuildContext context, DateTime? date) async {
+  Future<DateTime?> _selectDate(BuildContext context, DateTime? date) async {
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: selectedDate,
-      firstDate: DateTime(2000),
+      initialDate: date ?? DateTime.now(),
+      firstDate: DateTime(1900),
       lastDate: DateTime(2101),
     );
-    if (picked != null && picked != selectedDate) {
-      setState(() {
-        selectedDate = picked;
-        date = selectedDate;
-      });
-    }
+    return picked;
   }
 
   Future<void> _pickImage() async {
@@ -297,8 +293,17 @@ class UserEditScreenState extends State<UserEditScreen> {
                           ),
                         ),
                         ElevatedButton(
-                          onPressed: () => _selectDate(
-                              context, widget.user?.person?.dateOfEmployment),
+                          onPressed: () async {
+                            DateTime? newDate =
+                                await _selectDate(context, selectedDate);
+                            if (newDate != null) {
+                              setState(() {
+                                selectedEmploymentDate = newDate;
+                                widget.user?.person?.dateOfEmployment =
+                                    selectedEmploymentDate;
+                              });
+                            }
+                          },
                           child: const Text('Select Date'),
                         ),
                       ],
@@ -426,6 +431,36 @@ class UserEditScreenState extends State<UserEditScreen> {
           child: SingleChildScrollView(
               child: Column(
             children: [
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(8.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.person,
+                        color: Colors.blue,
+                        size: 30.0,
+                      ),
+                      SizedBox(width: 5),
+                      Text(
+                        'User information',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 24,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const Padding(
+                padding: EdgeInsets.all(10.0),
+                child: Divider(
+                  thickness: 2,
+                  color: Colors.grey,
+                ),
+              ),
               Padding(
                 padding: const EdgeInsets.all(20.0),
                 child: Row(
@@ -456,7 +491,16 @@ class UserEditScreenState extends State<UserEditScreen> {
                             ),
                           ElevatedButton(
                             onPressed: _pickImage,
-                            child: const Text('Select Image'),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: <Widget>[
+                                Icon(Icons.image), // Add the icon here
+                                SizedBox(
+                                    width:
+                                        8), // Add some spacing between the icon and text
+                                Text('Select Image'),
+                              ],
+                            ),
                           ),
                         ],
                       ),
@@ -594,7 +638,7 @@ class UserEditScreenState extends State<UserEditScreen> {
                                     ? widget.user!.userRoles![0].role?.name ??
                                         'No Role Selected'
                                     : 'No Role Selected',
-                                style: TextStyle(fontSize: 16),
+                                style: const TextStyle(fontSize: 16),
                               ),
                             ],
                           ),
@@ -710,21 +754,32 @@ class UserEditScreenState extends State<UserEditScreen> {
                           mainAxisSize: MainAxisSize.min,
                           children: <Widget>[
                             const Text(
-                              'Date of Birth',
+                              'Date of Birth MM-dd-yyyy',
                               style: TextStyle(fontSize: 20),
                             ),
                             const SizedBox(
                               height: 5.0,
                             ),
                             Text(
-                              "${widget.user?.person?.birthDate?.toLocal()}"
-                                  .split(' ')[0],
+                              DateFormat('MM-dd-yyyy')
+                                  .format(selectedDate), // Format the date
                               style: const TextStyle(
-                                  fontSize: 18, fontWeight: FontWeight.bold),
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                             ElevatedButton(
-                              onPressed: () => _selectDate(
-                                  context, widget.user?.person?.birthDate),
+                              onPressed: () async {
+                                DateTime? newDate =
+                                    await _selectDate(context, selectedDate);
+                                if (newDate != null) {
+                                  setState(() {
+                                    selectedDate = newDate;
+                                    widget.user?.person?.birthDate =
+                                        selectedDate;
+                                  });
+                                }
+                              },
                               child: const Text('Select Date'),
                             ),
                           ],
@@ -764,6 +819,13 @@ class UserEditScreenState extends State<UserEditScreen> {
                       ],
                     ))
                   ],
+                ),
+              ),
+              const Padding(
+                padding: EdgeInsets.all(10.0),
+                child: Divider(
+                  thickness: 2,
+                  color: Colors.grey,
                 ),
               ),
               buildUserRoleRow(widget.user!),

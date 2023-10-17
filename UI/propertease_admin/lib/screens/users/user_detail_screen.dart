@@ -285,6 +285,10 @@ class UserDetailScreenState extends State<UserDetailScreen> {
                 ],
               ),
             ),
+            const Divider(
+              thickness: 2,
+              color: Colors.grey,
+            ),
           ],
         ),
       );

@@ -172,9 +172,21 @@ class ClientAddScreenState extends State<ClientAddScreen> {
                               width: 700,
                               height: 400,
                             ),
+                          const SizedBox(
+                            height: 10,
+                          ),
                           ElevatedButton(
                             onPressed: _pickImage,
-                            child: const Text('Select Image'),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: <Widget>[
+                                Icon(Icons.image), // Add the icon here
+                                SizedBox(
+                                    width:
+                                        8), // Add some spacing between the icon and text
+                                Text('Select Image'),
+                              ],
+                            ),
                           ),
                         ],
                       ),
@@ -484,8 +496,16 @@ class ClientAddScreenState extends State<ClientAddScreen> {
                               ),
                             ),
                             ElevatedButton(
-                              onPressed: () => _selectDate(
-                                  context, newUser.person?.birthDate),
+                              onPressed: () async {
+                                DateTime? newDate =
+                                    await _selectDate(context, selectedDate);
+                                if (newDate != null) {
+                                  setState(() {
+                                    selectedDate = newDate;
+                                  });
+                                  print(selectedDate);
+                                }
+                              },
                               child: const Text('Select Date'),
                             ),
                           ],
@@ -562,18 +582,13 @@ class ClientAddScreenState extends State<ClientAddScreen> {
     });
   }
 
-  Future<void> _selectDate(BuildContext context, DateTime? date) async {
+  Future<DateTime?> _selectDate(BuildContext context, DateTime? date) async {
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: selectedDate,
-      firstDate: DateTime(2000),
+      initialDate: date ?? DateTime.now(),
+      firstDate: DateTime(1900),
       lastDate: DateTime(2101),
     );
-    if (picked != null && picked != selectedDate) {
-      setState(() {
-        selectedDate = picked;
-        date = selectedDate;
-      });
-    }
+    return picked;
   }
 }
