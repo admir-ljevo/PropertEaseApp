@@ -7,6 +7,7 @@ import 'package:propertease_admin/screens/property/property_detail_screen.dart';
 import 'package:propertease_admin/screens/property/property_edit_screen.dart';
 import 'package:propertease_admin/utils/authorization.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../models/city.dart';
 import '../../models/property.dart';
@@ -42,9 +43,15 @@ class PropertyListWidgetState extends State<PropertyListWidget> {
   City? _selectedCity = null;
   PropertyType? _selectedProperty = null;
   bool? _isAvailable = null; // New variable for "Available" filter
-
+  String? userId;
   // Add a GlobalKey for the form
   GlobalKey<FormState> formKey = GlobalKey<FormState>();
+  Future<void> getUserIdFromSharedPreferences() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      userId = prefs.getString('userId');
+    });
+  }
 
   @override
   void didChangeDependencies() {
@@ -63,6 +70,7 @@ class PropertyListWidgetState extends State<PropertyListWidget> {
     _photoProvider = context.read<PhotoProvider>();
     _propertyTypeProvider = context.read<PropertyTypeProvider>();
     _cityProvider = context.read<CityProvider>();
+    getUserIdFromSharedPreferences();
     _fetchProperties();
   }
 
@@ -367,6 +375,7 @@ class PropertyListWidgetState extends State<PropertyListWidget> {
         // Include the price range filter
         'priceFrom': minPrice,
         'priceTo': maxPrice,
+        'applicationUserId': int.tryParse(userId!),
       });
 
       setState(() {

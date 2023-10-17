@@ -7,6 +7,7 @@ import 'package:propertease_admin/providers/property_reservation_provider.dart';
 import 'package:propertease_admin/providers/property_type_provider.dart';
 import 'package:propertease_admin/screens/reservation/reservation_detail_screen.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../models/property.dart';
 import '../../models/property_type.dart';
@@ -43,6 +44,15 @@ class ReservationListWidgetState extends State<ReservationListWidget> {
       title_widget: const Text("Reservation List"),
       child: Column(children: [_buildContent(), _buildDataListView()]),
     );
+  }
+
+  String? userId;
+  // Add a GlobalKey for the form
+  Future<void> getUserIdFromSharedPreferences() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      userId = prefs.getString('userId');
+    });
   }
 
   PropertyType? _selectedProperty = null;
@@ -118,6 +128,7 @@ class ReservationListWidgetState extends State<ReservationListWidget> {
 
   Future<void> _fetchReservations() async {
     try {
+      await getUserIdFromSharedPreferences();
       propertyResult = await _propertyProvider.get();
       propertyTypeResult = await _propertyTypeProvider.get();
 
@@ -137,6 +148,7 @@ class ReservationListWidgetState extends State<ReservationListWidget> {
         'totalPriceFrom': minPrice,
         'totalPriceTo': maxPrice,
         'isActive': _isAvailable,
+        'renterId': int.tryParse(userId!),
       });
 
       setState(() {

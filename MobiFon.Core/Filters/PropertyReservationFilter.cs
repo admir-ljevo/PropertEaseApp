@@ -15,6 +15,8 @@ namespace PropertEase.Core.Filters
         public int propertyTypeId { get; set; }
         public string? propertyName { get; set; }
 
+        public int? renterId { get; set; }
+        public int? clientId { get; set; }
         public bool? isActive { get; set; } 
 
 

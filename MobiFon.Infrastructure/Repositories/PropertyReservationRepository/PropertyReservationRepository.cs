@@ -46,6 +46,8 @@ namespace MobiFon.Infrastructure.Repositories.PropertyReservationRepository
                     && (!filter.DateOccupancyEnded.HasValue || pr.DateOfOccupancyEnd <= filter.DateOccupancyEnded.Value)
                     && (!filter.totalPriceFrom.HasValue || pr.TotalPrice >= filter.totalPriceFrom.Value)
                     && (!filter.totalPriceTo.HasValue || pr.TotalPrice <= filter.totalPriceTo.Value)
+                    &&(!filter.clientId.HasValue || pr.ClientId == filter.clientId)
+                    &&(!filter.renterId.HasValue || pr.RenterId == filter.renterId)
                     && (filter.propertyTypeId == 0 || pr.Property.PropertyTypeId == filter.propertyTypeId) &&
                     (!filter.isActive.HasValue || pr.IsActive == filter.isActive.Value )&&(!pr.IsDeleted)
         )

@@ -208,15 +208,21 @@ class LoginWidgetState extends State<LoginWidget> {
                       var username = _usernameController.text;
 
                       // Call the signIn function to authenticate
-                      final String? authToken = await _userProvider.signIn(
+                      final Map<String, dynamic>? loginResult =
+                          await _userProvider.signIn(
                         _usernameController.text,
                         _passwordController.text,
                       );
 
-                      if (authToken != null) {
+                      if (loginResult != null) {
+                        final String authToken = loginResult['accessToken'];
+                        final String userId = loginResult['userId'];
+
                         final SharedPreferences prefs =
                             await SharedPreferences.getInstance();
                         prefs.setString('authToken', authToken);
+                        prefs.setString('userId', userId); // Store the userId
+
                         showSucessfullLoginMessage(username);
                         Navigator.push(
                           context,

@@ -7,6 +7,7 @@ import 'package:propertease_admin/models/search_result.dart';
 import 'package:propertease_admin/providers/property_type_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:propertease_admin/providers/image_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/city.dart';
 import '../../models/photo.dart';
 import '../../models/property.dart';
@@ -53,7 +54,16 @@ class _PropertyAddScreenState extends State<PropertyAddScreen> {
   List<TextEditingController> _textControllers = [];
   final ImagePicker _picker = ImagePicker();
 
-  // Create a method to fetch images
+  String? userId;
+  // Add a GlobalKey for the form
+  GlobalKey<FormState> formKey = GlobalKey<FormState>();
+  Future<void> getUserIdFromSharedPreferences() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      userId = prefs.getString('userId');
+    });
+  }
+
   void fetchImages() async {
     // Get the photo provider from the context
     final photoProvider = context.read<PhotoProvider>();
@@ -113,6 +123,7 @@ class _PropertyAddScreenState extends State<PropertyAddScreen> {
   Future initForm() async {
     propertyTypeResult = await _propertyTypeProvider.get();
     cityResult = await _cityProvider.get();
+    await getUserIdFromSharedPreferences();
     print(propertyTypeResult?.result);
     fetchImages();
   }
@@ -248,6 +259,7 @@ class _PropertyAddScreenState extends State<PropertyAddScreen> {
         property.monthlyPrice = parsedPrice;
         property.dailyPrice = 0;
       }
+      property.applicationUserId = int.tryParse(userId!);
       property.createdAt = DateTime.now();
       property.gardenSize = parsedGardenSize;
       property.squareMeters = parsedSquareMeters;

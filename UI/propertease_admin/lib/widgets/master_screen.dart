@@ -3,6 +3,7 @@ import 'package:flutter/src/widgets/framework.dart';
 import 'package:flutter/src/widgets/placeholder.dart';
 import 'package:propertease_admin/main.dart';
 import 'package:propertease_admin/screens/notifications/notification-list-screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:propertease_admin/screens/reservation/reservation_list_screen.dart';
 import 'package:propertease_admin/screens/users/user_list_screen.dart';
@@ -28,8 +29,11 @@ class _MasterScreenWidgetState extends State<MasterScreenWidget> {
       drawer: Drawer(
         child: ListView(children: [
           ListTile(
-            title: Text("Login"),
-            onTap: () {
+            title: Text("Logout"),
+            onTap: () async {
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.remove('authToken');
+
               Navigator.of(context)
                   .push(MaterialPageRoute(builder: (context) => LoginWidget()));
             },

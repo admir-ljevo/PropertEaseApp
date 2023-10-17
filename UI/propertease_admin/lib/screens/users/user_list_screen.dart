@@ -9,6 +9,7 @@ import 'package:propertease_admin/screens/users/user_detail_screen.dart';
 import 'package:propertease_admin/screens/users/user_edit_screen.dart';
 import 'package:propertease_admin/widgets/master_screen.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../providers/city_provider.dart';
 
@@ -31,10 +32,18 @@ class UserListWidgetState extends State<UserListWidget> {
   City? selectedCity;
   String? selectedRole;
   int? cityId;
+  String? userId;
+  Future<void> getUserIdFromSharedPreferences() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      userId = prefs.getString('userId');
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return MasterScreenWidget(
-        title_widget: const Text("Users list"),
+        title_widget: Text("Users list $userId"),
         child: SingleChildScrollView(
           child: Column(
             children: [
@@ -51,6 +60,7 @@ class UserListWidgetState extends State<UserListWidget> {
     super.initState();
     _userProvider = context.read<UserProvider>();
     _cityProvider = context.read<CityProvider>();
+    getUserIdFromSharedPreferences();
     fetchData();
   }
 

@@ -93,7 +93,7 @@ class UserProvider with ChangeNotifier {
     }
   }
 
-  Future<String?> signIn(String userName, String password) async {
+  Future<Map<String, dynamic>?> signIn(String userName, String password) async {
     try {
       final url = Uri.parse("https://localhost:44340/Access/SignIn");
       final response = await http.post(
@@ -113,15 +113,19 @@ class UserProvider with ChangeNotifier {
         final Map<String, dynamic> data = jsonDecode(response.body);
         final String accessToken = data['token'];
         final int roleId = data['user']['userRoles'][0]['role']['id'];
+        final String userId = data['user']['id'].toString();
         if (roleId == 3 || roleId == 1) {
-          return accessToken; // Return the access token
+          return {
+            'accessToken': accessToken,
+            'userId': userId,
+          };
         }
-      } else {
-        return null;
       }
     } catch (e) {
       return null;
     }
+
+    return null; // Return null if the login fails or there's an error
   }
 
   Future<void> addClient(ApplicationUser client, String password) async {
