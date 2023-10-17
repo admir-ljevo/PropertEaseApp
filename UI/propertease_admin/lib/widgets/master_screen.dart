@@ -35,7 +35,7 @@ class _MasterScreenWidgetState extends State<MasterScreenWidget> {
             },
           ),
           ListTile(
-            title: Text("Nekretnine"),
+            title: Text("Properties"),
             onTap: () {
               Navigator.of(context).push(MaterialPageRoute(
                   builder: (context) => const PropertyListWidget()));

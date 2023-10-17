@@ -9,6 +9,7 @@ import 'package:propertease_admin/providers/property_provider.dart';
 import 'package:propertease_admin/providers/property_reservation_provider.dart';
 import 'package:propertease_admin/providers/property_type_provider.dart';
 import 'package:propertease_admin/screens/property/property_list_screen.dart';
+import 'package:propertease_admin/screens/users/renter_add_screen.dart';
 import 'package:propertease_admin/utils/authorization.dart';
 import 'package:provider/provider.dart';
 
@@ -129,7 +130,17 @@ class LoginWidget extends StatelessWidget {
                           ),
                         );
                       },
-                      child: const Text("Login"))
+                      child: const Text("Login")),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => const RenterAddScreen(),
+                        ),
+                      );
+                    },
+                    child: const Text("Create an account"),
+                  )
                 ],
               ),
             ),
