@@ -23,12 +23,14 @@ class _MasterScreenWidgetState extends State<MasterScreenWidget> {
   String? firstName;
   String? lastName;
   String photoUrl = 'https://localhost:44340';
+  int? roleId;
   Future<void> getUserIdFromSharedPreferences() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     setState(() {
       firstName = prefs.getString('firstName');
       lastName = prefs.getString('lastName');
       photoUrl = 'https://localhost:44340${prefs.getString('profilePhoto')}';
+      roleId = prefs.getInt('roleId')!;
     });
   }
 
@@ -36,6 +38,13 @@ class _MasterScreenWidgetState extends State<MasterScreenWidget> {
   void initState() {
     // TODO: implement initState
     super.initState();
+    getUserIdFromSharedPreferences();
+  }
+
+  @override
+  void didChangeDependencies() {
+    // TODO: implement didChangeDependencies
+    super.didChangeDependencies();
     getUserIdFromSharedPreferences();
   }
 
@@ -55,8 +64,6 @@ class _MasterScreenWidgetState extends State<MasterScreenWidget> {
             child: PopupMenuButton<String>(
               onSelected: (String choice) async {
                 if (choice == 'Profile') {
-                  // Handle the profile option
-                  // Add your navigation logic to the profile page here
                 } else if (choice == 'Logout') {
                   final prefs = await SharedPreferences.getInstance();
                   await prefs.remove('authToken');
@@ -72,7 +79,7 @@ class _MasterScreenWidgetState extends State<MasterScreenWidget> {
                     title: Text('Profile'),
                   ),
                 ),
-                PopupMenuItem<String>(
+                const PopupMenuItem<String>(
                   value: 'Logout',
                   child: ListTile(
                     leading: Icon(Icons.exit_to_app),
@@ -105,7 +112,7 @@ class _MasterScreenWidgetState extends State<MasterScreenWidget> {
                         Row(
                           children: [
                             Text("$firstName $lastName"),
-                            Icon(Icons.arrow_drop_down),
+                            const Icon(Icons.arrow_drop_down),
                           ],
                         ), // Indicator icon
                       ],
@@ -136,13 +143,14 @@ class _MasterScreenWidgetState extends State<MasterScreenWidget> {
                   builder: (context) => const NewsListWidget()));
             },
           ),
-          ListTile(
-            title: const Text("Users"),
-            onTap: () {
-              Navigator.of(context).push(MaterialPageRoute(
-                  builder: (context) => const UserListWidget()));
-            },
-          ),
+          if (roleId == 1)
+            ListTile(
+              title: const Text("Users"),
+              onTap: () {
+                Navigator.of(context).push(MaterialPageRoute(
+                    builder: (context) => const UserListWidget()));
+              },
+            ),
         ]),
       ),
       body: widget.child!,

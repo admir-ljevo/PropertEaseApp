@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class NotificationAddScreen extends StatefulWidget {
   const NotificationAddScreen({Key? key}) : super(key: key);
@@ -17,15 +18,22 @@ class NotificationAddScreenState extends State<NotificationAddScreen> {
   late NotificationProvider _notificationProvider;
   New? notification = New();
   File? selectedImage = File('assets/images/house_placeholder.jpg');
-
+  late int userId;
   final TextEditingController textController = TextEditingController();
   final TextEditingController nameController = TextEditingController();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  Future<void> getUserIdFromSharedPreferences() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      userId = int.tryParse(prefs.getString('userId')!)!;
+    });
+  }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _notificationProvider = context.read<NotificationProvider>();
+    getUserIdFromSharedPreferences();
   }
 
   Future<void> _pickImage() async {
@@ -47,9 +55,8 @@ class NotificationAddScreenState extends State<NotificationAddScreen> {
       notification?.text = textController.text;
       notification?.name = nameController.text;
       notification?.image = notification?.file?.path;
-
+      notification?.userId = userId;
       await _notificationProvider.addNotification(notification!);
-      // Show a success message using a SnackBar
       showSuccessSnackBar();
     }
   }

@@ -220,6 +220,7 @@ class LoginWidgetState extends State<LoginWidget> {
                         final String firstName = loginResult['firstName'];
                         final String lastName = loginResult['lastName'];
                         final String profilePhoto = loginResult['profilePhoto'];
+                        final int roleId = loginResult['roleId'];
                         final SharedPreferences prefs =
                             await SharedPreferences.getInstance();
                         prefs.setString('authToken', authToken);
@@ -227,6 +228,7 @@ class LoginWidgetState extends State<LoginWidget> {
                         prefs.setString('firstName', firstName);
                         prefs.setString('lastName', lastName);
                         prefs.setString('profilePhoto', profilePhoto);
+                        prefs.setInt('roleId', roleId);
                         showSucessfullLoginMessage(username);
                         Navigator.push(
                           context,

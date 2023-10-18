@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:propertease_admin/models/new.dart';
 import 'package:propertease_admin/screens/notifications/notification_edit_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class NotificationDetailScreen extends StatefulWidget {
   New? notification;
@@ -15,10 +16,24 @@ class NotificationDetailScreen extends StatefulWidget {
 
 class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
   final TextEditingController _contentController = TextEditingController();
+  String? firstName;
+  String? lastName;
+  String photoUrl = 'https://localhost:44340';
+  int? roleId;
+  Future<void> getUserIdFromSharedPreferences() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      firstName = prefs.getString('firstName');
+      lastName = prefs.getString('lastName');
+      photoUrl = 'https://localhost:44340${prefs.getString('profilePhoto')}';
+      roleId = prefs.getInt('roleId')!;
+    });
+  }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    getUserIdFromSharedPreferences();
     _contentController.text = widget.notification?.text ?? '';
   }
 
@@ -46,23 +61,24 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
       appBar: AppBar(
         title: const Text('News details'),
         actions: <Widget>[
-          Row(
-            children: [
-              const Text(
-                "Edit notification",
-                style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 20),
-              ),
-              IconButton(
-                icon: const Icon(Icons.edit),
-                onPressed: () {
-                  _navigateToEditScreen(context);
-                },
-              ),
-            ],
-          ),
+          if (roleId == 1)
+            Row(
+              children: [
+                const Text(
+                  "Edit notification",
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 20),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.edit),
+                  onPressed: () {
+                    _navigateToEditScreen(context);
+                  },
+                ),
+              ],
+            ),
           const SizedBox(
             width: 50,
           ),

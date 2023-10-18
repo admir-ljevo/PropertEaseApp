@@ -107,25 +107,46 @@ class UserProvider with ChangeNotifier {
           'Content-Type': 'application/json',
         },
       );
-
       if (response.statusCode == 200) {
         // Successful login
         final Map<String, dynamic> data = jsonDecode(response.body);
         final String accessToken = data['token'];
-        final int roleId = data['user']['userRoles'][0]['role']['id'];
+        final List<dynamic> userRoles = data['user']['userRoles'];
         final String userId = data['user']['id'].toString();
         final String firstName = data['user']['person']['firstName'];
         final String lastName = data['user']['person']['lastName'];
         final String profilePhoto = data['user']['person']['profilePhoto'];
-        if (roleId == 3 || roleId == 1) {
+        late int roleId;
+
+        // Check if there is a userRole with role['id'] equal to 3
+        bool hasAdminRole =
+            userRoles.any((userRole) => userRole['role']['id'] == 1);
+
+        bool hasEmployeeRole =
+            userRoles.any((userRole) => userRole['role']['id'] == 3);
+
+        if (hasAdminRole) {
+          roleId = 1;
           return {
             'accessToken': accessToken,
             'userId': userId,
             'firstName': firstName,
             'lastName': lastName,
             'profilePhoto': profilePhoto,
+            'roleId': roleId,
+          };
+        } else if (hasEmployeeRole) {
+          roleId = 3;
+          return {
+            'accessToken': accessToken,
+            'userId': userId,
+            'firstName': firstName,
+            'lastName': lastName,
+            'profilePhoto': profilePhoto,
+            'roleId': roleId,
           };
         }
+        return null;
       }
     } catch (e) {
       return null;

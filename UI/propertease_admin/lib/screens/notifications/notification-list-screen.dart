@@ -5,6 +5,7 @@ import 'package:propertease_admin/screens/notifications/notification-detail-scre
 import 'package:propertease_admin/screens/notifications/notification_add_screen.dart';
 import 'package:propertease_admin/widgets/master_screen.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../models/new.dart';
 
@@ -23,6 +24,21 @@ class NewsListWidgetState extends State<NewsListWidget> {
   late DateTime? seletedDateEnd;
   String? formattedStartDate;
   String? formattedEndDate;
+
+  String? firstName;
+  String? lastName;
+  String photoUrl = 'https://localhost:44340';
+  int? roleId;
+  Future<void> getUserIdFromSharedPreferences() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      firstName = prefs.getString('firstName');
+      lastName = prefs.getString('lastName');
+      photoUrl = 'https://localhost:44340${prefs.getString('profilePhoto')}';
+      roleId = prefs.getInt('roleId')!;
+    });
+  }
+
   TextEditingController _searchController = TextEditingController();
   Future<void> _fetchData() async {
     _news = await _newsProvider.get(filter: {
@@ -40,7 +56,7 @@ class NewsListWidgetState extends State<NewsListWidget> {
     // TODO: implement initState
     super.initState();
     _newsProvider = context.read<NotificationProvider>();
-
+    getUserIdFromSharedPreferences();
     _fetchData();
   }
 
@@ -49,6 +65,7 @@ class NewsListWidgetState extends State<NewsListWidget> {
     // TODO: implement didChangeDependencies
     super.didChangeDependencies();
     _newsProvider = context.read<NotificationProvider>();
+    getUserIdFromSharedPreferences();
     _fetchData();
   }
 
@@ -134,23 +151,23 @@ class NewsListWidgetState extends State<NewsListWidget> {
             ],
           ),
 
-          // Add the "Add notification" button here
-          Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => const NotificationAddScreen(),
-                  ),
-                );
-              },
-              child: const Padding(
-                padding: EdgeInsets.all(20.0),
-                child: Text("Add notification"),
+          if (roleId == 1)
+            Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const NotificationAddScreen(),
+                    ),
+                  );
+                },
+                child: const Padding(
+                  padding: EdgeInsets.all(20.0),
+                  child: Text("Add notification"),
+                ),
               ),
             ),
-          ),
 
           // Second child: Your existing MasterScreenWidget
           Expanded(
