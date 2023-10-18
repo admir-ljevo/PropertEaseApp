@@ -3,8 +3,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:propertease_admin/main.dart';
 import 'package:propertease_admin/models/person.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../models/application_role.dart';
 import '../../models/application_user.dart';
@@ -28,7 +30,8 @@ class ClientAddScreenState extends State<ClientAddScreen> {
   SearchResult<City>? cityResult;
   SearchResult<ApplicationRole>? roleResult;
   final _formKey = GlobalKey<FormState>();
-
+  final List<String> menuItems = ['Profile', 'Logout'];
+  String selectedMenuItem = 'Profile'; // Initial selection
   late CityProvider _cityProvider;
   late RoleProvider _roleProvider;
   late UserProvider _userProvider;
@@ -45,7 +48,7 @@ class ClientAddScreenState extends State<ClientAddScreen> {
       TextEditingController();
 
   int selectedGender = 0; // 0 for Male, 1 for Female
-
+  final String _baseUrl = 'https://localhost:44340';
   Future<void> addClient() async {
     newUser.id = 0;
     newUser.person = Person();
@@ -74,6 +77,18 @@ class ClientAddScreenState extends State<ClientAddScreen> {
     }
   }
 
+  String? firstName;
+  String? lastName;
+  String photoUrl = 'https://localhost:44340';
+  Future<void> getUserIdFromSharedPreferences() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      firstName = prefs.getString('firstName');
+      lastName = prefs.getString('lastName');
+      photoUrl = 'https://localhost:44340${prefs.getString('profilePhoto')}';
+    });
+  }
+
   DateTime selectedDate = DateTime.now();
   Future<void> _pickImage() async {
     final picker = ImagePicker();
@@ -90,6 +105,7 @@ class ClientAddScreenState extends State<ClientAddScreen> {
   }
 
   Future<void> _fetchCities() async {
+    await getUserIdFromSharedPreferences();
     var cities = await _cityProvider.get();
     setState(() {
       cityResult = cities;
@@ -117,11 +133,57 @@ class ClientAddScreenState extends State<ClientAddScreen> {
     _fetchCities();
   }
 
+  void _showPopupMenu(BuildContext context) async {
+    showMenu(
+      context: context,
+      position: RelativeRect.fromLTRB(0, 70, 0, 0), // Adjust position as needed
+      items: menuItems.map((String item) {
+        return PopupMenuItem<String>(
+          value: item,
+          child: Text(item),
+        );
+      }).toList(),
+    ).then((value) async {
+      if (value != null) {
+        // Handle the selection from the dropdown menu
+        if (value == 'Profile') {
+        } else if (value == 'Logout') {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.remove('authToken');
+
+          Navigator.of(context)
+              .push(MaterialPageRoute(builder: (context) => LoginWidget()));
+        }
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     // TODO: implement build
     return Scaffold(
-      appBar: AppBar(title: const Text("Add new client")),
+      appBar: AppBar(
+        title: GestureDetector(
+          onTap: () {
+            _showPopupMenu(context);
+          },
+          child: Row(
+            children: [
+              ClipOval(
+                child: Image.network(
+                  photoUrl,
+                  width: 50, // Adjust the width and height as needed
+                  height: 50,
+                ),
+              ),
+
+              SizedBox(width: 8), // Add some spacing
+              Text("$firstName $lastName"), // User's name
+              Icon(Icons.keyboard_arrow_down), // Add a down arrow icon
+            ],
+          ),
+        ),
+      ),
       body: Form(
           key: _formKey,
           child: SingleChildScrollView(

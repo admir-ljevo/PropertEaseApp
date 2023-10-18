@@ -114,10 +114,16 @@ class UserProvider with ChangeNotifier {
         final String accessToken = data['token'];
         final int roleId = data['user']['userRoles'][0]['role']['id'];
         final String userId = data['user']['id'].toString();
+        final String firstName = data['user']['person']['firstName'];
+        final String lastName = data['user']['person']['lastName'];
+        final String profilePhoto = data['user']['person']['profilePhoto'];
         if (roleId == 3 || roleId == 1) {
           return {
             'accessToken': accessToken,
             'userId': userId,
+            'firstName': firstName,
+            'lastName': lastName,
+            'profilePhoto': profilePhoto,
           };
         }
       }
