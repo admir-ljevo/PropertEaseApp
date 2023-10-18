@@ -2,13 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter/src/widgets/framework.dart';
 import 'package:flutter/src/widgets/placeholder.dart';
 import 'package:propertease_admin/main.dart';
+import 'package:propertease_admin/models/application_user.dart';
+import 'package:propertease_admin/providers/application_user_provider.dart';
 import 'package:propertease_admin/screens/notifications/notification-list-screen.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:propertease_admin/screens/reservation/reservation_list_screen.dart';
 import 'package:propertease_admin/screens/users/user_list_screen.dart';
 
 import '../screens/property/property_list_screen.dart';
+import '../screens/users/user_detail_screen.dart';
 
 class MasterScreenWidget extends StatefulWidget {
   Widget? child;
@@ -20,17 +24,22 @@ class MasterScreenWidget extends StatefulWidget {
 }
 
 class _MasterScreenWidgetState extends State<MasterScreenWidget> {
+  late ApplicationUser user;
+  late UserProvider _userProvider;
   String? firstName;
   String? lastName;
   String photoUrl = 'https://localhost:44340';
   int? roleId;
+  int? userId;
   Future<void> getUserIdFromSharedPreferences() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     setState(() {
+      userId = int.tryParse(prefs.getString('userId')!)!;
       firstName = prefs.getString('firstName');
       lastName = prefs.getString('lastName');
       photoUrl = 'https://localhost:44340${prefs.getString('profilePhoto')}';
       roleId = prefs.getInt('roleId')!;
+      getUserById(userId!);
     });
   }
 
@@ -38,6 +47,7 @@ class _MasterScreenWidgetState extends State<MasterScreenWidget> {
   void initState() {
     // TODO: implement initState
     super.initState();
+    _userProvider = context.read<UserProvider>();
     getUserIdFromSharedPreferences();
   }
 
@@ -45,7 +55,19 @@ class _MasterScreenWidgetState extends State<MasterScreenWidget> {
   void didChangeDependencies() {
     // TODO: implement didChangeDependencies
     super.didChangeDependencies();
+    _userProvider = context.read<UserProvider>();
     getUserIdFromSharedPreferences();
+  }
+
+  Future<void> getUserById(int id) async {
+    try {
+      var fetchedUser = await _userProvider.GetEmployeeById(id);
+      setState(() {
+        user = fetchedUser;
+      });
+    } catch (e) {
+      throw (e.toString());
+    }
   }
 
   @override
@@ -64,6 +86,13 @@ class _MasterScreenWidgetState extends State<MasterScreenWidget> {
             child: PopupMenuButton<String>(
               onSelected: (String choice) async {
                 if (choice == 'Profile') {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => UserDetailScreen(
+                        user: user,
+                      ),
+                    ),
+                  );
                 } else if (choice == 'Logout') {
                   final prefs = await SharedPreferences.getInstance();
                   await prefs.remove('authToken');

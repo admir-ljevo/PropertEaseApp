@@ -67,6 +67,21 @@ class UserProvider with ChangeNotifier {
     throw Exception("Something is wrong");
   }
 
+  Future<ApplicationUser> GetEmployeeById(int id) async {
+    var url = 'https://localhost:44340/api/Employee/$id';
+    var uri = Uri.parse(url);
+    var headers = createHeaders();
+    var response = await http.get(uri, headers: headers);
+
+    if (isValidResponse(response)) {
+      final Map<String, dynamic> responseData = jsonDecode(response.body);
+      ApplicationUser user = ApplicationUser.fromJson(responseData);
+      return user;
+    } else {
+      throw Exception("Something is wrong");
+    }
+  }
+
   Future<List<ApplicationUser>> get({dynamic filter}) async {
     var url = "$_baseUrl$_endpoint/GetFilteredData";
 
