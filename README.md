@@ -14,14 +14,17 @@ The application is developed using following tech stack:
    - Notification overview (Renter and Admin role)
    - Notification management (Admin role)
    - Managing renters and clients (Admin role)
+   - Reservation report generating (Admin/renter)
    - User overview (Admin role)
      
 The application is yet to be finished, there is still a mobile version of the application left to be implemented, which is intended to be used by the 'Client' role.
-Some features on desktop part are also in progress of implementation, those features are reports and messaging.
+Messaging is the only feature on the desktop application left to be implemented.
 
 Some of the screenshots of the application in its current state are listed below:
 
 ![image](https://github.com/admir-ljevo/PropertEaseApp/assets/82807221/cdad422e-02fd-4273-966f-98a70bcd0fbe)
+
+![image](https://github.com/admir-ljevo/PropertEaseApp/assets/82807221/1120aa86-be86-4ceb-846a-cf26278937ff)
 
 
 ![image](https://github.com/admir-ljevo/PropertEaseApp/assets/82807221/13ffbac0-8985-4812-a98a-19f948adbfe8)
@@ -53,4 +56,10 @@ Some of the screenshots of the application in its current state are listed below
 
 
 ![image](https://github.com/admir-ljevo/PropertEaseApp/assets/82807221/84721b4f-2214-4598-aa71-06153d3fc7ba)
+
+![image](https://github.com/admir-ljevo/PropertEaseApp/assets/82807221/9ba76b4f-e7dc-49b7-b2b9-da29a860721e)
+
+
+![image](https://github.com/admir-ljevo/PropertEaseApp/assets/82807221/e8c247b7-3bf6-4f70-8f34-6ebb9b516127)
+
 
