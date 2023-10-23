@@ -2,6 +2,8 @@
 using MobiFon.Core.Entities;
 using MobiFon.Infrastructure.Repositories.BaseRepository;
 using PropertEase.Core.Filters;
+using PropertEase.Core.SearchObjects;
+using PropertEase.Reporting.Models;
 
 namespace MobiFon.Infrastructure.Repositories.PropertyReservationRepository
 {
@@ -11,6 +13,7 @@ namespace MobiFon.Infrastructure.Repositories.PropertyReservationRepository
         Task<PropertyReservationDto> GetByIdAsync(int id);
         Task<List<PropertyReservationDto>> GetByNameAsync(string name);
         Task<List<PropertyReservationDto>> GetFiltered(PropertyReservationFilter filter);
+        Task<List<PropertyReservationDto>> GetRenterBusinessReportData(ReportSearchObject search);
         Task<List<PropertyReservationDto>> GetForPaginationAsync(string searchFilter, int pageSize, int offset);
     }
 }

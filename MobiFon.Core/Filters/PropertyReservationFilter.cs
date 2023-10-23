@@ -8,7 +8,9 @@ namespace PropertEase.Core.Filters
 {
     public class PropertyReservationFilter
     {
-        public DateTime? DateOccupancyStarted { get; set; }
+        public DateTime? DateOccupancyStartedStart { get; set; }
+        public DateTime? DateOccupancyStartedEnd { get; set; }
+
         public DateTime? DateOccupancyEnded { get; set; }
         public float? totalPriceFrom { get; set; }
         public float? totalPriceTo { get; set; }

@@ -1,6 +1,7 @@
 ﻿using MobiFon.Core.Dto.PropertyReservation;
 using MobiFon.Services.Services.BaseService;
 using PropertEase.Core.Filters;
+using PropertEase.Core.SearchObjects;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,5 +13,7 @@ namespace MobiFon.Services.Services.PropertyReservationService
     public interface IPropertyReservationService: IBaseService<PropertyReservationDto>
     {
         public Task<List<PropertyReservationDto>> GetFiltered(PropertyReservationFilter filter);
+        public Task<List<PropertyReservationDto>> GetRenterBusinessReportData(ReportSearchObject search);
+
     }
 }

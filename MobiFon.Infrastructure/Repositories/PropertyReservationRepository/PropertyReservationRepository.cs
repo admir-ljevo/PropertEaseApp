@@ -4,6 +4,8 @@ using MobiFon.Core.Entities;
 using MobiFon.Core.SearchObjects;
 using MobiFon.Infrastructure.Repositories.BaseRepository;
 using PropertEase.Core.Filters;
+using PropertEase.Core.SearchObjects;
+using PropertEase.Reporting.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -42,14 +44,15 @@ namespace MobiFon.Infrastructure.Repositories.PropertyReservationRepository
             var reservations = await ProjectToListAsync<PropertyReservationDto>(
          DatabaseContext.PropertyReservations
         .Where(pr => (string.IsNullOrEmpty(filter.propertyName) || pr.Property.Name.Contains(filter.propertyName))
-                    && (!filter.DateOccupancyStarted.HasValue || pr.DateOfOccupancyStart >= filter.DateOccupancyStarted.Value)
+                    && (!filter.DateOccupancyStartedStart.HasValue || pr.DateOfOccupancyStart >= filter.DateOccupancyStartedStart.Value)
+                    && (!filter.DateOccupancyStartedEnd.HasValue || pr.DateOfOccupancyStart <= filter.DateOccupancyStartedEnd.Value)
                     && (!filter.DateOccupancyEnded.HasValue || pr.DateOfOccupancyEnd <= filter.DateOccupancyEnded.Value)
                     && (!filter.totalPriceFrom.HasValue || pr.TotalPrice >= filter.totalPriceFrom.Value)
                     && (!filter.totalPriceTo.HasValue || pr.TotalPrice <= filter.totalPriceTo.Value)
-                    &&(!filter.clientId.HasValue || pr.ClientId == filter.clientId)
-                    &&(!filter.renterId.HasValue || pr.RenterId == filter.renterId)
+                    && (!filter.clientId.HasValue || pr.ClientId == filter.clientId)
+                    && (!filter.renterId.HasValue || pr.RenterId == filter.renterId)
                     && (filter.propertyTypeId == 0 || pr.Property.PropertyTypeId == filter.propertyTypeId) &&
-                    (!filter.isActive.HasValue || pr.IsActive == filter.isActive.Value )&&(!pr.IsDeleted)
+                    (!filter.isActive.HasValue || pr.IsActive == filter.isActive.Value) && (!pr.IsDeleted)
         )
 );
 
@@ -57,5 +60,11 @@ namespace MobiFon.Infrastructure.Repositories.PropertyReservationRepository
 
         }
 
+        public async new Task<List<PropertyReservationDto>> GetRenterBusinessReportData(ReportSearchObject search)
+        {
+            var result = await ProjectToListAsync<PropertyReservationDto>(DatabaseContext.PropertyReservations.Where(
+                x => !x.IsDeleted && search.DateFrom <= x.CreatedAt && search.DateTo >= x.CreatedAt && search.RenterId == x.RenterId));
+            return result;
+        }
     }
 }

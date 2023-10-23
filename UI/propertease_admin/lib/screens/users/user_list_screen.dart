@@ -28,7 +28,7 @@ class UserListWidgetState extends State<UserListWidget> {
   late List<City> cities = [];
   late SearchResult<City> fetchedCities;
   TextEditingController _searchController = TextEditingController();
-  String searchQuery = ''; // To store the search query
+  String searchQuery = '';
   City? selectedCity;
   String? selectedRole;
   int? cityId;

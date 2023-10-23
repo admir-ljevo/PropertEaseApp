@@ -136,7 +136,8 @@ class ClientAddScreenState extends State<ClientAddScreen> {
   void _showPopupMenu(BuildContext context) async {
     showMenu(
       context: context,
-      position: RelativeRect.fromLTRB(0, 70, 0, 0), // Adjust position as needed
+      position:
+          const RelativeRect.fromLTRB(0, 70, 0, 0), // Adjust position as needed
       items: menuItems.map((String item) {
         return PopupMenuItem<String>(
           value: item,
@@ -177,9 +178,9 @@ class ClientAddScreenState extends State<ClientAddScreen> {
                 ),
               ),
 
-              SizedBox(width: 8), // Add some spacing
+              const SizedBox(width: 8), // Add some spacing
               Text("$firstName $lastName"), // User's name
-              Icon(Icons.keyboard_arrow_down), // Add a down arrow icon
+              const Icon(Icons.keyboard_arrow_down), // Add a down arrow icon
             ],
           ),
         ),

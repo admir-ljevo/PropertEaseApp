@@ -48,6 +48,9 @@ using MobiFon.Infrastructure.Repositories.NotificationRepository;
 using MobiFon.Services.Services.NotificationService;
 using PropertEase.Infrastructure.Repositories.CityRepository;
 using PropertEase.Services.Services.CityService;
+using PropertEase.Services.Services.ReportingService;
+using Microsoft.ReportingServices.Interfaces;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -130,6 +133,7 @@ builder.Services.AddScoped<IConversationService, ConversationService>();
 builder.Services.AddScoped<IMessageService, MessageService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<ICityService, CityService>();
+builder.Services.AddScoped<IReportingService, ReportingService>();
 builder.Services.AddHostedService<PropertyReservationBackgroundService>();
 
 

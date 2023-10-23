@@ -1,6 +1,10 @@
 {
   "Files": [
     {
+      "Id": "C:\\Users\\Admir\\Desktop\\PropertEaseApp\\MobiFonApi\\wwwroot\\uploads\\RentersReport.rdlc",
+      "PackagePath": "staticwebassets\\uploads\\RentersReport.rdlc"
+    },
+    {
       "Id": "C:\\Users\\Admir\\Desktop\\PropertEaseApp\\MobiFonApi\\wwwroot\\uploads\\images\\390681617_062b1fc3-94c7-4e08-8185-115ac3f46929.jpg",
       "PackagePath": "staticwebassets\\uploads\\images\\390681617_062b1fc3-94c7-4e08-8185-115ac3f46929.jpg"
     },
@@ -133,6 +137,10 @@
       "PackagePath": "staticwebassets\\uploads\\images\\boho-living-room-with-reid-grey-sofa_1_f5714bd3-666d-4ae3-a2fa-aa541875bf1c.jpg"
     },
     {
+      "Id": "C:\\Users\\Admir\\Desktop\\PropertEaseApp\\MobiFonApi\\wwwroot\\uploads\\images\\hasbulla_775ed630-1856-4b45-86a4-e1d148a2385d.jpg",
+      "PackagePath": "staticwebassets\\uploads\\images\\hasbulla_775ed630-1856-4b45-86a4-e1d148a2385d.jpg"
+    },
+    {
       "Id": "C:\\Users\\Admir\\Desktop\\PropertEaseApp\\MobiFonApi\\wwwroot\\uploads\\images\\house_placeholder_967212a8-e44a-44ae-93e4-85243668cdac.jpg",
       "PackagePath": "staticwebassets\\uploads\\images\\house_placeholder_967212a8-e44a-44ae-93e4-85243668cdac.jpg"
     },
@@ -151,6 +159,10 @@
     {
       "Id": "C:\\Users\\Admir\\Desktop\\PropertEaseApp\\MobiFonApi\\wwwroot\\uploads\\images\\istockphoto-1183338499-612x612_1aca98e4-03ed-4613-a241-e0b496f77eb7.jpg",
       "PackagePath": "staticwebassets\\uploads\\images\\istockphoto-1183338499-612x612_1aca98e4-03ed-4613-a241-e0b496f77eb7.jpg"
+    },
+    {
+      "Id": "C:\\Users\\Admir\\Desktop\\PropertEaseApp\\MobiFonApi\\wwwroot\\uploads\\images\\istockphoto-1183338499-612x612_2a5ed926-4a09-4ba0-a5ab-4b89291ae4fa.jpg",
+      "PackagePath": "staticwebassets\\uploads\\images\\istockphoto-1183338499-612x612_2a5ed926-4a09-4ba0-a5ab-4b89291ae4fa.jpg"
     },
     {
       "Id": "C:\\Users\\Admir\\Desktop\\PropertEaseApp\\MobiFonApi\\wwwroot\\uploads\\images\\istockphoto-1183338499-612x612_2ff9e17a-1aac-405c-af75-1a8e2adbe960.jpg",

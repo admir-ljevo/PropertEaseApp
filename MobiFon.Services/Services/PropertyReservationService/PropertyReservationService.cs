@@ -5,6 +5,7 @@ using MobiFon.Core.Dto.PropertyReservation;
 using MobiFon.Core.Entities;
 using MobiFon.Infrastructure.UnitOfWork;
 using PropertEase.Core.Filters;
+using PropertEase.Core.SearchObjects;
 
 namespace MobiFon.Services.Services.PropertyReservationService
 {
@@ -70,5 +71,9 @@ namespace MobiFon.Services.Services.PropertyReservationService
             return await unitOfWork.PropertyReservationRepository.GetFiltered(filter);
         }
 
+        public async Task<List<PropertyReservationDto>> GetRenterBusinessReportData(ReportSearchObject search)
+        {
+            return await unitOfWork.PropertyReservationRepository.GetRenterBusinessReportData(search);
+        }
     }
 }

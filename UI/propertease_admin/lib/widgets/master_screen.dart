@@ -5,6 +5,7 @@ import 'package:propertease_admin/main.dart';
 import 'package:propertease_admin/models/application_user.dart';
 import 'package:propertease_admin/providers/application_user_provider.dart';
 import 'package:propertease_admin/screens/notifications/notification-list-screen.dart';
+import 'package:propertease_admin/screens/reports/renter_reservation_report_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -163,6 +164,13 @@ class _MasterScreenWidgetState extends State<MasterScreenWidget> {
             onTap: () {
               Navigator.of(context).push(MaterialPageRoute(
                   builder: (context) => const ReservationListWidget()));
+            },
+          ),
+          ListTile(
+            title: const Text("Reports"),
+            onTap: () {
+              Navigator.of(context).push(MaterialPageRoute(
+                  builder: (context) => const RenterReservationReportScreen()));
             },
           ),
           ListTile(

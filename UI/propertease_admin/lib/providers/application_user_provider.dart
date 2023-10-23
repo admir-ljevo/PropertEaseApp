@@ -40,10 +40,8 @@ class UserProvider with ChangeNotifier {
     final response = await http.delete(Uri.parse(url), headers: headers);
     print(url);
     if (response.statusCode == 200) {
-      // Successful deletion
       print("User deleted successfully");
     } else if (response.statusCode == 404) {
-      // Property not found, handle as needed
       throw Exception("User not found");
     } else {
       // Handle other error cases
@@ -79,6 +77,25 @@ class UserProvider with ChangeNotifier {
       return user;
     } else {
       throw Exception("Something is wrong");
+    }
+  }
+
+  Future<List<ApplicationUser>> getEmployees() async {
+    var url = 'https://localhost:44340/api/Employee/Get';
+    var uri = Uri.parse(url);
+    var headers = createHeaders();
+    var response = await http.get(uri, headers: headers);
+
+    try {
+      if (isValidResponse(response)) {
+        return (jsonDecode(response.body) as List)
+            .map((item) => ApplicationUser.fromJson(item))
+            .toList();
+      } else {
+        throw Exception("Not valid response: ");
+      }
+    } catch (e) {
+      throw Exception(response.statusCode);
     }
   }
 
