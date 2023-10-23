@@ -1,7 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'providers/application_user_provider.dart';
+import 'screens/property/property_list.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(MultiProvider(
+    providers: [
+      ChangeNotifierProvider(create: (_) => UserProvider()),
+    ],
+    child: const MyApp(),
+  ));
 }
 
 class MyApp extends StatelessWidget {
@@ -54,16 +64,59 @@ class LoginWidget extends StatefulWidget {
 
 class LoginWidgetState extends State<LoginWidget> {
   int _counter = 0;
+  TextEditingController _usernameController = new TextEditingController();
+  TextEditingController _passwordController = new TextEditingController();
+  late UserProvider _userProvider;
 
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    _userProvider = context.read<UserProvider>();
+  }
+
+  @override
+  void didChangeDependencies() {
+    // TODO: implement didChangeDependencies
+    super.didChangeDependencies();
+    _userProvider = context.read<UserProvider>();
+  }
+
+  void showUnsucessfullLoginMessage() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Wrong username and/or password '),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+
+  void showSucessfullLoginMessage(String username) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: <Widget>[
+            const Icon(
+              Icons.check_circle,
+              color: Colors.white,
+            ),
+            const SizedBox(width: 8),
+            Text('Welcome, $username',
+                style: const TextStyle(color: Colors.white)),
+          ],
+        ),
+        duration: const Duration(seconds: 10), // Show for 3 seconds
+        backgroundColor: Colors.green,
+        action: SnackBarAction(
+          label: 'Dismiss',
+          textColor: Colors.white,
+          onPressed: () {
+            // Handle the action if needed
+          },
+        ),
+        behavior: SnackBarBehavior.floating, // Adds a floating animation
+      ),
+    );
   }
 
   @override
@@ -98,6 +151,8 @@ class LoginWidgetState extends State<LoginWidget> {
                     ),
                     SizedBox(height: 20),
                     TextField(
+                      controller: _usernameController,
+
                       decoration: InputDecoration(
                         labelText: 'Username',
                         prefixIcon: Icon(
@@ -112,6 +167,8 @@ class LoginWidgetState extends State<LoginWidget> {
                       alignment: Alignment.centerRight,
                       children: [
                         TextField(
+                          controller: _passwordController,
+
                           decoration: InputDecoration(
                             labelText: "Password",
                             prefixIcon: Icon(
@@ -138,8 +195,43 @@ class LoginWidgetState extends State<LoginWidget> {
                     ),
                     SizedBox(height: 20),
                     ElevatedButton(
-                      onPressed: () {
-                        // Handle login button press
+                      onPressed: () async {
+                        var password = _passwordController.text;
+                        var username = _usernameController.text;
+
+                        // Call the signIn function to authenticate
+                        final Map<String, dynamic>? loginResult =
+                            await _userProvider.signIn(
+                          _usernameController.text,
+                          _passwordController.text,
+                        );
+
+                        if (loginResult != null) {
+                          final String authToken = loginResult['accessToken'];
+                          final String userId = loginResult['userId'];
+                          final String firstName = loginResult['firstName'];
+                          final String lastName = loginResult['lastName'];
+                          final String profilePhoto =
+                              loginResult['profilePhoto'];
+                          final int roleId = loginResult['roleId'];
+                          final SharedPreferences prefs =
+                              await SharedPreferences.getInstance();
+                          prefs.setString('authToken', authToken);
+                          prefs.setString('userId', userId); // Store the userId
+                          prefs.setString('firstName', firstName);
+                          prefs.setString('lastName', lastName);
+                          prefs.setString('profilePhoto', profilePhoto);
+                          prefs.setInt('roleId', roleId);
+                          showSucessfullLoginMessage(username);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const PropertyListWidget(),
+                            ),
+                          );
+                        } else {
+                          showUnsucessfullLoginMessage();
+                        }
                       },
                       style: ElevatedButton.styleFrom(
                         primary: Colors.blue,
