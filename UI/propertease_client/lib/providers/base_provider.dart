@@ -1,8 +1,9 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:http/http.dart';
+import 'package:http/io_client.dart';
 
 import '../models/property.dart';
 import '../models/search_result.dart';
@@ -10,11 +11,15 @@ import '../models/search_result.dart';
 abstract class BaseProvider<T> with ChangeNotifier {
   static String? _baseUrl;
   late String _endpoint;
-
+  HttpClient client = HttpClient();
+  IOClient? http;
   BaseProvider(String endpoint) {
     _endpoint = endpoint;
     _baseUrl = const String.fromEnvironment("baseUrl",
-        defaultValue: "https://10.0.2.2:44340/api/");
+        defaultValue: "https://10.0.2.2:7137/api/");
+
+    client.badCertificateCallback = (cert, host, port) => true;
+    http = IOClient(client);
   }
 
   Future<SearchResult<T>> get({dynamic filter}) async {
@@ -27,7 +32,7 @@ abstract class BaseProvider<T> with ChangeNotifier {
 
     var uri = Uri.parse(url);
     var headers = createHeaders();
-    var response = await http.get(uri, headers: headers);
+    var response = await http!.get(uri, headers: headers);
 
     var result = SearchResult<T>();
 
@@ -51,7 +56,7 @@ abstract class BaseProvider<T> with ChangeNotifier {
     var requestBody =
         jsonEncode(toJson(data)); // Make sure data has toJson() method
 
-    var response = await http.put(
+    var response = await http!.put(
       Uri.parse(url),
       headers: headers,
       body: requestBody,
@@ -70,7 +75,7 @@ abstract class BaseProvider<T> with ChangeNotifier {
     var requestBody = jsonEncode(toJson(data));
 
     var response =
-        await http.post(Uri.parse(url), headers: headers, body: requestBody);
+        await http!.post(Uri.parse(url), headers: headers, body: requestBody);
     print(response.statusCode);
     if (isValidResponse(response)) {
       return fromJson(jsonDecode(response.body));
@@ -84,7 +89,7 @@ abstract class BaseProvider<T> with ChangeNotifier {
     var url = "$_baseUrl$_endpoint/$id";
     final headers = createHeaders();
 
-    final response = await http.delete(Uri.parse(url), headers: headers);
+    final response = await http!.delete(Uri.parse(url), headers: headers);
     print(url);
     if (response.statusCode == 200) {
       // Successful deletion
@@ -101,7 +106,6 @@ abstract class BaseProvider<T> with ChangeNotifier {
 
   Future<SearchResult<T>> getFiltered({dynamic filter}) async {
     var url = "$_baseUrl$_endpoint/GetFilteredData";
-
     if (filter != null) {
       var queryString = getQueryString(filter);
       url = "$url?$queryString";
@@ -109,7 +113,7 @@ abstract class BaseProvider<T> with ChangeNotifier {
 
     var uri = Uri.parse(url);
     var headers = createHeaders();
-    var response = await http.get(uri, headers: headers);
+    var response = await http!.get(uri, headers: headers);
 
     var result = SearchResult<T>();
 
@@ -121,7 +125,6 @@ abstract class BaseProvider<T> with ChangeNotifier {
         result.result.add(fromJson(item));
       }
 
-      print(url);
       return result;
     }
     throw Exception("Something is wrong");

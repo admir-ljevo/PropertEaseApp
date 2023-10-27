@@ -26,12 +26,16 @@ namespace MobiFon.Controllers
         public async Task<PhotoDto> Add([FromForm] PhotoUpsertDto photoDto)
         {
             var file = photoDto.File;
-            if(file!=null)
-                photoDto.Url = await fileManager.UploadFile(file);
+            byte[] imageBytes = null;
+
+            if (file != null)
+                imageBytes = await fileManager.UploadFileAsBase64String(file);
+
+            photoDto.ImageBytes = imageBytes;
 
             return await photoService.AddAsync(mapper.Map<PhotoDto>(photoDto));
-        
         }
+
 
         [HttpGet("propertyId/{id}")]
         public async Task<List<PhotoDto>> GetPhotosByProperty(int id)

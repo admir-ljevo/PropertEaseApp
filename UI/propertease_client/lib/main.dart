@@ -1,14 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:propertease_client/providers/property_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'providers/application_user_provider.dart';
+import 'providers/city_provider.dart';
+import 'providers/image_provider.dart';
+import 'providers/property_type_provider.dart';
 import 'screens/property/property_list.dart';
 
 void main() {
   runApp(MultiProvider(
     providers: [
       ChangeNotifierProvider(create: (_) => UserProvider()),
+      ChangeNotifierProvider(create: (_) => PropertyProvider()),
+      ChangeNotifierProvider(create: (_) => PropertyTypeProvider()),
+      ChangeNotifierProvider(create: (_) => CityProvider()),
+      ChangeNotifierProvider(create: (_) => PhotoProvider()),
     ],
     child: const MyApp(),
   ));
@@ -63,9 +71,8 @@ class LoginWidget extends StatefulWidget {
 }
 
 class LoginWidgetState extends State<LoginWidget> {
-  int _counter = 0;
-  TextEditingController _usernameController = new TextEditingController();
-  TextEditingController _passwordController = new TextEditingController();
+  final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
   late UserProvider _userProvider;
 
   @override
@@ -123,7 +130,7 @@ class LoginWidgetState extends State<LoginWidget> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
+        title: const Text(
           'Login',
           style: TextStyle(color: Colors.blue),
         ),
@@ -131,7 +138,7 @@ class LoginWidgetState extends State<LoginWidget> {
       ),
       body: Center(
         child: Container(
-          constraints: BoxConstraints(maxWidth: 400, maxHeight: 400),
+          constraints: const BoxConstraints(maxWidth: 400, maxHeight: 400),
           width: 400,
           child: Card(
             elevation: 5,
@@ -149,11 +156,11 @@ class LoginWidgetState extends State<LoginWidget> {
                       height: 100,
                       width: 100,
                     ),
-                    SizedBox(height: 20),
+                    const SizedBox(height: 20),
                     TextField(
                       controller: _usernameController,
 
-                      decoration: InputDecoration(
+                      decoration: const InputDecoration(
                         labelText: 'Username',
                         prefixIcon: Icon(
                           Icons.mail,
@@ -162,14 +169,14 @@ class LoginWidgetState extends State<LoginWidget> {
                       ),
                       // Replace this with your controller
                     ),
-                    SizedBox(height: 20),
+                    const SizedBox(height: 20),
                     Stack(
                       alignment: Alignment.centerRight,
                       children: [
                         TextField(
                           controller: _passwordController,
 
-                          decoration: InputDecoration(
+                          decoration: const InputDecoration(
                             labelText: "Password",
                             prefixIcon: Icon(
                               Icons.password,
@@ -183,7 +190,7 @@ class LoginWidgetState extends State<LoginWidget> {
                           onTap: () {
                             // Toggle password visibility
                           },
-                          child: Padding(
+                          child: const Padding(
                             padding: EdgeInsets.only(right: 12.0),
                             child: Icon(
                               Icons.visibility_off,
@@ -193,7 +200,7 @@ class LoginWidgetState extends State<LoginWidget> {
                         ),
                       ],
                     ),
-                    SizedBox(height: 20),
+                    const SizedBox(height: 20),
                     ElevatedButton(
                       onPressed: () async {
                         var password = _passwordController.text;
@@ -236,7 +243,7 @@ class LoginWidgetState extends State<LoginWidget> {
                       style: ElevatedButton.styleFrom(
                         primary: Colors.blue,
                       ),
-                      child: Text(
+                      child: const Text(
                         "Login",
                         style: TextStyle(color: Colors.white),
                       ),
@@ -245,7 +252,7 @@ class LoginWidgetState extends State<LoginWidget> {
                       onPressed: () {
                         // Handle "Create an account" button press
                       },
-                      child: Text(
+                      child: const Text(
                         "Create an account",
                         style: TextStyle(color: Colors.blue),
                       ),

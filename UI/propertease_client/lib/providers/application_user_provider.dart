@@ -23,7 +23,7 @@ class UserProvider with ChangeNotifier {
 
   UserProvider() {
     _baseUrl = const String.fromEnvironment("baseUrl",
-        defaultValue: "https://10.0.2.2:44340/api/");
+        defaultValue: "http://10.0.2.2:44340/api/");
     _endpoint = 'ApplicationUser';
     client.badCertificateCallback = (cert, host, port) => true;
     http = IOClient(client);
@@ -132,7 +132,8 @@ class UserProvider with ChangeNotifier {
 
   Future<Map<String, dynamic>?> signIn(String userName, String password) async {
     try {
-      final url = Uri.parse("https://10.0.2.2:54762/Access/SignIn");
+      final url = Uri.parse("https://10.0.2.2:7137/Access/SignIn");
+      var headers = createHeaders();
       final response = await http!.post(
         url,
         body: jsonEncode({
@@ -144,7 +145,7 @@ class UserProvider with ChangeNotifier {
           'Content-Type': 'application/json',
         },
       );
-      if (response?.statusCode == 200) {
+      if (response.statusCode == 200) {
         // Successful login
         final Map<String, dynamic> data = jsonDecode(response!.body);
         final String accessToken = data['token'];
@@ -152,7 +153,7 @@ class UserProvider with ChangeNotifier {
         final String userId = data['user']['id'].toString();
         final String firstName = data['user']['person']['firstName'];
         final String lastName = data['user']['person']['lastName'];
-        final String profilePhoto = data['user']['person']['profilePhoto'];
+        final String? profilePhoto = data['user']['person']['profilePhoto'];
         late int roleId;
 
         // Check if there is a userRole with role['id'] equal to 3
