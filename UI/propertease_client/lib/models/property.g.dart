@@ -54,6 +54,10 @@ Property _$PropertyFromJson(Map<String, dynamic> json) => Property(
       ..propertyType = json['propertyType'] == null
           ? null
           : PropertyType.fromJson(json['propertyType'] as Map<String, dynamic>)
+      ..applicationUser = json['applicationUser'] == null
+          ? null
+          : ApplicationUser.fromJson(
+              json['applicationUser'] as Map<String, dynamic>)
       ..city = json['city'] == null
           ? null
           : City.fromJson(json['city'] as Map<String, dynamic>);
@@ -99,5 +103,6 @@ Map<String, dynamic> _$PropertyToJson(Property instance) => <String, dynamic>{
       'averageRating': instance.averageRating,
       'isAvailable': instance.isAvailable,
       'propertyType': instance.propertyType,
+      'applicationUser': instance.applicationUser,
       'city': instance.city,
     };

@@ -10,6 +10,7 @@ import '../../models/city.dart';
 import '../../models/property.dart';
 import '../../models/property_type.dart';
 import '../../models/search_result.dart';
+import 'property_details.dart';
 
 class PropertyListWidget extends StatefulWidget {
   const PropertyListWidget({super.key});
@@ -46,7 +47,6 @@ class PropertyListWidgetState extends State<PropertyListWidget> {
     _cityProvider = context.read<CityProvider>();
     _propertyTypeProvider = context.read<PropertyTypeProvider>();
     _photoProvider = context.read<PhotoProvider>();
-    _fetchProperties();
   }
 
   Future<Image> getFirstImageByPropertyId(int? propertyId) async {
@@ -156,163 +156,153 @@ class PropertyListWidgetState extends State<PropertyListWidget> {
                               const EdgeInsets.symmetric(horizontal: 24),
                           title: const Text("Filter Properties"),
                           children: [
-                            Expanded(
-                              child: DropdownButtonFormField<City?>(
-                                key: UniqueKey(),
-                                value: _selectedCity,
-                                onChanged: (City? newValue) async {
-                                  setState(() {
-                                    _selectedCity = newValue;
-                                    cityId = newValue?.id;
-                                  });
-                                  await _fetchProperties();
-                                },
-                                items: (cityResult?.result ?? [])
-                                    .map<DropdownMenuItem<City?>>(
-                                  (City? city) {
-                                    if (city != null && city.name != null ||
-                                        _selectedCity != null) {
-                                      return DropdownMenuItem<City?>(
-                                        value: city,
-                                        child: Text(city!.name!),
-                                      );
-                                    } else {
-                                      return const DropdownMenuItem<City?>(
-                                        value: null,
-                                        child: Text('Undefined'),
-                                      );
-                                    }
+                            Column(
+                              children: [
+                                DropdownButtonFormField<City?>(
+                                  value: _selectedCity,
+                                  onChanged: (City? newValue) async {
+                                    setState(() {
+                                      _selectedCity = newValue;
+                                      cityId = newValue?.id;
+                                    });
+                                    await _fetchProperties();
                                   },
-                                ).toList(),
-                                decoration: const InputDecoration(
-                                  labelText: 'City',
+                                  items: (cityResult?.result ?? [])
+                                      .map<DropdownMenuItem<City?>>(
+                                    (City? city) {
+                                      if (city != null && city.name != null ||
+                                          _selectedCity != null) {
+                                        return DropdownMenuItem<City?>(
+                                          value: city,
+                                          child: Text(city!.name!),
+                                        );
+                                      } else {
+                                        return const DropdownMenuItem<City?>(
+                                          value: null,
+                                          child: Text('Undefined'),
+                                        );
+                                      }
+                                    },
+                                  ).toList(),
+                                  decoration: const InputDecoration(
+                                    labelText: 'City',
+                                  ),
                                 ),
-                              ),
-                            ),
-                            Expanded(
-                              child: DropdownButtonFormField<PropertyType?>(
-                                value: _selectedProperty,
-                                onChanged: (PropertyType? newValue) async {
-                                  setState(() {
-                                    _selectedProperty = newValue;
-                                    propertyTypeId = newValue?.id;
-                                  });
-                                  await _fetchProperties();
-                                },
-                                items: (propertyTypeResult?.result ?? [])
-                                    .map<DropdownMenuItem<PropertyType?>>(
-                                  (PropertyType? propertyType) {
-                                    if (propertyType != null &&
-                                        propertyType.name != null) {
-                                      return DropdownMenuItem<PropertyType?>(
-                                        value: propertyType,
-                                        child: Text(propertyType.name!),
-                                      );
-                                    } else {
-                                      return const DropdownMenuItem<
-                                          PropertyType?>(
-                                        value: null,
-                                        child: Text('Undefined'),
-                                      );
-                                    }
+                                DropdownButtonFormField<PropertyType?>(
+                                  value: _selectedProperty,
+                                  onChanged: (PropertyType? newValue) async {
+                                    setState(() {
+                                      _selectedProperty = newValue;
+                                      propertyTypeId = newValue?.id;
+                                    });
+                                    await _fetchProperties();
                                   },
-                                ).toList(),
-                                decoration: const InputDecoration(
-                                  labelText: 'Property type',
+                                  items: (propertyTypeResult?.result ?? [])
+                                      .map<DropdownMenuItem<PropertyType?>>(
+                                    (PropertyType? propertyType) {
+                                      if (propertyType != null &&
+                                          propertyType.name != null) {
+                                        return DropdownMenuItem<PropertyType?>(
+                                          value: propertyType,
+                                          child: Text(propertyType.name!),
+                                        );
+                                      } else {
+                                        return const DropdownMenuItem<
+                                            PropertyType?>(
+                                          value: null,
+                                          child: Text('Undefined'),
+                                        );
+                                      }
+                                    },
+                                  ).toList(),
+                                  decoration: const InputDecoration(
+                                    labelText: 'Property type',
+                                  ),
                                 ),
-                              ),
-                            ),
-                            Expanded(
-                              child: DropdownButtonFormField<bool?>(
-                                value: _isAvailable,
-                                onChanged: (bool? newValue) {
-                                  _fetchProperties();
-                                  setState(() {
-                                    _isAvailable = newValue;
-                                  });
-                                },
-                                items: const [
-                                  DropdownMenuItem<bool?>(
-                                    value: null,
-                                    child: Text('All'),
+                                DropdownButtonFormField<bool?>(
+                                  value: _isAvailable,
+                                  onChanged: (bool? newValue) {
+                                    _fetchProperties();
+                                    setState(() {
+                                      _isAvailable = newValue;
+                                    });
+                                  },
+                                  items: const [
+                                    DropdownMenuItem<bool?>(
+                                      value: null,
+                                      child: Text('All'),
+                                    ),
+                                    DropdownMenuItem<bool?>(
+                                      value: true,
+                                      child: Text('Available'),
+                                    ),
+                                    DropdownMenuItem<bool?>(
+                                      value: false,
+                                      child: Text('Rented'),
+                                    ),
+                                  ],
+                                  decoration: const InputDecoration(
+                                    labelText: 'Available',
                                   ),
-                                  DropdownMenuItem<bool?>(
-                                    value: true,
-                                    child: Text('Available'),
-                                  ),
-                                  DropdownMenuItem<bool?>(
-                                    value: false,
-                                    child: Text('Rented'),
-                                  ),
-                                ],
-                                decoration: const InputDecoration(
-                                  labelText: 'Available',
                                 ),
-                              ),
-                            ),
-                            Expanded(
-                              child: TextFormField(
-                                decoration: const InputDecoration(
-                                  labelText: 'Min Price',
-                                  prefixIcon: Icon(Icons.attach_money),
-                                ),
-                                keyboardType: TextInputType.number,
-                                controller: _minPriceController,
-                                onChanged: (value) async {
-                                  await _fetchProperties();
-                                },
-                              ),
-                            ),
-                            Expanded(
-                              child: TextFormField(
-                                decoration: const InputDecoration(
-                                  labelText: 'Max Price',
-                                  prefixIcon: Icon(Icons.attach_money),
-                                ),
-                                keyboardType: TextInputType.number,
-                                controller: _maxPriceController,
-                                onChanged: (value) async {
-                                  await _fetchProperties();
-                                },
-                              ),
-                            ),
-                            ElevatedButton(
-                              onPressed: () async {
-                                setState(() {
-                                  _selectedCity = null;
-                                  _selectedProperty = null;
-                                  _isAvailable = null;
-                                  cityId = null;
-                                  propertyTypeId = null;
-                                });
-
-                                formKey.currentState?.reset();
-                                await _fetchProperties();
-
-                                _nameController.clear();
-                              },
-                              style: ButtonStyle(
-                                backgroundColor:
-                                    MaterialStateProperty.all(Colors.blue),
-                              ),
-                              child: const Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.clear,
-                                    color: Colors.white,
-                                  ), // Add your desired icon here
-                                  SizedBox(
-                                    width:
-                                        4, // Add some spacing between the icon and text
+                                TextFormField(
+                                  decoration: const InputDecoration(
+                                    labelText: 'Min Price',
+                                    prefixIcon: Icon(Icons.attach_money),
                                   ),
-                                  Text(
-                                    "Clear filters",
-                                    style: TextStyle(color: Colors.white),
+                                  keyboardType: TextInputType.number,
+                                  controller: _minPriceController,
+                                  onChanged: (value) async {
+                                    await _fetchProperties();
+                                  },
+                                ),
+                                TextFormField(
+                                  decoration: const InputDecoration(
+                                    labelText: 'Max Price',
+                                    prefixIcon: Icon(Icons.attach_money),
                                   ),
-                                ],
-                              ),
-                            )
+                                  keyboardType: TextInputType.number,
+                                  controller: _maxPriceController,
+                                  onChanged: (value) async {
+                                    await _fetchProperties();
+                                  },
+                                ),
+                                ElevatedButton(
+                                  onPressed: () async {
+                                    setState(() {
+                                      _selectedCity = null;
+                                      _selectedProperty = null;
+                                      _isAvailable = null;
+                                      cityId = null;
+                                      propertyTypeId = null;
+                                    });
+                                    formKey.currentState?.reset();
+                                    await _fetchProperties();
+                                    _nameController.clear();
+                                  },
+                                  style: ButtonStyle(
+                                    backgroundColor:
+                                        MaterialStateProperty.all(Colors.blue),
+                                  ),
+                                  child: const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.clear,
+                                        color: Colors.white,
+                                      ),
+                                      SizedBox(
+                                        width: 4,
+                                      ),
+                                      Text(
+                                        "Clear filters",
+                                        style: TextStyle(color: Colors.white),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
                           ],
                         );
                       },
@@ -381,15 +371,11 @@ class PropertyListWidgetState extends State<PropertyListWidget> {
                                         image: image.image,
                                         fit: BoxFit.contain,
                                       ),
-                                      // Text positioned in the bottom left corner
                                       Positioned(
-                                        left:
-                                            8, // Adjust the left position as needed
-                                        bottom:
-                                            8, // Adjust the bottom position as needed
+                                        left: 8,
+                                        bottom: 8,
                                         child: Container(
-                                          padding: const EdgeInsets.all(
-                                              8), // Adjust padding as needed
+                                          padding: const EdgeInsets.all(8),
                                           color: currentProperty.isAvailable!
                                               ? Colors
                                                   .blue // Set background color for 'Available' (true)
@@ -613,7 +599,16 @@ class PropertyListWidgetState extends State<PropertyListWidget> {
                                   ),
                                   Center(
                                     child: ElevatedButton(
-                                      onPressed: () {},
+                                      onPressed: () {
+                                        Navigator.of(context).push(
+                                          MaterialPageRoute(
+                                            builder: (context) =>
+                                                PropertyDetailsScreen(
+                                              property: currentProperty,
+                                            ),
+                                          ),
+                                        );
+                                      },
                                       style: ButtonStyle(
                                         backgroundColor:
                                             MaterialStateProperty.all(

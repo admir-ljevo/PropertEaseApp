@@ -1,5 +1,6 @@
 import 'package:json_annotation/json_annotation.dart';
 
+import 'application_user.dart';
 import 'city.dart';
 import 'property_type.dart';
 
@@ -47,6 +48,8 @@ class Property {
   double? averageRating;
   bool? isAvailable;
   PropertyType? propertyType;
+  ApplicationUser? applicationUser;
+
   City? city;
   Property({
     this.id = 0,
