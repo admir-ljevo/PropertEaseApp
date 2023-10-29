@@ -35,7 +35,7 @@ namespace MobiFon.Infrastructure.Repositories.PropertyReservationRepository
             return await ProjectToListAsync<PropertyReservationDto>(DatabaseContext.PropertyReservations.Where(pr => !pr.IsDeleted).Skip(offset).Take(pageSize));
         }
 
-        public async Task<List<PropertyReservationDto>> GetAllAsync()
+        public new async Task<List<PropertyReservationDto>> GetAllAsync()
         {
             return await ProjectToListAsync<PropertyReservationDto>(DatabaseContext.PropertyReservations.Where(pr => !pr.IsDeleted));
         }

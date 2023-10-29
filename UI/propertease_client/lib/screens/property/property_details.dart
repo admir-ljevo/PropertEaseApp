@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:propertease_client/providers/image_provider.dart';
+import 'package:propertease_client/screens/property/reviews/review_list.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/photo.dart';
@@ -1173,7 +1174,15 @@ class PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
                         ),
                       ),
                       child: ElevatedButton(
-                        onPressed: () {},
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => ReviewListScreen(
+                                id: widget.property?.id!,
+                              ),
+                            ),
+                          );
+                        },
                         style: ElevatedButton.styleFrom(
                           primary: Colors
                               .transparent, // Make the button background transparent
@@ -1182,7 +1191,7 @@ class PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
                         child: const Column(
                           children: [
                             Text(
-                              "Add rating",
+                              "Reviews",
                               style:
                                   TextStyle(color: Colors.white, fontSize: 20),
                             ),

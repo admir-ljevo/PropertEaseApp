@@ -2,6 +2,7 @@
 using MobiFon.Core.Dto.PropertyRating;
 using MobiFon.Core.Entities;
 using MobiFon.Infrastructure.Repositories.BaseRepository;
+using PropertEase.Core.Filters;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,6 +17,7 @@ namespace MobiFon.Infrastructure.Repositories.PropertyRatingRepository
         Task<List<PropertyRatingDto>> GetByName(string name);
         Task<PropertyRatingDto> GetByIdAsync(int id);
         Task<List<PropertyRatingDto>> GetByPropertyId(int id);
+        Task<List<PropertyRatingDto>> GetFiltered(RatingsFilter filter);
         Task<List<PropertyRatingDto>> GetForPaginationAsync(string searchFilter, int pageSize, int offeset)
                   => throw new NotImplementedException();
     }

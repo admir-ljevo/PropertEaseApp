@@ -50,7 +50,8 @@ Person _$PersonFromJson(Map<String, dynamic> json) => Person()
       : DateTime.parse(json['dateOfEmployment'] as String)
   ..pay = (json['pay'] as num?)?.toDouble()
   ..membershipCard = json['membershipCard'] as bool?
-  ..applicationUserId = json['applicationUserId'] as int?;
+  ..applicationUserId = json['applicationUserId'] as int?
+  ..profilePhotoBytes = json['profilePhotoBytes'] as String?;
 
 Map<String, dynamic> _$PersonToJson(Person instance) => <String, dynamic>{
       'id': instance.id,
@@ -85,4 +86,5 @@ Map<String, dynamic> _$PersonToJson(Person instance) => <String, dynamic>{
       'pay': instance.pay,
       'membershipCard': instance.membershipCard,
       'applicationUserId': instance.applicationUserId,
+      'profilePhotoBytes': instance.profilePhotoBytes,
     };

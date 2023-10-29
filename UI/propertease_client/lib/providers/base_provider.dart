@@ -106,6 +106,7 @@ abstract class BaseProvider<T> with ChangeNotifier {
 
   Future<SearchResult<T>> getFiltered({dynamic filter}) async {
     var url = "$_baseUrl$_endpoint/GetFilteredData";
+
     if (filter != null) {
       var queryString = getQueryString(filter);
       url = "$url?$queryString";
@@ -117,10 +118,11 @@ abstract class BaseProvider<T> with ChangeNotifier {
 
     var result = SearchResult<T>();
 
-    if (isValidResponse(response)) {
-      List data = jsonDecode(response.body);
-      result.count = data.length;
+    List data = jsonDecode(response.body);
 
+    result.count = data.length;
+    print(url);
+    if (isValidResponse(response)) {
       for (var item in data) {
         result.result.add(fromJson(item));
       }

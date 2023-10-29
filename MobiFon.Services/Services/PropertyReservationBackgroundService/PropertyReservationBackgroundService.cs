@@ -22,7 +22,7 @@ namespace MobiFon.Services.Services.PropertyReservationBackgroundService
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
-            timer = new Timer(DoWork, null, TimeSpan.Zero, interval);
+           timer = new Timer(DoWork, null, TimeSpan.Zero, interval);
 
             return Task.CompletedTask;
         }
@@ -30,18 +30,18 @@ namespace MobiFon.Services.Services.PropertyReservationBackgroundService
         private async void DoWork(object? state)
         {
             logger.LogInformation("runjetluk");
-            using (var scope = serviceProvider.CreateScope())
-            {
-                var propertyReservationService = scope.ServiceProvider.GetRequiredService<IPropertyReservationService>();
-                //var propertyService = scope.ServiceProvider.GetRequiredService<IPropertyService>();
-                List<PropertyReservationDto> reservations = await propertyReservationService.GetAllAsync();
-                foreach (var reservation in reservations.Where(r => r.DateOfOccupancyEnd <= DateTime.Now && r.IsActive))
-                {
-                    logger.LogInformation($"Updating reservation: {reservation.Id}");
-                    reservation.IsActive = false;
-                    propertyReservationService.Update(reservation);
-                }
-            }
+            //using (var scope = serviceProvider.CreateScope())
+            //{
+            //    var propertyReservationService = scope.ServiceProvider.GetRequiredService<IPropertyReservationService>();
+            //    //var propertyService = scope.ServiceProvider.GetRequiredService<IPropertyService>();
+            //    List<PropertyReservationDto> reservations = await propertyReservationService.GetAllAsync();
+            //    foreach (var reservation in reservations.Where(r => r.DateOfOccupancyEnd <= DateTime.Now && r.IsActive))
+            //    {
+            //        logger.LogInformation($"Updating reservation: {reservation.Id}");
+            //        reservation.IsActive = false;
+            //        propertyReservationService.Update(reservation);
+            //    }
+            //}
         }
 
         public Task StopAsync(CancellationToken cancellationToken)

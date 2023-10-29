@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:propertease_client/providers/property_provider.dart';
+import 'package:propertease_client/providers/rating_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -17,6 +18,7 @@ void main() {
       ChangeNotifierProvider(create: (_) => PropertyTypeProvider()),
       ChangeNotifierProvider(create: (_) => CityProvider()),
       ChangeNotifierProvider(create: (_) => PhotoProvider()),
+      ChangeNotifierProvider(create: (_) => RatingProvider()),
     ],
     child: const MyApp(),
   ));

@@ -1,7 +1,9 @@
 ﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using MobiFon.Core.Dto.ApplicationUser;
+using MobiFon.Core.Dto.Photo;
 using MobiFon.Services.FileManager;
 using MobiFon.Services.Services.ApplicationUsersService;
 using PropertEase.Core.Dto.ApplicationUser;
@@ -48,10 +50,16 @@ namespace MobiFon.Controllers
         public async Task<IActionResult> Add([FromForm]ClientInsertDto entity)
         {
             var file = entity.File;
+            byte[] imageBytes = null;
+
             if (file != null)
             {
                 entity.ProfilePhoto = await _fileManager.UploadFile(file);
+                imageBytes = await _fileManager.UploadFileAsBase64String(file);
+
+
             }
+            entity.ProfilePhotoBytes = imageBytes;
             var newClient = await ApplicationUsersService.AddClientAsync(entity);
             return Ok(newClient);
         }

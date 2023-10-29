@@ -10,6 +10,7 @@ import '../../models/city.dart';
 import '../../models/property.dart';
 import '../../models/property_type.dart';
 import '../../models/search_result.dart';
+import '../../utils/util.dart';
 import 'property_details.dart';
 
 class PropertyListWidget extends StatefulWidget {
@@ -401,7 +402,7 @@ class PropertyListWidgetState extends State<PropertyListWidget> {
                                           MainAxisAlignment.center,
                                       children: [
                                         Text(
-                                          'User rating: ${currentProperty.averageRating!}/5',
+                                          'User rating: ${formatNumber(currentProperty.averageRating!)}/5',
                                           style: const TextStyle(
                                             fontSize:
                                                 18, // Adjust the font size as needed

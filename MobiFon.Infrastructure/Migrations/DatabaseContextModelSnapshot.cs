@@ -569,6 +569,9 @@ namespace MobiFon.Infrastructure.Migrations
                     b.Property<string>("ProfilePhoto")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<byte[]>("ProfilePhotoBytes")
+                        .HasColumnType("varbinary(max)");
+
                     b.Property<string>("ProfilePhotoThumbnail")
                         .HasColumnType("nvarchar(max)");
 

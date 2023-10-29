@@ -1,6 +1,6 @@
 {
   "Version": 1,
-  "Hash": "fvcOXjlb6vFb9nT9RXbJxwOdyYSxz+InGXSdPhdJ5Fg=",
+  "Hash": "s+Q8gNAhb+eryx2QyJUBk4NV52LkN62Jej09mWwsImg=",
   "Source": "PropertEase",
   "BasePath": "_content/PropertEase",
   "Mode": "Default",
@@ -338,6 +338,23 @@
       "CopyToOutputDirectory": "Never",
       "CopyToPublishDirectory": "PreserveNewest",
       "OriginalItemSpec": "wwwroot\\uploads\\images\\Hasan_0a765e7a-08d7-42c4-82e8-9569bcaa68c1.jpg"
+    },
+    {
+      "Identity": "C:\\Users\\Admir\\Desktop\\PropertEaseApp\\MobiFonApi\\wwwroot\\uploads\\images\\hasbulla_5fb9bfc7-3149-4005-8da3-d99cef88bdda.jpg",
+      "SourceId": "PropertEase",
+      "SourceType": "Discovered",
+      "ContentRoot": "C:\\Users\\Admir\\Desktop\\PropertEaseApp\\MobiFonApi\\wwwroot\\",
+      "BasePath": "_content/PropertEase",
+      "RelativePath": "uploads/images/hasbulla_5fb9bfc7-3149-4005-8da3-d99cef88bdda.jpg",
+      "AssetKind": "All",
+      "AssetMode": "All",
+      "AssetRole": "Primary",
+      "RelatedAsset": "",
+      "AssetTraitName": "",
+      "AssetTraitValue": "",
+      "CopyToOutputDirectory": "Never",
+      "CopyToPublishDirectory": "PreserveNewest",
+      "OriginalItemSpec": "wwwroot\\uploads\\images\\hasbulla_5fb9bfc7-3149-4005-8da3-d99cef88bdda.jpg"
     },
     {
       "Identity": "C:\\Users\\Admir\\Desktop\\PropertEaseApp\\MobiFonApi\\wwwroot\\uploads\\images\\hasbulla_775ed630-1856-4b45-86a4-e1d148a2385d.jpg",

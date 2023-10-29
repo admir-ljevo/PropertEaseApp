@@ -126,6 +126,7 @@ namespace MobiFon.Services.Services.ApplicationUsersService
             newUser.Person.Position = 0;
             newUser.Person.ProfilePhoto = user.ProfilePhoto;
             newUser.Person.ProfilePhotoThumbnail = user.ProfilePhoto;
+            newUser.Person.ProfilePhotoBytes = user.ProfilePhotoBytes;
             newUser.Person.Qualifications = "";
             newUser.Person.WorkExperience = false;
 

@@ -4,6 +4,7 @@ using MobiFon.Core.Dto.Property;
 using MobiFon.Core.Dto.PropertyRating;
 using MobiFon.Core.Entities;
 using MobiFon.Infrastructure.Repositories.BaseRepository;
+using PropertEase.Core.Filters;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -37,6 +38,15 @@ namespace MobiFon.Infrastructure.Repositories.PropertyRatingRepository
         public async Task<List<PropertyRatingDto>> GetByPropertyId(int id)
         {
             return await ProjectToListAsync<PropertyRatingDto>(DatabaseContext.PropertyRatings.Where(pr=>pr.PropertyId == id && !pr.IsDeleted));
+        }
+
+        public async Task<List<PropertyRatingDto>> GetFiltered(RatingsFilter filter)
+        {
+            var ratings = await ProjectToListAsync<PropertyRatingDto>(DatabaseContext.PropertyRatings.Where(pr => !pr.IsDeleted
+            && (!filter.PropertyId.HasValue || filter.PropertyId == pr.PropertyId) 
+            && (!filter.CreatedFrom.HasValue || filter.CreatedFrom.Value <= pr.CreatedAt)
+            && (!filter.CreatedTo.HasValue || filter.CreatedTo.Value>=pr.CreatedAt)));
+            return ratings;
         }
     }
 }

@@ -24,6 +24,8 @@ namespace MobiFon.Core.Dto.ApplicationUser
         public DateTime BirthDate { get; set; }
         public Gender? Gender { get; set; }
         public string? ProfilePhoto { get; set; }
+        public byte[]? ProfilePhotoBytes { get; set; }
+
         public string? ProfilePhotoThumbnail { get; set; }
         public int? BirthPlaceId { get; set; }
         public string Jmbg { get; set; }

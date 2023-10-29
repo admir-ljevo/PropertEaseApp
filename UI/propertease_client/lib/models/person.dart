@@ -38,7 +38,7 @@ class Person {
   double? pay;
   bool? membershipCard;
   int? applicationUserId;
-
+  String? profilePhotoBytes;
   Person();
 
   factory Person.fromJson(Map<String, dynamic> json) => _$PersonFromJson(json);
