@@ -8,26 +8,27 @@ part of 'property_rating.dart';
 
 PropertyRating _$PropertyRatingFromJson(Map<String, dynamic> json) =>
     PropertyRating(
-      id: json['id'] as int?,
+      id: json['id'] as int? ?? 0,
       createdAt: json['createdAt'] == null
           ? null
           : DateTime.parse(json['createdAt'] as String),
       modifiedAt: json['modifiedAt'] == null
           ? null
           : DateTime.parse(json['modifiedAt'] as String),
-      totalRecordsCount: json['totalRecordsCount'] as int?,
-      isDeleted: json['isDeleted'] as bool?,
-      property: json['property'] == null
-          ? null
-          : Property.fromJson(json['property'] as Map<String, dynamic>),
+      totalRecordsCount: json['totalRecordsCount'] as int? ?? 0,
+      isDeleted: json['isDeleted'] as bool? ?? false,
       propertyId: json['propertyId'] as int?,
-      reviewer: json['reviewer'] == null
-          ? null
-          : ApplicationUser.fromJson(json['reviewer'] as Map<String, dynamic>),
       reviewerName: json['reviewerName'] as String?,
       rating: (json['rating'] as num?)?.toDouble(),
       description: json['description'] as String?,
-    );
+      reviewerId: json['reviewerId'] as int?,
+    )
+      ..property = json['property'] == null
+          ? null
+          : Property.fromJson(json['property'] as Map<String, dynamic>)
+      ..reviewer = json['reviewer'] == null
+          ? null
+          : ApplicationUser.fromJson(json['reviewer'] as Map<String, dynamic>);
 
 Map<String, dynamic> _$PropertyRatingToJson(PropertyRating instance) =>
     <String, dynamic>{
@@ -38,6 +39,7 @@ Map<String, dynamic> _$PropertyRatingToJson(PropertyRating instance) =>
       'isDeleted': instance.isDeleted,
       'property': instance.property,
       'propertyId': instance.propertyId,
+      'reviewerId': instance.reviewerId,
       'reviewer': instance.reviewer,
       'reviewerName': instance.reviewerName,
       'rating': instance.rating,

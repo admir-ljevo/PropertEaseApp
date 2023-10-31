@@ -14,7 +14,7 @@ namespace MobiFon.Controllers
 {
     public class PropertyRatingsController : BaseController<PropertyRatingDto, PropertyRatingUpsertDto, PropertyRatingUpsertDto, BaseSearchObject>
     {
-        IPropertyRatingService propertyRatingService;
+       private readonly IPropertyRatingService propertyRatingService;
         public PropertyRatingsController(IPropertyRatingService baseService, IMapper mapper) : base(baseService, mapper)
         {
             propertyRatingService = baseService;

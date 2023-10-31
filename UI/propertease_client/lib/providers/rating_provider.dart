@@ -8,4 +8,9 @@ class RatingProvider extends BaseProvider<PropertyRating> {
   PropertyRating fromJson(data) {
     return PropertyRating.fromJson(data);
   }
+
+  @override
+  Map<String, dynamic> toJson(PropertyRating data) {
+    return data.toJson();
+  }
 }

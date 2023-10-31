@@ -15,7 +15,7 @@ namespace MobiFon.Core.Dto.PropertyRating
         public ApplicationUserDto Reviewer { get; set; }
         public int ReviewerId { get; set; }
         public string ReviewerName { get; set; }
-        public float Rating { get; set; }
+        public double Rating { get; set; }
         public string Description { get; set; }
     }
 }

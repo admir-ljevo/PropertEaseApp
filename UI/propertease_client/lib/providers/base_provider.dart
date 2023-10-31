@@ -76,12 +76,15 @@ abstract class BaseProvider<T> with ChangeNotifier {
 
     var response =
         await http!.post(Uri.parse(url), headers: headers, body: requestBody);
-    print(response.statusCode);
     if (isValidResponse(response)) {
       return fromJson(jsonDecode(response.body));
     } else {
-      // ignore: prefer_interpolation_to_compose_strings
-      throw Exception("Failed to insert item");
+      final responseStatusCode = response.statusCode;
+      final responseBody = response.body;
+      final errorMessage =
+          "Failed to insert item. Status Code: $responseStatusCode, Response Body: $responseBody";
+      print(errorMessage);
+      throw Exception(errorMessage);
     }
   }
 
@@ -144,11 +147,14 @@ abstract class BaseProvider<T> with ChangeNotifier {
   bool isValidResponse(Response response) {
     if (response.statusCode < 299) {
       return true;
-    } else if (response.statusCode == 401) {
+    }
+    if (response.statusCode == 401) {
       throw Exception("Wrong credentials");
-    } else {
+    }
+    if (response.statusCode == 500) {
       throw Exception("Something else is wrong");
     }
+    throw Exception("runje");
   }
 
   Map<String, String> createHeaders() {

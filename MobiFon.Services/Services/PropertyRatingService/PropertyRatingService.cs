@@ -28,6 +28,7 @@ namespace MobiFon.Services.Services.PropertyRatingService
         public async Task<PropertyRatingDto> AddAsync(PropertyRatingDto entityDto)
         {
             await unitOfWork.PropertyRatingRepository.AddAsync(entityDto);
+            await unitOfWork.SaveChangesAsync();
             PropertyDto property = await unitOfWork.PropertyRepository.GetByIdAsync(entityDto.PropertyId);
             var ratings = await unitOfWork.PropertyRatingRepository.GetByPropertyId(entityDto.PropertyId);
             if (ratings != null)
@@ -39,7 +40,6 @@ namespace MobiFon.Services.Services.PropertyRatingService
                 property.AverageRating = entityDto.Rating;
             }
             unitOfWork.PropertyRepository.Update(property);
-            await unitOfWork.SaveChangesAsync();
 
             return entityDto;
         }
@@ -72,7 +72,7 @@ namespace MobiFon.Services.Services.PropertyRatingService
 
         public void Update(PropertyRatingDto entity)
         {
-            float oldRating = entity.Rating;
+            double oldRating = entity.Rating;
             unitOfWork.PropertyRatingRepository.Update(entity);
 
             unitOfWork.SaveChanges();
@@ -88,7 +88,7 @@ namespace MobiFon.Services.Services.PropertyRatingService
 
         public async Task<PropertyRatingDto> UpdateAsync(PropertyRatingDto entity)
         {
-            float oldRating = entity.Rating;
+            double oldRating = entity.Rating;
             unitOfWork.PropertyRatingRepository.Update(entity);
 
             await unitOfWork.SaveChangesAsync();

@@ -1,11 +1,12 @@
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:propertease_client/models/application_user.dart';
 import 'package:propertease_client/models/property_rating.dart';
 import 'package:propertease_client/models/search_result.dart';
 import 'package:propertease_client/providers/rating_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ReviewListScreen extends StatefulWidget {
   int? id;
@@ -22,19 +23,38 @@ class ReviewListScreenState extends State<ReviewListScreen> {
   DateTime? endDate;
   String? formattedStartDate;
   String? formattedEndDate;
+  int selectedRating = 1;
+  TextEditingController commentController = TextEditingController();
+  PropertyRating addedRating = PropertyRating();
   @override
   void didChangeDependencies() {
-    // TODO: implement didChangeDependencies
     super.didChangeDependencies();
     _ratingProvider = context.read<RatingProvider>();
+    getUserIdFromSharedPreferences();
+    _fetchRatings();
   }
 
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
     _ratingProvider = context.read<RatingProvider>();
+    getUserIdFromSharedPreferences();
     _fetchRatings();
+  }
+
+  String? firstName;
+  String? lastName;
+
+  int? userId;
+  // Add a GlobalKey for the form
+  GlobalKey<FormState> formKey = GlobalKey<FormState>();
+  Future<void> getUserIdFromSharedPreferences() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      userId = int.tryParse(prefs.getString('userId')!)!;
+      firstName = prefs.getString('firstName');
+      lastName = prefs.getString('lastName');
+    });
   }
 
   Future<void> _fetchRatings() async {
@@ -47,7 +67,6 @@ class ReviewListScreenState extends State<ReviewListScreen> {
 
       SearchResult<PropertyRating> tempRatings =
           await _ratingProvider.getFiltered(filter: filter);
-
       setState(() {
         ratings = tempRatings;
       });
@@ -131,6 +150,75 @@ class ReviewListScreenState extends State<ReviewListScreen> {
                 ),
               ],
             ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Row(
+              children: [
+                Text("Rating:    "),
+                Container(
+                  width: 200, // Set the width to your desired value
+                  child: DropdownButton<int>(
+                    value: selectedRating,
+                    onChanged: (int? value) {
+                      setState(() {
+                        selectedRating = value!;
+                      });
+                    },
+                    items: [1, 2, 3, 4, 5].map((int value) {
+                      return DropdownMenuItem<int>(
+                        value: value,
+                        child: Text(value.toString()),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: TextField(
+              controller: commentController,
+              decoration: InputDecoration(labelText: 'Review Comment'),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              try {
+                int rating = selectedRating;
+                String comment = commentController.text;
+                addedRating.id = 0;
+                addedRating.modifiedAt = DateTime.now();
+                addedRating.totalRecordsCount = 0;
+                addedRating.isDeleted = false;
+                addedRating.createdAt = DateTime.now();
+                addedRating.propertyId = widget.id!;
+                addedRating.rating = double.tryParse(selectedRating.toString());
+                addedRating.description = comment;
+                addedRating.reviewerId = userId!;
+                addedRating.reviewerName = "$firstName $lastName";
+
+                addedRating = await _ratingProvider.addAsync(addedRating);
+                setState(() {
+                  _fetchRatings();
+                });
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Review added successfully'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Review added successfully'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+            child: const Text("Add Review"),
           ),
           Expanded(
             child: FutureBuilder<SearchResult<PropertyRating>>(

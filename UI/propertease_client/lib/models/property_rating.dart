@@ -13,20 +13,20 @@ class PropertyRating {
   bool? isDeleted;
   Property? property;
   int? propertyId;
+  int? reviewerId;
   ApplicationUser? reviewer;
   String? reviewerName;
   double? rating;
   String? description;
 
   PropertyRating({
-    this.id,
+    this.id = 0,
     this.createdAt,
     this.modifiedAt,
-    this.totalRecordsCount,
-    this.isDeleted,
-    this.property,
+    this.totalRecordsCount = 0,
+    this.isDeleted = false,
     this.propertyId,
-    this.reviewer,
+    this.reviewerId,
     this.reviewerName,
     this.rating,
     this.description,

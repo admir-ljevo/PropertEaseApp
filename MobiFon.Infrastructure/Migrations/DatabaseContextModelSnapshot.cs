@@ -784,8 +784,8 @@ namespace MobiFon.Infrastructure.Migrations
                     b.Property<int>("PropertyId")
                         .HasColumnType("int");
 
-                    b.Property<float>("Rating")
-                        .HasColumnType("real");
+                    b.Property<double>("Rating")
+                        .HasColumnType("float");
 
                     b.Property<int>("ReviewerId")
                         .HasColumnType("int");
