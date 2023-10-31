@@ -202,6 +202,7 @@ class ReviewListScreenState extends State<ReviewListScreen> {
                 addedRating = await _ratingProvider.addAsync(addedRating);
                 setState(() {
                   _fetchRatings();
+                  commentController.text = "";
                 });
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
