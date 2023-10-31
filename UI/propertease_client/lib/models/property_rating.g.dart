@@ -18,10 +18,10 @@ PropertyRating _$PropertyRatingFromJson(Map<String, dynamic> json) =>
       totalRecordsCount: json['totalRecordsCount'] as int? ?? 0,
       isDeleted: json['isDeleted'] as bool? ?? false,
       propertyId: json['propertyId'] as int?,
+      reviewerId: json['reviewerId'] as int?,
       reviewerName: json['reviewerName'] as String?,
       rating: (json['rating'] as num?)?.toDouble(),
       description: json['description'] as String?,
-      reviewerId: json['reviewerId'] as int?,
     )
       ..property = json['property'] == null
           ? null

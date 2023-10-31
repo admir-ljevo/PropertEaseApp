@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'providers/application_user_provider.dart';
 import 'providers/city_provider.dart';
 import 'providers/image_provider.dart';
+import 'providers/notification_provider.dart';
 import 'providers/property_type_provider.dart';
 import 'screens/property/property_list.dart';
 
@@ -19,6 +20,7 @@ void main() {
       ChangeNotifierProvider(create: (_) => CityProvider()),
       ChangeNotifierProvider(create: (_) => PhotoProvider()),
       ChangeNotifierProvider(create: (_) => RatingProvider()),
+      ChangeNotifierProvider(create: (_) => NotificationProvider()),
     ],
     child: const MyApp(),
   ));

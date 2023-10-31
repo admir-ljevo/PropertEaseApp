@@ -30,18 +30,30 @@ namespace MobiFon.Controllers
         public async Task<NotificationDto> Add([FromForm] NotificationUpsertDto notification)
         {
             var file = notification.File;
-            if(file!=null)
+            byte[] imageBytes = null;
+            if (file != null)
+            {
                 notification.Image = await fileManager.UploadFile(file);
-            
+                imageBytes = await fileManager.UploadFileAsBase64String(file);
+
+            }
+            notification.ImageBytes = imageBytes;
             return await notificationService.AddAsync(mapper.Map<NotificationDto>(notification));
         }
 
         [HttpPut("Edit/{id}")]
         public async Task<NotificationDto> Edit([FromForm] NotificationUpsertDto notification)
         {
+            byte[] imageBytes = null;
+
             var file = notification.File;
             if (file != null)
+            {
                 notification.Image = await fileManager.UploadFile(file);
+                imageBytes = await fileManager.UploadFileAsBase64String(file);
+            }
+            notification.ImageBytes = imageBytes;
+
             return await notificationService.UpdateAsync(mapper.Map<NotificationDto>(notification));
 
         }

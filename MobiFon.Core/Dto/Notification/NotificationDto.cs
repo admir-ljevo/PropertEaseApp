@@ -13,6 +13,8 @@ namespace MobiFon.Core.Dto.Notification
         public int UserId { get; set; }
         public ApplicationUserDto User { get; set; }
         public string? Image { get; set; }
+        public byte[]? ImageBytes { get; set; }
+
         public string Text { get; set; }
     }
 }

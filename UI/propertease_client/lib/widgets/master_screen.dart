@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../screens/notifications/notification_list.dart';
+import '../screens/property/property_list.dart';
+
 class MasterScreenWidget extends StatefulWidget {
   Widget? child;
   String? title;
@@ -33,13 +36,21 @@ class MasterScreenWidgetState extends State<MasterScreenWidget> {
       ),
       drawer: Drawer(
         child: ListView(
-          children: const [
+          children: [
             ListTile(
               title: Text("Properties"),
+              onTap: () {
+                Navigator.of(context).push(MaterialPageRoute(
+                    builder: (context) => const PropertyListWidget()));
+              },
             ),
             ListTile(
-              title: Text("News"),
-            )
+              title: const Text("News"),
+              onTap: () {
+                Navigator.of(context).push(MaterialPageRoute(
+                    builder: (context) => const NewsListWidget()));
+              },
+            ),
           ],
         ),
       ),
