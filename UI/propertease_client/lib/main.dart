@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:propertease_client/providers/property_provider.dart';
 import 'package:propertease_client/providers/rating_provider.dart';
+import 'package:propertease_client/screens/users/client_add_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -142,7 +143,7 @@ class LoginWidgetState extends State<LoginWidget> {
       ),
       body: Center(
         child: Container(
-          constraints: const BoxConstraints(maxWidth: 400, maxHeight: 400),
+          constraints: const BoxConstraints(maxWidth: 400, maxHeight: 450),
           width: 400,
           child: Card(
             elevation: 5,
@@ -254,9 +255,13 @@ class LoginWidgetState extends State<LoginWidget> {
                     ),
                     TextButton(
                       onPressed: () {
-                        // Handle "Create an account" button press
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const ClientAddScreen(),
+                          ),
+                        );
                       },
-                      child: const Text(
+                      child: Text(
                         "Create an account",
                         style: TextStyle(color: Colors.blue),
                       ),

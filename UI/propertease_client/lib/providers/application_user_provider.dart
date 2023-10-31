@@ -2,7 +2,9 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:http/http.dart';
+
 import 'package:http_parser/http_parser.dart' as http_parser;
 import 'package:http/io_client.dart';
 
@@ -12,7 +14,7 @@ class UserProvider with ChangeNotifier {
   static String? _baseUrl;
   late String _endpoint;
   HttpClient client = HttpClient();
-  IOClient? http;
+  IOClient? ioClient;
   Map<String, String> createHeaders() {
     var headers = {
       'Content-Type': 'application/json; charset=utf-8',
@@ -26,7 +28,7 @@ class UserProvider with ChangeNotifier {
         defaultValue: "http://10.0.2.2:44340/api/");
     _endpoint = 'ApplicationUser';
     client.badCertificateCallback = (cert, host, port) => true;
-    http = IOClient(client);
+    ioClient = IOClient(client);
   }
   bool isValidResponse(Response response) {
     if (response.statusCode < 299) {
@@ -42,7 +44,7 @@ class UserProvider with ChangeNotifier {
     var url = "$_baseUrl$_endpoint/$id";
     final headers = createHeaders();
 
-    final response = await http?.delete(Uri.parse(url), headers: headers);
+    final response = await ioClient?.delete(Uri.parse(url), headers: headers);
     print(url);
     if (response!.statusCode == 200) {
       print("User deleted successfully");
@@ -59,7 +61,7 @@ class UserProvider with ChangeNotifier {
     var url = '$_baseUrl$_endpoint/GetAllUsers';
     var uri = Uri.parse(url);
     var headers = createHeaders();
-    var response = await http?.get(uri, headers: headers);
+    var response = await ioClient?.get(uri, headers: headers);
 
     List<ApplicationUser> users = [];
     if (isValidResponse(response!)) {
@@ -74,7 +76,7 @@ class UserProvider with ChangeNotifier {
     var url = 'https://localhost:44340/api/Employee/$id';
     var uri = Uri.parse(url);
     var headers = createHeaders();
-    var response = await http?.get(uri, headers: headers);
+    var response = await ioClient?.get(uri, headers: headers);
 
     if (isValidResponse(response!)) {
       final Map<String, dynamic> responseData = jsonDecode(response.body);
@@ -89,7 +91,7 @@ class UserProvider with ChangeNotifier {
     var url = 'https://localhost:44340/api/Employee/Get';
     var uri = Uri.parse(url);
     var headers = createHeaders();
-    var response = await http?.get(uri, headers: headers);
+    var response = await ioClient?.get(uri, headers: headers);
 
     try {
       if (isValidResponse(response!)) {
@@ -114,7 +116,7 @@ class UserProvider with ChangeNotifier {
 
     var uri = Uri.parse(url);
     var headers = createHeaders();
-    var response = await http?.get(uri, headers: headers);
+    var response = await ioClient?.get(uri, headers: headers);
     print(url);
 
     try {
@@ -134,7 +136,7 @@ class UserProvider with ChangeNotifier {
     try {
       final url = Uri.parse("https://10.0.2.2:7137/Access/SignIn");
       var headers = createHeaders();
-      final response = await http!.post(
+      final response = await ioClient!.post(
         url,
         body: jsonEncode({
           'userName': userName,
@@ -181,46 +183,51 @@ class UserProvider with ChangeNotifier {
     return null; // Return null if the login fails or there's an error
   }
 
-  // Future<void> updateClient(ApplicationUser client, int id) async {
-  //   try {
-  //     final url = Uri.parse("https://10.0.2.2:44340/api/Clients/Edit/$id");
-  //     final request = http.MultipartRequest('PUT', url);
-  //     request.fields['Id'] = client.id.toString();
-  //     request.fields['Email'] = client.email ?? '';
-  //     request.fields['UserName'] = client.userName ?? '';
-  //     request.fields['FirstName'] = client.person?.firstName ?? '';
-  //     request.fields['LastName'] = client.person?.lastName ?? '';
-  //     request.fields['BirthDate'] =
-  //         client.person?.birthDate?.toIso8601String() ?? '';
-  //     request.fields['Gender'] = client.person?.gender?.toString() ?? '';
-  //     request.fields['ProfilePhoto'] = client.person?.profilePhoto ?? '';
-  //     request.fields['ProfilePhotoThumbnail'] =
-  //         client.person?.profilePhotoThumbnail ?? '';
-  //     request.fields['BirthPlaceId'] =
-  //         client.person?.birthPlaceId?.toString() ?? '';
-  //     request.fields['Jmbg'] = client.person?.jmbg ?? '';
-  //     request.fields['PlaceOfResidenceId'] =
-  //         client.person?.placeOfResidenceId?.toString() ?? '';
+  Future<void> addClient(ApplicationUser client, String password) async {
+    try {
+      final url = Uri.parse("https://10.0.2.2:7137/api/Clients/Add");
+      final request = http.MultipartRequest('POST', url);
 
-  //     request.fields['Address'] = client.person?.address ?? '';
-  //     request.fields['PostCode'] = client.person?.postCode ?? '';
-  //     request.fields['PhoneNumber'] = client.phoneNumber ?? '';
-  //     request.fields['Position'] = client.person?.position.toString() ?? '';
+      request.fields['Id'] = client.id.toString();
+      request.fields['Email'] = client.email ?? '';
+      request.fields['UserName'] = client.userName ?? '';
+      request.fields['FirstName'] = client.person?.firstName ?? '';
+      request.fields['LastName'] = client.person?.lastName ?? '';
+      request.fields['BirthDate'] =
+          client.person?.birthDate?.toIso8601String() ?? '';
+      request.fields['Gender'] = client.person?.gender?.toString() ?? '';
+      request.fields['ProfilePhoto'] = client.person?.profilePhoto ?? '';
+      request.fields['ProfilePhotoThumbnail'] =
+          client.person?.profilePhotoThumbnail ?? '';
+      request.fields['BirthPlaceId'] =
+          client.person?.birthPlaceId?.toString() ?? '';
+      request.fields['Jmbg'] = client.person?.jmbg ?? '';
+      request.fields['PlaceOfResidenceId'] =
+          client.person?.placeOfResidenceId?.toString() ?? '';
 
-  //     if (client.file != null) {
-  //       request.files.add(
-  //         await http?.MultipartFile.fromPath('File', client.file!.path,
-  //             contentType: http_parser.MediaType('image', 'jpeg')),
-  //       );
-  //     }
-  //     final response = await request.send();
-  //     if (response.statusCode != 200) {
-  //       print('Error: ${response.statusCode} ${response.toString()}');
-  //     }
-  //   } catch (e) {
-  //     print('Err: ${e.toString()}');
-  //   }
-  // }
+      request.fields['Address'] = client.person?.address ?? '';
+      request.fields['PostCode'] = client.person?.postCode ?? '';
+      request.fields['PhoneNumber'] = client.phoneNumber ?? '';
+      request.fields['Position'] = client.person?.position.toString() ?? '';
+      request.fields['Password'] = password;
+
+      if (client.file != null) {
+        request.files.add(
+          await http.MultipartFile.fromPath('File', client.file!.path,
+              contentType: http_parser.MediaType('image', 'jpeg')),
+        );
+      }
+
+      final response = await request.send();
+      if (response.statusCode != 200) {
+        print('Error: ${response.statusCode} ${response.toString()}');
+      }
+    } catch (e) {
+      print('Err: ${e.toString()}');
+    } finally {
+      ioClient!.close(); // Close the IOClient when you're done
+    }
+  }
 
   String getQueryString(Map params, {String prefix = '&'}) {
     String query = '';
