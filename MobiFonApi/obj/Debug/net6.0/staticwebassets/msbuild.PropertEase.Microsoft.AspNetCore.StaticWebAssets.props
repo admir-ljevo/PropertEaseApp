@@ -16,6 +16,22 @@
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
       <OriginalItemSpec>$([System.IO.Path]::GetFullPath($(MSBuildThisFileDirectory)..\staticwebassets\uploads\images\0000c437-500_fc4b9565-f1f8-4ce9-a590-bf84eea09e32.jpg))</OriginalItemSpec>
     </StaticWebAsset>
+    <StaticWebAsset Include="$([System.IO.Path]::GetFullPath($(MSBuildThisFileDirectory)..\staticwebassets\uploads\images\1000000034_952cad31-9669-4a29-836b-3c80e1b44999.png))">
+      <SourceType>Package</SourceType>
+      <SourceId>PropertEase</SourceId>
+      <ContentRoot>$(MSBuildThisFileDirectory)..\staticwebassets\</ContentRoot>
+      <BasePath>_content/PropertEase</BasePath>
+      <RelativePath>uploads/images/1000000034_952cad31-9669-4a29-836b-3c80e1b44999.png</RelativePath>
+      <AssetKind>All</AssetKind>
+      <AssetMode>All</AssetMode>
+      <AssetRole>Primary</AssetRole>
+      <RelatedAsset></RelatedAsset>
+      <AssetTraitName></AssetTraitName>
+      <AssetTraitValue></AssetTraitValue>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      <OriginalItemSpec>$([System.IO.Path]::GetFullPath($(MSBuildThisFileDirectory)..\staticwebassets\uploads\images\1000000034_952cad31-9669-4a29-836b-3c80e1b44999.png))</OriginalItemSpec>
+    </StaticWebAsset>
     <StaticWebAsset Include="$([System.IO.Path]::GetFullPath($(MSBuildThisFileDirectory)..\staticwebassets\uploads\images\390681617_062b1fc3-94c7-4e08-8185-115ac3f46929.jpg))">
       <SourceType>Package</SourceType>
       <SourceId>PropertEase</SourceId>
@@ -560,6 +576,22 @@
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
       <OriginalItemSpec>$([System.IO.Path]::GetFullPath($(MSBuildThisFileDirectory)..\staticwebassets\uploads\images\istockphoto-1183338499-612x612_5e4d550a-d91e-4c65-ac42-eda82a491461.jpg))</OriginalItemSpec>
     </StaticWebAsset>
+    <StaticWebAsset Include="$([System.IO.Path]::GetFullPath($(MSBuildThisFileDirectory)..\staticwebassets\uploads\images\istockphoto-1183338499-612x612_5ee966a7-e059-49e4-b574-11ee277ab269.jpg))">
+      <SourceType>Package</SourceType>
+      <SourceId>PropertEase</SourceId>
+      <ContentRoot>$(MSBuildThisFileDirectory)..\staticwebassets\</ContentRoot>
+      <BasePath>_content/PropertEase</BasePath>
+      <RelativePath>uploads/images/istockphoto-1183338499-612x612_5ee966a7-e059-49e4-b574-11ee277ab269.jpg</RelativePath>
+      <AssetKind>All</AssetKind>
+      <AssetMode>All</AssetMode>
+      <AssetRole>Primary</AssetRole>
+      <RelatedAsset></RelatedAsset>
+      <AssetTraitName></AssetTraitName>
+      <AssetTraitValue></AssetTraitValue>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      <OriginalItemSpec>$([System.IO.Path]::GetFullPath($(MSBuildThisFileDirectory)..\staticwebassets\uploads\images\istockphoto-1183338499-612x612_5ee966a7-e059-49e4-b574-11ee277ab269.jpg))</OriginalItemSpec>
+    </StaticWebAsset>
     <StaticWebAsset Include="$([System.IO.Path]::GetFullPath($(MSBuildThisFileDirectory)..\staticwebassets\uploads\images\istockphoto-1183338499-612x612_5f1fcc8b-a149-4a27-bed8-04ec3b693330.jpg))">
       <SourceType>Package</SourceType>
       <SourceId>PropertEase</SourceId>
@@ -639,6 +671,22 @@
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
       <OriginalItemSpec>$([System.IO.Path]::GetFullPath($(MSBuildThisFileDirectory)..\staticwebassets\uploads\images\istockphoto-1183338499-612x612_bdfc6d37-4c41-4eb8-b9b8-faabf09e00fc.jpg))</OriginalItemSpec>
+    </StaticWebAsset>
+    <StaticWebAsset Include="$([System.IO.Path]::GetFullPath($(MSBuildThisFileDirectory)..\staticwebassets\uploads\images\istockphoto-1183338499-612x612_c1973066-f2e1-41eb-9ea1-eacfc13fccac.jpg))">
+      <SourceType>Package</SourceType>
+      <SourceId>PropertEase</SourceId>
+      <ContentRoot>$(MSBuildThisFileDirectory)..\staticwebassets\</ContentRoot>
+      <BasePath>_content/PropertEase</BasePath>
+      <RelativePath>uploads/images/istockphoto-1183338499-612x612_c1973066-f2e1-41eb-9ea1-eacfc13fccac.jpg</RelativePath>
+      <AssetKind>All</AssetKind>
+      <AssetMode>All</AssetMode>
+      <AssetRole>Primary</AssetRole>
+      <RelatedAsset></RelatedAsset>
+      <AssetTraitName></AssetTraitName>
+      <AssetTraitValue></AssetTraitValue>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      <OriginalItemSpec>$([System.IO.Path]::GetFullPath($(MSBuildThisFileDirectory)..\staticwebassets\uploads\images\istockphoto-1183338499-612x612_c1973066-f2e1-41eb-9ea1-eacfc13fccac.jpg))</OriginalItemSpec>
     </StaticWebAsset>
     <StaticWebAsset Include="$([System.IO.Path]::GetFullPath($(MSBuildThisFileDirectory)..\staticwebassets\uploads\images\istockphoto-1183338499-612x612_ca41727d-36fa-488d-a76f-9f4f2c1f46a2.jpg))">
       <SourceType>Package</SourceType>
@@ -1151,6 +1199,22 @@
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
       <OriginalItemSpec>$([System.IO.Path]::GetFullPath($(MSBuildThisFileDirectory)..\staticwebassets\uploads\images\w575_437a8114-de40-4c7f-847f-6fdb5ebb0881.jpg))</OriginalItemSpec>
+    </StaticWebAsset>
+    <StaticWebAsset Include="$([System.IO.Path]::GetFullPath($(MSBuildThisFileDirectory)..\staticwebassets\uploads\images\w575_58509db0-6c37-4e53-b715-cdf3671dd16a.jpg))">
+      <SourceType>Package</SourceType>
+      <SourceId>PropertEase</SourceId>
+      <ContentRoot>$(MSBuildThisFileDirectory)..\staticwebassets\</ContentRoot>
+      <BasePath>_content/PropertEase</BasePath>
+      <RelativePath>uploads/images/w575_58509db0-6c37-4e53-b715-cdf3671dd16a.jpg</RelativePath>
+      <AssetKind>All</AssetKind>
+      <AssetMode>All</AssetMode>
+      <AssetRole>Primary</AssetRole>
+      <RelatedAsset></RelatedAsset>
+      <AssetTraitName></AssetTraitName>
+      <AssetTraitValue></AssetTraitValue>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      <OriginalItemSpec>$([System.IO.Path]::GetFullPath($(MSBuildThisFileDirectory)..\staticwebassets\uploads\images\w575_58509db0-6c37-4e53-b715-cdf3671dd16a.jpg))</OriginalItemSpec>
     </StaticWebAsset>
     <StaticWebAsset Include="$([System.IO.Path]::GetFullPath($(MSBuildThisFileDirectory)..\staticwebassets\uploads\images\w575_59d49065-5103-4535-9276-f8ee5d4cb2a9.jpg))">
       <SourceType>Package</SourceType>

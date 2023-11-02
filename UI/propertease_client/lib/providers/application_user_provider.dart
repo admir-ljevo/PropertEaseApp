@@ -25,9 +25,11 @@ class UserProvider with ChangeNotifier {
 
   UserProvider() {
     _baseUrl = const String.fromEnvironment("baseUrl",
-        defaultValue: "http://10.0.2.2:44340/api/");
+        defaultValue: "https://10.0.2.2:7137/api/");
     _endpoint = 'ApplicationUser';
-    client.badCertificateCallback = (cert, host, port) => true;
+    client.badCertificateCallback = (cert, host, port) {
+      return true; // Disable certificate validation (for debugging purposes).
+    };
     ioClient = IOClient(client);
   }
   bool isValidResponse(Response response) {
@@ -57,6 +59,37 @@ class UserProvider with ChangeNotifier {
     }
   }
 
+  Future<String?> changePassword(
+      String oldPassword, String newPassword, String userId) async {
+    var url =
+        'https://10.0.2.2:7137/Access/ChangePassword'; // Adjust the URL as needed
+
+    var body = {
+      'currentPassword': oldPassword,
+      'newPassword': newPassword,
+      'userId': userId,
+    };
+
+    var headers = createHeaders();
+
+    try {
+      final response = await ioClient?.post(
+        Uri.parse(url),
+        headers: headers,
+        body: jsonEncode(body),
+      );
+
+      if (response?.statusCode == 200) {
+        return "Password changed successfully";
+      } else {
+        final responseJson = json.decode(response!.body);
+        return responseJson['description']; // Return the error description
+      }
+    } catch (e) {
+      return 'Network error: ${e.toString()}';
+    }
+  }
+
   Future<List<ApplicationUser>> getAllUsers() async {
     var url = '$_baseUrl$_endpoint/GetAllUsers';
     var uri = Uri.parse(url);
@@ -70,6 +103,21 @@ class UserProvider with ChangeNotifier {
           .toList();
     }
     throw Exception("Something is wrong");
+  }
+
+  Future<ApplicationUser> GetClientById(int id) async {
+    var url = 'https://10.0.2.2:7137/api/Clients/$id';
+    var uri = Uri.parse(url);
+    var headers = createHeaders();
+    var response = await ioClient?.get(uri, headers: headers);
+
+    if (isValidResponse(response!)) {
+      final Map<String, dynamic> responseData = jsonDecode(response.body);
+      ApplicationUser user = ApplicationUser.fromJson(responseData);
+      return user;
+    } else {
+      throw Exception("Something is wrong");
+    }
   }
 
   Future<ApplicationUser> GetEmployeeById(int id) async {
@@ -148,29 +196,33 @@ class UserProvider with ChangeNotifier {
         },
       );
       if (response.statusCode == 200) {
+        String? profilePhoto = "";
+
         // Successful login
         final Map<String, dynamic> data = jsonDecode(response!.body);
         final String accessToken = data['token'];
         final List<dynamic> userRoles = data['user']['userRoles'];
         final String userId = data['user']['id'].toString();
+
         final String firstName = data['user']['person']['firstName'];
         final String lastName = data['user']['person']['lastName'];
-        final String? profilePhoto = data['user']['person']['profilePhoto'];
+        if (data['user']['person']['profilePhotoBytes'].toString().isNotEmpty)
+          profilePhoto = data['user']['person']['profilePhotoBytes'].toString();
+        print(profilePhoto);
         late int roleId;
 
         // Check if there is a userRole with role['id'] equal to 3
 
         bool isClient =
             userRoles.any((userRole) => userRole['role']['id'] == 4);
-
         if (isClient) {
           roleId = 4;
           return {
             'accessToken': accessToken,
-            'userId': userId,
             'firstName': firstName,
             'lastName': lastName,
             'profilePhoto': profilePhoto,
+            'userId': userId,
             'roleId': roleId,
           };
         }
@@ -183,11 +235,58 @@ class UserProvider with ChangeNotifier {
     return null; // Return null if the login fails or there's an error
   }
 
-  Future<void> addClient(ApplicationUser client, String password) async {
+  Future<void> addClient(ApplicationUser clientData, String password) async {
     try {
       final url = Uri.parse("https://10.0.2.2:7137/api/Clients/Add");
+
       final request = http.MultipartRequest('POST', url);
 
+      request.fields['Id'] = clientData.id.toString();
+      request.fields['Email'] = clientData.email ?? '';
+      request.fields['UserName'] = clientData.userName ?? '';
+      request.fields['FirstName'] = clientData.person?.firstName ?? '';
+      request.fields['LastName'] = clientData.person?.lastName ?? '';
+      request.fields['BirthDate'] =
+          clientData.person?.birthDate?.toIso8601String() ?? '';
+      request.fields['Gender'] = clientData.person?.gender?.toString() ?? '';
+      request.fields['ProfilePhoto'] = clientData.person?.profilePhoto ?? '';
+      request.fields['ProfilePhotoThumbnail'] =
+          clientData.person?.profilePhotoThumbnail ?? '';
+      request.fields['BirthPlaceId'] =
+          clientData.person?.birthPlaceId?.toString() ?? '';
+      request.fields['Jmbg'] = clientData.person?.jmbg ?? '';
+      request.fields['PlaceOfResidenceId'] =
+          clientData.person?.placeOfResidenceId?.toString() ?? '';
+
+      request.fields['Address'] = clientData.person?.address ?? '';
+      request.fields['PostCode'] = clientData.person?.postCode ?? '';
+      request.fields['PhoneNumber'] = clientData.phoneNumber ?? '';
+      request.fields['Position'] = clientData.person?.position.toString() ?? '';
+      request.fields['Password'] = password;
+
+      if (clientData.file != null) {
+        request.files.add(
+          await http.MultipartFile.fromPath('File', clientData.file!.path,
+              contentType: http_parser.MediaType('image', 'jpeg')),
+        );
+      }
+
+      final streamedResponse = await ioClient!.send(request);
+
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode != 200) {
+        print('Error: ${response.statusCode} ${response.body}');
+      }
+    } catch (e) {
+      print('Err: ${e.toString()}');
+    }
+  }
+
+  Future<void> updateClient(ApplicationUser client, int id) async {
+    try {
+      final url = Uri.parse("https://localhost:44340/api/Clients/Edit/$id");
+      final request = http.MultipartRequest('PUT', url);
       request.fields['Id'] = client.id.toString();
       request.fields['Email'] = client.email ?? '';
       request.fields['UserName'] = client.userName ?? '';
@@ -209,7 +308,6 @@ class UserProvider with ChangeNotifier {
       request.fields['PostCode'] = client.person?.postCode ?? '';
       request.fields['PhoneNumber'] = client.phoneNumber ?? '';
       request.fields['Position'] = client.person?.position.toString() ?? '';
-      request.fields['Password'] = password;
 
       if (client.file != null) {
         request.files.add(
@@ -217,15 +315,15 @@ class UserProvider with ChangeNotifier {
               contentType: http_parser.MediaType('image', 'jpeg')),
         );
       }
+      final streamedResponse = await ioClient!.send(request);
 
-      final response = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
       if (response.statusCode != 200) {
-        print('Error: ${response.statusCode} ${response.toString()}');
+        print('Error: ${response.statusCode} ${response.body}');
       }
     } catch (e) {
       print('Err: ${e.toString()}');
-    } finally {
-      ioClient!.close(); // Close the IOClient when you're done
     }
   }
 
