@@ -20,7 +20,7 @@ class UserProvider with ChangeNotifier {
 
   UserProvider() {
     _baseUrl = const String.fromEnvironment("baseUrl",
-        defaultValue: "https://localhost:44340/api/");
+        defaultValue: "https://localhost:7137/api/");
     _endpoint = 'ApplicationUser';
   }
   bool isValidResponse(Response response) {
@@ -66,7 +66,7 @@ class UserProvider with ChangeNotifier {
   }
 
   Future<ApplicationUser> GetEmployeeById(int id) async {
-    var url = 'https://localhost:44340/api/Employee/$id';
+    var url = 'https://localhost:7137/api/Employee/$id';
     var uri = Uri.parse(url);
     var headers = createHeaders();
     var response = await http.get(uri, headers: headers);
@@ -81,7 +81,7 @@ class UserProvider with ChangeNotifier {
   }
 
   Future<List<ApplicationUser>> getEmployees() async {
-    var url = 'https://localhost:44340/api/Employee/Get';
+    var url = 'https://localhost:7137/api/Employee/Get';
     var uri = Uri.parse(url);
     var headers = createHeaders();
     var response = await http.get(uri, headers: headers);
@@ -127,7 +127,7 @@ class UserProvider with ChangeNotifier {
 
   Future<Map<String, dynamic>?> signIn(String userName, String password) async {
     try {
-      final url = Uri.parse("https://localhost:44340/Access/SignIn");
+      final url = Uri.parse("https://localhost:7137/Access/SignIn");
       final response = await http.post(
         url,
         body: jsonEncode({
@@ -189,7 +189,7 @@ class UserProvider with ChangeNotifier {
 
   Future<void> addClient(ApplicationUser client, String password) async {
     try {
-      final url = Uri.parse("https://localhost:44340/api/Clients/Add");
+      final url = Uri.parse("https://localhost:7137/api/Clients/Add");
       final request = http.MultipartRequest('POST', url);
       request.fields['Id'] = client.id.toString();
       request.fields['Email'] = client.email ?? '';
@@ -230,7 +230,7 @@ class UserProvider with ChangeNotifier {
 
   Future<void> addEmployee(ApplicationUser employee, String password) async {
     try {
-      final url = Uri.parse("https://localhost:44340/api/Employee/Add");
+      final url = Uri.parse("https://localhost:7137/api/Employee/Add");
       final request = http.MultipartRequest('POST', url);
       request.fields['Id'] = employee.id.toString();
       request.fields['Email'] = employee.email ?? '';
@@ -282,7 +282,7 @@ class UserProvider with ChangeNotifier {
 
   Future<void> updateClient(ApplicationUser client, int id) async {
     try {
-      final url = Uri.parse("https://localhost:44340/api/Clients/Edit/$id");
+      final url = Uri.parse("https://localhost:7137/api/Clients/Edit/$id");
       final request = http.MultipartRequest('PUT', url);
       request.fields['Id'] = client.id.toString();
       request.fields['Email'] = client.email ?? '';
@@ -323,7 +323,7 @@ class UserProvider with ChangeNotifier {
 
   Future<void> updateEmployee(ApplicationUser employee, int id) async {
     try {
-      final url = Uri.parse("https://localhost:44340/api/Employee/Edit/$id");
+      final url = Uri.parse("https://localhost:7137/api/Employee/Edit/$id");
       final request = http.MultipartRequest('PUT', url);
 
       request.fields['Id'] = employee.id.toString();

@@ -25,12 +25,16 @@ namespace MobiFon.Services.Services.ConversationService
             return await unitOfOfWork.ConversationRepository.GetAllAsync(); 
         }
 
+        public async Task<List<ConversationDto>> GetByClient(int clientId)
+        {
+            return await unitOfOfWork.ConversationRepository.GetByClient(clientId);        }
+
         public async Task<ConversationDto> GetByIdAsync(int id)
         {
             return await unitOfOfWork.ConversationRepository.GetByIdAync(id);
         }
 
-        public async Task<List<ConversationDto>> GetByPropertyAndRenter(int propertyId, int renterId)
+        public async Task<List<ConversationDto>> GetByPropertyAndRenter(int? propertyId, int renterId)
         {
            return await unitOfOfWork.ConversationRepository.GetByPropertyAndRenter(propertyId, renterId);   
         }
@@ -39,6 +43,10 @@ namespace MobiFon.Services.Services.ConversationService
         {
             return await unitOfOfWork.ConversationRepository.GetByPropertyId(id);
         }
+
+        public async Task<ConversationDto> GetLastByClient(int clientId)
+        {
+            return await unitOfOfWork.ConversationRepository.GetLastByClient(clientId);        }
 
         public async Task RemoveByIdAsync(int id, bool isSoft = true)
         {

@@ -329,11 +329,11 @@ class PropertyListWidgetState extends State<PropertyListWidget> {
           else
             Expanded(
               child: ListView.builder(
+                cacheExtent: 3000,
                 itemCount: result!.count,
                 itemBuilder: (context, index) {
                   final currentProperty = result!.result[index];
 
-                  // Call the function to get the image
                   return FutureBuilder<Image>(
                     future: getFirstImageByPropertyId(currentProperty.id),
                     builder: (context, snapshot) {
@@ -651,5 +651,19 @@ class PropertyListWidgetState extends State<PropertyListWidget> {
         ],
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _minPriceController.dispose();
+    _maxPriceController.dispose();
+
+    _propertyProvider.dispose();
+    _propertyTypeProvider.dispose();
+    _cityProvider.dispose();
+    _photoProvider.dispose();
+
+    super.dispose();
   }
 }

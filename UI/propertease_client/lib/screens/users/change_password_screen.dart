@@ -58,7 +58,7 @@ class ChangePasswordScreenState extends State<ChangePasswordScreen> {
             TextField(
               controller: _newPasswordController,
               obscureText: true,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: "New Password",
               ),
               onChanged: (password) {
@@ -78,7 +78,7 @@ class ChangePasswordScreenState extends State<ChangePasswordScreen> {
             ),
             Text(
               newPasswordError,
-              style: TextStyle(
+              style: const TextStyle(
                 color: Colors.red, // Customize the error text color
               ),
             ),
@@ -128,7 +128,7 @@ class ChangePasswordScreenState extends State<ChangePasswordScreen> {
                         backgroundColor: Colors.green,
                       ));
                     } else {
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
                         content: Text("Old password doesn't match"),
                         backgroundColor:
                             Colors.red, // Customize the SnackBar appearance
@@ -149,13 +149,5 @@ class ChangePasswordScreenState extends State<ChangePasswordScreen> {
         ),
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    _oldPasswordController.dispose();
-    _newPasswordController.dispose();
-    _confirmPasswordController.dispose();
-    super.dispose();
   }
 }

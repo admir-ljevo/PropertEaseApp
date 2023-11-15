@@ -18,6 +18,8 @@ namespace MobiFon.Core.Dto.Conversation
         public int ClientId { get; set; }
         public ApplicationUserDto Renter { get; set; }
         public int RenterId { get; set; }
+        public string? LastMessage { get; set; }
+        public DateTime? LastSent { get; set; } 
         public ICollection<MessageDto> Messages { get; set; }
     }
 }

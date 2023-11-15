@@ -36,7 +36,7 @@ class NewsListWidgetState extends State<NewsListWidget> {
       firstName = prefs.getString('firstName');
       lastName = prefs.getString('lastName');
       photoUrl = 'https://localhost:44340${prefs.getString('profilePhoto')}';
-      roleId = prefs.getInt('roleId')!;
+      roleId = prefs.getInt('roleId');
     });
   }
 

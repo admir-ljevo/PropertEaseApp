@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:propertease_client/models/conversation.dart';
+import 'package:propertease_client/providers/conversation_provider.dart';
+import 'package:propertease_client/providers/message_provider.dart';
 import 'package:propertease_client/providers/property_provider.dart';
+import 'package:propertease_client/providers/property_reservation_provider.dart';
 import 'package:propertease_client/providers/rating_provider.dart';
 import 'package:propertease_client/screens/users/client_add_screen.dart';
 import 'package:provider/provider.dart';
@@ -22,6 +26,9 @@ void main() {
       ChangeNotifierProvider(create: (_) => PhotoProvider()),
       ChangeNotifierProvider(create: (_) => RatingProvider()),
       ChangeNotifierProvider(create: (_) => NotificationProvider()),
+      ChangeNotifierProvider(create: (_) => ConversationProvider()),
+      ChangeNotifierProvider(create: (_) => MessageProvider()),
+      ChangeNotifierProvider(create: (_) => PropertyReservationProvider())
     ],
     child: const MyApp(),
   ));

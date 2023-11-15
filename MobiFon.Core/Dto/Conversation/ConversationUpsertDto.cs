@@ -13,5 +13,7 @@ namespace MobiFon.Core.Dto.Conversation
         public int PropertyId { get; set; }
         public int ClientId { get; set; }
         public int RenterId { get; set; }
+        public string? LastMessage { get; set; }
+        public DateTime? LastSent { get; set; }
     }
 }

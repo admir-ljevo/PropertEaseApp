@@ -40,10 +40,16 @@ namespace MobiFon.Controllers
         public async Task<IActionResult> Put(int id, [FromForm] ClientUpdateDto entity)
         {
             var file = entity.File;
+            byte[] imageBytes = null;
+
             if (file != null)
             {
                 entity.ProfilePhoto = await _fileManager.UploadFile(file);
+                entity.ProfilePhotoBytes = await _fileManager.UploadFileAsBase64String(file);
+            
+
             }
+
             return Ok(await ApplicationUsersService.EditClient(entity));
         }
         [HttpPost("Add")]

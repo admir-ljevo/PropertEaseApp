@@ -105,7 +105,7 @@ class UserProvider with ChangeNotifier {
     throw Exception("Something is wrong");
   }
 
-  Future<ApplicationUser> GetClientById(int id) async {
+  Future<ApplicationUser> getClientById(int id) async {
     var url = 'https://10.0.2.2:7137/api/Clients/$id';
     var uri = Uri.parse(url);
     var headers = createHeaders();
@@ -114,6 +114,7 @@ class UserProvider with ChangeNotifier {
     if (isValidResponse(response!)) {
       final Map<String, dynamic> responseData = jsonDecode(response.body);
       ApplicationUser user = ApplicationUser.fromJson(responseData);
+      print("Džamija");
       return user;
     } else {
       throw Exception("Something is wrong");
@@ -285,7 +286,7 @@ class UserProvider with ChangeNotifier {
 
   Future<void> updateClient(ApplicationUser client, int id) async {
     try {
-      final url = Uri.parse("https://localhost:44340/api/Clients/Edit/$id");
+      final url = Uri.parse("https://10.0.2.2:7137/api/Clients/Edit/$id");
       final request = http.MultipartRequest('PUT', url);
       request.fields['Id'] = client.id.toString();
       request.fields['Email'] = client.email ?? '';

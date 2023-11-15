@@ -121,7 +121,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
             child: Opacity(
               opacity: images[i].url == displayedImageUrl ? 0.3 : 1.0,
               child: Image.network(
-                "https://localhost:44340/${images[i].url}",
+                "https://localhost:7137/${images[i].url}",
                 width: 100,
                 height: 100,
                 fit: BoxFit.cover,
@@ -194,7 +194,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                       300, // Set the maximum height for the image
                                 ),
                                 child: Image.network(
-                                  "https://localhost:44340/${images[currentImageIndex].url}",
+                                  "https://localhost:7137/${images[currentImageIndex].url}",
                                   fit: BoxFit.cover,
                                 ),
                               ),

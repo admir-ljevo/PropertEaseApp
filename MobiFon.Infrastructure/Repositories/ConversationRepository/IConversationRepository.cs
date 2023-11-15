@@ -13,7 +13,10 @@ namespace MobiFon.Infrastructure.Repositories.ConversationRepository
     {
         new Task<List<ConversationDto>> GetAllAsync();
         Task<ConversationDto> GetByIdAync(int id);
-        Task<List<ConversationDto>> GetByPropertyAndRenter(int propertyId, int renterId);
+        Task<List<ConversationDto>> GetByPropertyAndRenter(int? propertyId, int renterId);
+        Task<List<ConversationDto>> GetByClient( int clientId);
+        Task<ConversationDto> GetLastByClient(int clientId);
+
         Task<List<ConversationDto>> GetByPropertyId(int id);
     }
 }

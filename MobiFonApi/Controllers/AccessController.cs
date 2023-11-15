@@ -42,7 +42,6 @@ namespace MobiFon.Controllers
             return BadRequest(Messages.WrongCredentials);
         }
         [HttpPost]
-        [HttpPost]
         public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordModel model)
         {
             if (ModelState.IsValid)

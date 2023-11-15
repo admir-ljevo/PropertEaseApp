@@ -14,7 +14,8 @@ namespace PropertEase.Core.Filters
         public DateTime? DateOccupancyEnded { get; set; }
         public float? totalPriceFrom { get; set; }
         public float? totalPriceTo { get; set; }
-        public int propertyTypeId { get; set; }
+        public int? propertyTypeId { get; set; }
+        public int? propertyId { get; set; }
         public string? propertyName { get; set; }
 
         public int? renterId { get; set; }

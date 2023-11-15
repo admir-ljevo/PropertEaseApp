@@ -22,11 +22,11 @@ class UserEditScreen extends StatefulWidget {
 }
 
 class UserEditScreenState extends State<UserEditScreen> {
-  late ApplicationUser editedUser = ApplicationUser();
+  late ApplicationUser editedUser;
   File? selectedImage;
   SearchResult<City>? cityResult;
   City? selectedCity;
-
+  late int selectedGender;
   final _formKey = GlobalKey<FormState>();
 
   late CityProvider _cityProvider;
@@ -46,10 +46,10 @@ class UserEditScreenState extends State<UserEditScreen> {
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController =
       TextEditingController();
-
-  DateTime selectedDate = DateTime.now();
+  String? profilePhoto;
+  late DateTime selectedDate;
   DateTime selectedEmploymentDate = DateTime.now();
-  int selectedGender = 0; // 0 for Male, 1 for Female
+  // 0 for Male, 1 for Female
   int selectedRole = 0;
   void _onGenderChanged(int newValue) {
     setState(() {
@@ -76,26 +76,26 @@ class UserEditScreenState extends State<UserEditScreen> {
     if (pickedFile != null) {
       setState(() {
         selectedImage = File(pickedFile.path);
-        widget.user?.file = selectedImage;
-        widget.user?.person?.profilePhoto = selectedImage?.path;
-        widget.user?.person?.profilePhotoThumbnail = selectedImage?.path;
+
+        editedUser.file = File(pickedFile.path);
+        editedUser.person?.profilePhoto = selectedImage?.path;
+        editedUser.person?.profilePhotoThumbnail = selectedImage?.path;
       });
     }
   }
 
-  Future<void> _updateEmployee() async {
-    double? parsedPay = double.tryParse(_payController.text);
-
-    editedUser = widget.user!;
+  Future<void> _updateClient() async {
     editedUser.person?.gender = widget.user?.person?.gender;
     editedUser.person?.firstName = _firstNameController.text;
     editedUser.person?.lastName = _lastNameController.text;
+    editedUser.person?.birthDate = selectedDate;
     editedUser.userName = _userNameController.text;
     editedUser.phoneNumber = _phoneNumberController.text;
     editedUser.person?.address = _addressController.text;
     editedUser.person?.postCode = _postalCodeController.text;
     editedUser.person?.jmbg = _jmbgController.text;
-    editedUser.email = _emailController.text;
+
+    editedUser.person?.placeOfResidenceId = selectedCity?.id;
     if (_formKey.currentState!.validate()) {
       if (widget.user?.userRoles?[0].role?.id == 4) {
         await _userProvider.updateClient(editedUser, editedUser.id!);
@@ -123,6 +123,8 @@ class UserEditScreenState extends State<UserEditScreen> {
   @override
   void initState() {
     super.initState();
+    editedUser = widget.user!;
+
     _firstNameController.text = widget.user?.person?.firstName ?? '';
     _lastNameController.text = widget.user?.person?.lastName ?? '';
     _userNameController.text = widget.user?.userName ?? '';
@@ -131,9 +133,13 @@ class UserEditScreenState extends State<UserEditScreen> {
     _addressController.text = widget.user?.person?.address ?? '';
     _postalCodeController.text = widget.user?.person?.postCode ?? '';
     _jmbgController.text = widget.user?.person?.jmbg ?? '';
+    selectedGender = widget.user!.person!.gender!;
     _cityProvider = context.read<CityProvider>();
     _userProvider = context.read<UserProvider>();
-    selectedCity = widget.user?.person?.placeOfResidence;
+    selectedCity = widget.user!.person!.placeOfResidence;
+    selectedCity!.id = widget.user!.person!.placeOfResidenceId;
+    selectedDate = widget.user!.person!.birthDate!;
+    profilePhoto = editedUser.person!.profilePhotoBytes;
     print(widget.user?.userRoles?.length);
     _fetchCities();
   }
@@ -142,9 +148,24 @@ class UserEditScreenState extends State<UserEditScreen> {
   void didChangeDependencies() {
     // TODO: implement didChangeDependencies
     super.didChangeDependencies();
+    editedUser = widget.user!;
+
     _cityProvider = context.read<CityProvider>();
     _userProvider = context.read<UserProvider>();
+    _firstNameController.text = widget.user?.person?.firstName ?? '';
+    _lastNameController.text = widget.user?.person?.lastName ?? '';
+    _userNameController.text = widget.user?.userName ?? '';
+    _emailController.text = widget.user?.email ?? '';
+    _phoneNumberController.text = widget.user?.phoneNumber ?? '';
+    _addressController.text = widget.user?.person?.address ?? '';
+    _postalCodeController.text = widget.user?.person?.postCode ?? '';
+    _jmbgController.text = widget.user?.person?.jmbg ?? '';
+    selectedGender = widget.user!.person!.gender!;
+    selectedCity = widget.user!.person!.placeOfResidence;
+    selectedCity!.id = widget.user!.person!.placeOfResidenceId;
+    profilePhoto = editedUser.person!.profilePhotoBytes;
 
+    selectedDate = widget.user!.person!.birthDate!;
     _fetchCities();
   }
 
@@ -195,10 +216,9 @@ class UserEditScreenState extends State<UserEditScreen> {
                 padding: const EdgeInsets.all(20.0),
                 child: Column(
                   children: [
-                    if (selectedImage == null &&
-                        widget.user?.person?.profilePhoto != null)
+                    if (selectedImage == null)
                       Image.memory(
-                        base64Decode(widget.user!.person!.profilePhotoBytes!),
+                        base64Decode(profilePhoto!),
                         width: 700,
                         height: 400,
                       ),
@@ -210,7 +230,11 @@ class UserEditScreenState extends State<UserEditScreen> {
                       ),
                     const SizedBox(height: 10),
                     ElevatedButton(
-                      onPressed: _pickImage,
+                      onPressed: () {
+                        setState(() {
+                          _pickImage();
+                        });
+                      },
                       child: const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: <Widget>[
@@ -515,7 +539,6 @@ class UserEditScreenState extends State<UserEditScreen> {
                           setState(() {
                             selectedDate = newDate;
                           });
-                          print(selectedDate);
                         }
                       },
                       child: const Text('Select Date'),
@@ -536,7 +559,9 @@ class UserEditScreenState extends State<UserEditScreen> {
                       value: selectedGender,
                       onChanged: (int? newValue) {
                         if (newValue != null) {
-                          _onGenderChanged(newValue);
+                          setState(() {
+                            _onGenderChanged(newValue);
+                          });
                         }
                       },
                       items: const [
@@ -560,13 +585,13 @@ class UserEditScreenState extends State<UserEditScreen> {
                   width: 150,
                   child: ElevatedButton(
                     onPressed: () async {
-                      await editClient();
+                      await _updateClient();
                     },
                     child: const Row(
                       children: [
-                        Icon(Icons.add),
+                        Icon(Icons.edit),
                         SizedBox(width: 20),
-                        Text('Add'),
+                        Text('Edit'),
                       ],
                     ),
                   ),
@@ -582,6 +607,4 @@ class UserEditScreenState extends State<UserEditScreen> {
       ),
     );
   }
-
-  editClient() {}
 }

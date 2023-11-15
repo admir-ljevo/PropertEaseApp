@@ -1,6 +1,8 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:propertease_client/screens/conversations/conversations_list_screen.dart';
+import 'package:propertease_client/screens/reservations/reservation_list_screen.dart';
 import 'package:propertease_client/screens/users/client_edit_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -39,14 +41,14 @@ class MasterScreenWidgetState extends State<MasterScreenWidget> {
       lastName = prefs.getString('lastName');
 
       photoUrl = prefs.getString('profilePhoto');
-      roleId = prefs.getInt('roleId')!;
+      roleId = prefs.getInt('roleId');
       getUserById(userId!);
     });
   }
 
   Future<void> getUserById(int id) async {
     try {
-      var fetchedUser = await _userProvider.GetClientById(id);
+      var fetchedUser = await _userProvider.getClientById(id);
       setState(() {
         user = fetchedUser;
       });
@@ -167,6 +169,22 @@ class MasterScreenWidgetState extends State<MasterScreenWidget> {
               onTap: () {
                 Navigator.of(context).push(MaterialPageRoute(
                     builder: (context) => const NewsListWidget()));
+              },
+            ),
+            ListTile(
+              title: const Text("Reservations"),
+              onTap: () {
+                Navigator.of(context).push(MaterialPageRoute(
+                    builder: (context) => const ReservationListScreen()));
+              },
+            ),
+            ListTile(
+              title: const Text("Conversations"),
+              onTap: () {
+                Navigator.of(context).push(MaterialPageRoute(
+                    builder: (context) => ConversationListScreen(
+                          clientId: userId,
+                        )));
               },
             ),
           ],

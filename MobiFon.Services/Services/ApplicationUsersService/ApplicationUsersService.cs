@@ -184,6 +184,7 @@ namespace MobiFon.Services.Services.ApplicationUsersService
                 editUser.Person.Position = 0;
                 editUser.Person.ProfilePhoto = user.ProfilePhoto;
                 editUser.Person.ProfilePhotoThumbnail = user.ProfilePhoto;
+                editUser.Person.ProfilePhotoBytes = user.ProfilePhotoBytes;
                 editUser.Person.Qualifications = "";
                 editUser.Person.WorkExperience = false;
 

@@ -1,4 +1,5 @@
-﻿using MobiFon.Core.Entities.Base;
+﻿using MobiFon.Core.Dto.Message;
+using MobiFon.Core.Entities.Base;
 using MobiFon.Core.Entities.Identity;
 
 
@@ -12,6 +13,8 @@ namespace MobiFon.Core.Entities
         public int ClientId { get; set; }
         public ApplicationUser Renter { get; set; }
         public int RenterId { get; set; }
+        public string? LastMessage { get; set; }
+        public DateTime? LastSent { get; set; }
         public List<Message> Messages { get; set; }
     }
 }

@@ -27,14 +27,14 @@ class NewsListWidgetState extends State<NewsListWidget> {
 
   String? firstName;
   String? lastName;
-  String photoUrl = 'https://localhost:44340';
+  String photoUrl = 'https://localhost:7137';
   int? roleId;
   Future<void> getUserIdFromSharedPreferences() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     setState(() {
       firstName = prefs.getString('firstName');
       lastName = prefs.getString('lastName');
-      photoUrl = 'https://localhost:44340${prefs.getString('profilePhoto')}';
+      photoUrl = 'https://localhost:7137${prefs.getString('profilePhoto')}';
       roleId = prefs.getInt('roleId')!;
     });
   }
@@ -274,7 +274,7 @@ class NewsListWidgetState extends State<NewsListWidget> {
                                       width: 250, // Set the maximum width
                                       height: 120, // Set the maximum height
                                       child: Image.network(
-                                        'https://localhost:44340/${currentNews.image}',
+                                        'https://localhost:7137/${currentNews.image}',
                                         alignment: Alignment
                                             .center, // Center the image within its box
                                         width: double

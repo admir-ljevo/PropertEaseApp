@@ -12,6 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:propertease_admin/screens/reservation/reservation_list_screen.dart';
 import 'package:propertease_admin/screens/users/user_list_screen.dart';
 
+import '../screens/messaging/conversation_list_screen.dart';
 import '../screens/property/property_list_screen.dart';
 import '../screens/users/user_detail_screen.dart';
 
@@ -29,7 +30,7 @@ class _MasterScreenWidgetState extends State<MasterScreenWidget> {
   late UserProvider _userProvider;
   String? firstName;
   String? lastName;
-  String photoUrl = 'https://localhost:44340';
+  String photoUrl = 'https://localhost:7137';
   int? roleId;
   int? userId;
   Future<void> getUserIdFromSharedPreferences() async {
@@ -38,7 +39,7 @@ class _MasterScreenWidgetState extends State<MasterScreenWidget> {
       userId = int.tryParse(prefs.getString('userId')!)!;
       firstName = prefs.getString('firstName');
       lastName = prefs.getString('lastName');
-      photoUrl = 'https://localhost:44340${prefs.getString('profilePhoto')}';
+      photoUrl = 'https://localhost:7137${prefs.getString('profilePhoto')}';
       roleId = prefs.getInt('roleId')!;
       getUserById(userId!);
     });
@@ -188,6 +189,15 @@ class _MasterScreenWidgetState extends State<MasterScreenWidget> {
                     builder: (context) => const UserListWidget()));
               },
             ),
+          ListTile(
+            title: const Text("Conversations"),
+            onTap: () {
+              Navigator.of(context).push(MaterialPageRoute(
+                  builder: (context) => ConversationListScreen(
+                        renterId: userId,
+                      )));
+            },
+          ),
         ]),
       ),
       body: widget.child!,

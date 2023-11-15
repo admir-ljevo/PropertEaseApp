@@ -310,7 +310,7 @@ class UserDetailScreenState extends State<UserDetailScreen> {
             ),
             child: widget.user?.person?.profilePhoto != null
                 ? Image.network(
-                    "https://localhost:44340/${widget.user?.person?.profilePhoto}",
+                    "https://localhost:7137/${widget.user?.person?.profilePhoto}",
                     fit: BoxFit.cover,
                   )
                 : Image.asset("assets/images/user_placeholder.jpg",

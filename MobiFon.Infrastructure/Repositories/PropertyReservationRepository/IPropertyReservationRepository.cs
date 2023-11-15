@@ -3,7 +3,6 @@ using MobiFon.Core.Entities;
 using MobiFon.Infrastructure.Repositories.BaseRepository;
 using PropertEase.Core.Filters;
 using PropertEase.Core.SearchObjects;
-using PropertEase.Reporting.Models;
 
 namespace MobiFon.Infrastructure.Repositories.PropertyReservationRepository
 {

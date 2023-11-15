@@ -16,7 +16,6 @@ namespace MobiFon.Controllers
             propertyReservationService = baseService;
         }
         [HttpGet("GetFilteredData")]
-        [SwaggerOperation(OperationId = "GetFilteredData")]
         public async Task<IActionResult> GetDataByFilter([FromQuery] PropertyReservationFilter filter)
         {
             try

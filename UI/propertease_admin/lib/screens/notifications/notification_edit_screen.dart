@@ -25,7 +25,7 @@ class _NotificationEditScreenState extends State<NotificationEditScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     _notificationProvider = context.read<NotificationProvider>();
-    imageUrl = "https://localhost:44340${widget.notification!.image}";
+    imageUrl = "https://localhost:7137${widget.notification!.image}";
   }
 
   Future<File> downloadFile(String url, String localPath) async {
@@ -45,7 +45,7 @@ class _NotificationEditScreenState extends State<NotificationEditScreen> {
     super.initState();
     textController.text = widget.notification?.text ?? '';
     nameController.text = widget.notification?.name ?? '';
-    imageUrl = "https://localhost:44340${widget.notification!.image}";
+    imageUrl = "https://localhost:7137${widget.notification!.image}";
 
     _notificationProvider = context.read<NotificationProvider>();
   }
@@ -104,7 +104,7 @@ class _NotificationEditScreenState extends State<NotificationEditScreen> {
                     children: [
                       if (selectedImage == null)
                         Image.network(
-                          "https://localhost:44340${widget.notification!.image}",
+                          "https://localhost:7137${widget.notification!.image}",
                           width: 700,
                           height: 400,
                         )

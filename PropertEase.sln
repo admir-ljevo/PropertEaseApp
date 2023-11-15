@@ -13,8 +13,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PropertEase.Services", "Mob
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PropertEase.Shared", "MobiFon.Shared\PropertEase.Shared.csproj", "{1790FE67-B22C-4ECD-8531-DA66F7534151}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PropertEase.Reporting", "PropertEase.Reporting\PropertEase.Reporting.csproj", "{20E9D4B6-0A8A-4181-82D6-AD11CF2FF2E7}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -41,10 +39,6 @@ Global
 		{1790FE67-B22C-4ECD-8531-DA66F7534151}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1790FE67-B22C-4ECD-8531-DA66F7534151}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1790FE67-B22C-4ECD-8531-DA66F7534151}.Release|Any CPU.Build.0 = Release|Any CPU
-		{20E9D4B6-0A8A-4181-82D6-AD11CF2FF2E7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{20E9D4B6-0A8A-4181-82D6-AD11CF2FF2E7}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{20E9D4B6-0A8A-4181-82D6-AD11CF2FF2E7}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{20E9D4B6-0A8A-4181-82D6-AD11CF2FF2E7}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

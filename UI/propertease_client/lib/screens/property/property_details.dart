@@ -1,10 +1,15 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:propertease_client/providers/conversation_provider.dart';
 import 'package:propertease_client/providers/image_provider.dart';
+import 'package:propertease_client/screens/conversations/messaging_screen.dart';
 import 'package:propertease_client/screens/property/reviews/review_list.dart';
+import 'package:propertease_client/screens/reservations/reservation_add_screen.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../models/conversation.dart';
 import '../../models/photo.dart';
 import '../../models/property.dart';
 
@@ -20,20 +25,46 @@ class PropertyDetailsScreen extends StatefulWidget {
 
 class PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
   late PhotoProvider _photoProvider;
+  late ConversationProvider _conversationProvider;
   int currentImageIndex = 0;
   int maxImagesToShow = 5;
   int startIndex = 5;
   String? displayedImageBytes;
+  Conversation conversation = Conversation();
+  Conversation? newConversation;
   TextEditingController _descriptionController = TextEditingController();
-  // Add a property to store the list of images
+
+  int? userId;
+  GlobalKey<FormState> formKey = GlobalKey<FormState>();
+  Future<void> getUserIdFromSharedPreferences() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      userId = int.tryParse(prefs.getString('userId')!)!;
+    });
+  }
+
   List<Photo> images = [];
+
+  Future<void> addConversation() async {
+    try {
+      conversation.renterId = widget.property?.applicationUserId;
+      conversation.createdAt = DateTime.now();
+      conversation.propertyId = widget.property?.id;
+      conversation.clientId = userId;
+      await _conversationProvider.addAsync(conversation);
+      newConversation = await _conversationProvider.getLastByClient(userId!);
+    } catch (e) {
+      print(e.toString());
+    }
+  }
+
   @override
   void didChangeDependencies() {
     // TODO: implement didChangeDependencies
     super.didChangeDependencies();
     _photoProvider = context.read<PhotoProvider>();
+    _conversationProvider = context.read<ConversationProvider>();
     _descriptionController.text = widget.property?.description ?? '';
-
     fetchImages();
   }
 
@@ -46,20 +77,22 @@ class PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
     // TODO: implement initState
     super.initState();
     _photoProvider = context.read<PhotoProvider>();
+    _conversationProvider = context.read<ConversationProvider>();
     _descriptionController.text = widget.property?.description ?? '';
+    getUserIdFromSharedPreferences();
     fetchImages();
   }
+
+  void refreshConversations() {}
 
   void fetchImages() async {
     // Get the photo provider from the context
     final photoProvider = context.read<PhotoProvider>();
 
-    // Call your getImagesByProperty function
     final propertyId =
         widget.property?.id; // Replace with the actual property ID
     final fetchedImages = await photoProvider.getImagesByProperty(propertyId);
 
-    // Update the state with the fetched images
     setState(() {
       images = fetchedImages;
       if (images.isNotEmpty) displayedImageBytes = images[0].imageBytes;
@@ -1226,7 +1259,17 @@ class PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
                         ),
                       ),
                       child: ElevatedButton(
-                        onPressed: () {},
+                        onPressed: () async {
+                          await addConversation();
+                          await Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => MessageListScreen(
+                                conversationId: newConversation?.id,
+                                recipientId: widget.property!.applicationUserId,
+                              ),
+                            ),
+                          );
+                        },
                         style: ElevatedButton.styleFrom(
                           primary: Colors
                               .transparent, // Make the button background transparent
@@ -1261,7 +1304,15 @@ class PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
                               20.0), // Set the border radius
                         ),
                         child: ElevatedButton(
-                          onPressed: () {},
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) => ReservationAddScreen(
+                                  property: widget.property,
+                                ),
+                              ),
+                            );
+                          },
                           style: ElevatedButton.styleFrom(
                             backgroundColor:
                                 Colors.white, // Set the button background color

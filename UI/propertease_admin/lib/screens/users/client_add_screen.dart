@@ -48,7 +48,7 @@ class ClientAddScreenState extends State<ClientAddScreen> {
       TextEditingController();
 
   int selectedGender = 0; // 0 for Male, 1 for Female
-  final String _baseUrl = 'https://localhost:44340';
+  final String _baseUrl = 'https://localhost:7137';
   Future<void> addClient() async {
     newUser.id = 0;
     newUser.person = Person();
@@ -79,13 +79,13 @@ class ClientAddScreenState extends State<ClientAddScreen> {
 
   String? firstName;
   String? lastName;
-  String photoUrl = 'https://localhost:44340';
+  String photoUrl = 'https://localhost:7137';
   Future<void> getUserIdFromSharedPreferences() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     setState(() {
       firstName = prefs.getString('firstName');
       lastName = prefs.getString('lastName');
-      photoUrl = 'https://localhost:44340${prefs.getString('profilePhoto')}';
+      photoUrl = 'https://localhost:7137${prefs.getString('profilePhoto')}';
     });
   }
 

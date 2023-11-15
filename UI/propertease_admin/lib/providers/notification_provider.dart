@@ -12,7 +12,7 @@ class NotificationProvider with ChangeNotifier {
 
   NotificationProvider() {
     _baseUrl = const String.fromEnvironment("baseUrl",
-        defaultValue: "https://localhost:44340/api/");
+        defaultValue: "https://localhost:7137/api/");
   }
 
   Map<String, String> createHeaders() {

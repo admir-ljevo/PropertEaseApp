@@ -15,6 +15,8 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'providers/application_user_provider.dart';
+import 'providers/conversation_provider.dart';
+import 'providers/message_provider.dart';
 
 void main() {
   runApp(MultiProvider(
@@ -27,6 +29,8 @@ void main() {
       ChangeNotifierProvider(create: (_) => NotificationProvider()),
       ChangeNotifierProvider(create: (_) => UserProvider()),
       ChangeNotifierProvider(create: (_) => RoleProvider()),
+      ChangeNotifierProvider(create: (_) => ConversationProvider()),
+      ChangeNotifierProvider(create: (_) => MessageProvider()),
     ],
     child: const MyApp(),
   ));

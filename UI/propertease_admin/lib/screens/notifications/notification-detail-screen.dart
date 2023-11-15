@@ -18,14 +18,14 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
   final TextEditingController _contentController = TextEditingController();
   String? firstName;
   String? lastName;
-  String photoUrl = 'https://localhost:44340';
+  String photoUrl = 'https://localhost:7137';
   int? roleId;
   Future<void> getUserIdFromSharedPreferences() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     setState(() {
       firstName = prefs.getString('firstName');
       lastName = prefs.getString('lastName');
-      photoUrl = 'https://localhost:44340${prefs.getString('profilePhoto')}';
+      photoUrl = 'https://localhost:7137${prefs.getString('profilePhoto')}';
       roleId = prefs.getInt('roleId')!;
     });
   }
@@ -132,7 +132,7 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
                     top: Radius.circular(10.0),
                   ),
                   child: Image.network(
-                    'https://localhost:44340/${widget.notification?.image}',
+                    'https://localhost:7137/${widget.notification?.image}',
                     fit: BoxFit.cover,
                     height: 170,
                     width: 250,

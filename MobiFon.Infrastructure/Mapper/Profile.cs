@@ -16,7 +16,6 @@ using MobiFon.Core.Dto.Conversation;
 using MobiFon.Core.Dto.Message;
 using MobiFon.Core.Dto.Notification;
 using PropertEase.Core.Dto.City;
-using PropertEase.Reporting.Models;
 
 namespace MobiFon.Infrastructure.Mapper
 {
@@ -94,12 +93,16 @@ namespace MobiFon.Infrastructure.Mapper
 
             CreateMap<Conversation, ConversationDto>().ReverseMap();
             CreateMap<ConversationDto, ConversationUpsertDto>().ReverseMap();
+            CreateMap<ConversationDto, ConversationDto>(); 
+
 
             #endregion
 
             #region Message
             CreateMap<Message, MessageDto>().ReverseMap();
             CreateMap<MessageDto, MessageUpsertDto>().ReverseMap();
+            CreateMap<MessageDto, MessageDto>().ReverseMap();
+
             #endregion
 
             #region Notification
@@ -109,17 +112,7 @@ namespace MobiFon.Infrastructure.Mapper
 
             #endregion
 
-            #region RenterReport
 
-            CreateMap<PropertyReservation, RenterBusinessReportModel>()
-               .ForMember(x => x.RenterName, opt => opt.MapFrom(x => x.Renter.ToString()))
-               .ForMember(x => x.ClientName, opt => opt.MapFrom(x => x.Client.ToString())).
-                ForMember(x => x.ReservationNumber, opt => opt.MapFrom(x => x.ReservationNumber)).
-                ForMember(x => x.DateOfPayment, opt => opt.MapFrom(x => x.CreatedAt.ToString())).
-                ForMember(x => x.PropertyName, opt => opt.MapFrom(x => x.Property.Name)).
-                ForMember(x => x.Price, opt => opt.MapFrom(x => x.TotalPrice.ToString())).
-                ForMember(x => x.RentType, opt => opt.MapFrom(x => x.Property.IsDaily ? "Daily" : "Monthly"));
-            #endregion
         }
 
     }

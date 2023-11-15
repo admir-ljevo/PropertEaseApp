@@ -48,9 +48,8 @@ using MobiFon.Infrastructure.Repositories.NotificationRepository;
 using MobiFon.Services.Services.NotificationService;
 using PropertEase.Infrastructure.Repositories.CityRepository;
 using PropertEase.Services.Services.CityService;
-using PropertEase.Services.Services.ReportingService;
 using Microsoft.ReportingServices.Interfaces;
-
+using PropertEase.Shared.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -81,6 +80,7 @@ builder.Services.AddSignalR();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+//builder.Services.AddScoped<MessageHub>();
 builder.Services.Configure<FormOptions>(o =>
 {
     o.ValueLengthLimit = int.MaxValue;
@@ -133,7 +133,6 @@ builder.Services.AddScoped<IConversationService, ConversationService>();
 builder.Services.AddScoped<IMessageService, MessageService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<ICityService, CityService>();
-builder.Services.AddScoped<IReportingService, ReportingService>();
 builder.Services.AddHostedService<PropertyReservationBackgroundService>();
 
 
@@ -226,6 +225,13 @@ app.UseSwaggerUI(c =>
 app.UseDeveloperExceptionPage();
 //}
 
+//app.UseRouting();
+
+//app.UseEndpoints(endpoints =>
+//{
+//    endpoints.MapHub<MessageHub>("/messageHub");
+//    endpoints.MapControllers();
+//});
 app.UseHttpsRedirection();
 app.UseSession();
 app.UseAuthentication();
@@ -235,12 +241,14 @@ app.UseStaticFiles();
 app.UseCors(x => x
     .AllowAnyMethod()
     .AllowAnyHeader()
-    .WithOrigins("https://localhost:44340") // allow any origin
-                                        //.WithOrigins("https://localhost:44340")); // Allow only this origin can also have multiple origins separated with comma
-    .AllowCredentials()); // allow credentials
+    .AllowAnyOrigin()// allow any origin
+                     //.WithOrigins("https://localhost:44340")); // Allow only this origin can also have multiple origins separated with comma
+   // .AllowCredentials()
+   ); // allow credentials
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<MessageHub>("/hubs/messageHub");
 
 await app.RunAsync();
 #endregion

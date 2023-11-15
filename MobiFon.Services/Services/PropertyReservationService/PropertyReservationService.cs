@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Hosting;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using MobiFon.Core.Dto.Property;
 using MobiFon.Core.Dto.PropertyReservation;
@@ -23,13 +24,13 @@ namespace MobiFon.Services.Services.PropertyReservationService
         public async Task<PropertyReservationDto> AddAsync(PropertyReservationDto entityDto)
         {
             entityDto.IsActive = true;
-            Property property = await unitOfWork.PropertyRepository.GetById(entityDto.PropertyId);
-            if (property.IsDaily)
-                entityDto.TotalPrice = (float)(property.DailyPrice * entityDto.NumberOfDays);
-            if(property.IsMonthly)
-                entityDto.TotalPrice = (float)(property.MonthlyPrice * entityDto.NumberOfMonths);
+            var lastReservationId = await unitOfWork.GetDatabaseContext().PropertyReservations
+                .OrderByDescending(reservation => reservation.Id)
+                .Select(reservation => reservation.Id)
+                .FirstOrDefaultAsync();
 
-            entityDto.ReservationNumber = $"#{entityDto.Id:D4}";
+            // 'lastReservationId' now contains the Id of the last reservation
+            entityDto.ReservationNumber = $"#{lastReservationId:D4}";
             await unitOfWork.PropertyReservationRepository.AddAsync(entityDto);
             await unitOfWork.SaveChangesAsync();
             return entityDto;
