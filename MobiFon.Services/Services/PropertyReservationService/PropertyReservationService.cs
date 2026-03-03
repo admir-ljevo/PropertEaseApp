@@ -28,10 +28,13 @@ namespace MobiFon.Services.Services.PropertyReservationService
             if(property.IsMonthly)
                 entityDto.TotalPrice = (float)(property.MonthlyPrice * entityDto.NumberOfMonths);
 
-            entityDto.ReservationNumber = $"#{entityDto.Id:D4}";
-
             await unitOfWork.PropertyReservationRepository.AddAsync(entityDto);
             await unitOfWork.SaveChangesAsync();
+
+            entityDto.ReservationNumber = $"#{entityDto.Id:D4}";
+            unitOfWork.PropertyReservationRepository.Update(entityDto);
+            await unitOfWork.SaveChangesAsync();
+
             return entityDto;
         }
 
@@ -42,7 +45,6 @@ namespace MobiFon.Services.Services.PropertyReservationService
 
         public async Task<PropertyReservationDto> GetByIdAsync(int id)
         {
-            logger.LogInformation("Runje");
             return await unitOfWork.PropertyReservationRepository.GetByIdAsync(id);
         }
 
@@ -60,10 +62,9 @@ namespace MobiFon.Services.Services.PropertyReservationService
 
         public async Task<PropertyReservationDto> UpdateAsync(PropertyReservationDto property)
         {
-            unitOfWork.PropertyRatingRepository.Update(property);
+            unitOfWork.PropertyReservationRepository.Update(property);
             await unitOfWork.SaveChangesAsync();
             return property;
-
         }
 
         public async Task<List<PropertyReservationDto>> GetFiltered(PropertyReservationFilter filter)

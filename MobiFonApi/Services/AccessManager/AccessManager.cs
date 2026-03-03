@@ -69,17 +69,23 @@ namespace MobiFon.Services.AccessManager
             var identity = new ClaimsIdentity(CookieAuthenticationDefaults.AuthenticationScheme);
 
             identity.AddClaim(new Claim(nameof(user.Id), user.Id.ToString()));
-            identity.AddClaim(new Claim(nameof(user.Email), user.Email));
-            identity.AddClaim(new Claim(nameof(user.Person.FirstName), user.Person.FirstName));
-            identity.AddClaim(new Claim(nameof(user.Person.LastName), user.Person.LastName));
+            identity.AddClaim(new Claim(nameof(user.Email), user.Email ?? ""));
 
-            if (user.Person.ProfilePhoto.IsSet())
-                identity.AddClaim(new Claim(CustomClaimTypes.ProfilePhoto, CustomClaimTypes.ProfilePhoto));
+            if (user.Person != null)
+            {
+                identity.AddClaim(new Claim(nameof(user.Person.FirstName), user.Person.FirstName ?? ""));
+                identity.AddClaim(new Claim(nameof(user.Person.LastName), user.Person.LastName ?? ""));
 
-            if (user.Person.ProfilePhotoThumbnail.IsSet())
-                identity.AddClaim(new Claim(CustomClaimTypes.ProfilePhoto, user.Person.ProfilePhotoThumbnail));
-            foreach (var item in user.UserRoles)
-                identity.AddClaim(new Claim(ClaimTypes.Role, item.RoleId.ToString()));
+                if (user.Person.ProfilePhoto.IsSet())
+                    identity.AddClaim(new Claim(CustomClaimTypes.ProfilePhoto, CustomClaimTypes.ProfilePhoto));
+
+                if (user.Person.ProfilePhotoThumbnail.IsSet())
+                    identity.AddClaim(new Claim(CustomClaimTypes.ProfilePhoto, user.Person.ProfilePhotoThumbnail));
+            }
+
+            if (user.UserRoles != null)
+                foreach (var item in user.UserRoles)
+                    identity.AddClaim(new Claim(ClaimTypes.Role, item.RoleId.ToString()));
 
             return identity.Claims;
         }
@@ -87,24 +93,34 @@ namespace MobiFon.Services.AccessManager
 
         public async Task<LoginInformation> SignInAsync(string username, string password, bool rememberMe = false)
         {
+            // Get the actual tracked entity for password verification
+            var actualUser = await _userManager.FindByNameAsync(username)
+                          ?? await _userManager.FindByEmailAsync(username);
+
+            if (actualUser == null || !actualUser.Active)
+                throw new UserNotFoundException();
+
+            if (!await _userManager.CheckPasswordAsync(actualUser, password))
+                throw new WrongCredentialsException(null);
+
+            // Get the full DTO (with Person, roles, etc.) for the response
             var user = await _applicationUsersService.FindByUserNameOrEmailAsync(username);
             if (user == null)
-            {
                 throw new UserNotFoundException();
-            }
 
-            if (!await _userManager.CheckPasswordAsync(new ApplicationUser() { PasswordHash = user.PasswordHash }, password))
-            {
-                throw new WrongCredentialsException(user);
-            }
+            var role = user.IsAdministrator ? "Administrator"
+                     : user.IsEmployee     ? "Employee"
+                     : user.IsCompanyOwner ? "CompanyOwner"
+                     : user.IsClient       ? "Client"
+                     : null;
 
-            var loginInformation = new LoginInformation
+            return new LoginInformation
             {
                 User = user,
-                Token = GenerateToken(user)
+                Token = GenerateToken(user),
+                UserId = user.Id,
+                Role = role
             };
-            return loginInformation;
-
         }
 
 

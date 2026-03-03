@@ -8,8 +8,8 @@ namespace MobiFon.Shared.Constants
 {
     public class ConfigurationValues
     {
-        public const string TokenKey = "CustomData:TokenKey";
-        public const string TokenValidityInMinutes = "CustomData:TokenValidityInMinutes";
+        public const string TokenKey = "JWTConfig:TokenKey";
+        public const string TokenValidityInMinutes = "JWTConfig:TokenValidityInMinutes";
         public const string ConnectionString = "Main";
     }
 }

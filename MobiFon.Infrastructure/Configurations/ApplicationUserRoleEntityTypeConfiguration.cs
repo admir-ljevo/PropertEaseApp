@@ -12,7 +12,8 @@ namespace MobiFon.Infrastructure.Configurations
     {
         public override void Configure(EntityTypeBuilder<ApplicationUserRole> builder)
         {
-            builder.HasKey(ur => ur.Id);
+            builder.HasKey(ur => new { ur.UserId, ur.RoleId });
+            builder.Property(ur => ur.Id).ValueGeneratedOnAdd();
 
             builder.HasOne(ur => ur.User)
                 .WithMany(us => us.Roles)

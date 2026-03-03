@@ -1,542 +1,373 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
+import 'package:propertease_admin/models/city.dart';
+import 'package:propertease_admin/models/property.dart';
+import 'package:propertease_admin/models/property_type.dart';
 import 'package:propertease_admin/models/search_result.dart';
-import 'package:propertease_admin/providers/image_provider.dart';
+import 'package:propertease_admin/providers/city_provider.dart';
+
 import 'package:propertease_admin/providers/property_provider.dart';
+import 'package:propertease_admin/providers/property_type_provider.dart';
+import 'package:propertease_admin/screens/property_add_screen.dart';
 import 'package:propertease_admin/screens/property_detail_screen.dart';
 import 'package:propertease_admin/screens/property_edit_screen.dart';
-import 'package:propertease_admin/utils/authorization.dart';
+import 'package:propertease_admin/utils/debounce.dart';
+import 'package:propertease_admin/widgets/master_screen.dart';
 import 'package:provider/provider.dart';
-
-import '../models/city.dart';
-import '../models/property.dart';
-import '../models/property_type.dart';
-import '../providers/city_provider.dart';
-import '../providers/property_type_provider.dart';
-import '../widgets/master_screen.dart';
-import 'property_add_screen.dart';
 
 class PropertyListWidget extends StatefulWidget {
   const PropertyListWidget({super.key});
-
   @override
   State<PropertyListWidget> createState() => PropertyListWidgetState();
 }
 
 class PropertyListWidgetState extends State<PropertyListWidget> {
-  late PropertyProvider _propertyProvider;
-  late PhotoProvider _photoProvider;
-  late PropertyTypeProvider _propertyTypeProvider;
-  late CityProvider _cityProvider;
-  SearchResult<Property>? result;
-  SearchResult<PropertyType>? propertyTypeResult;
-  SearchResult<City>? cityResult;
+  // Providers resolved once in initState
+  late final PropertyProvider _propertyProvider;
+  late final PropertyTypeProvider _propertyTypeProvider;
+  late final CityProvider _cityProvider;
+
+  SearchResult<Property>? _result;
+  // Reference data loaded ONCE per screen lifetime, not on every search call
+  List<PropertyType> _propertyTypes = [];
+  List<City> _cities = [];
+
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _minPriceController = TextEditingController();
   final TextEditingController _maxPriceController = TextEditingController();
+  City? _selectedCity;
+  PropertyType? _selectedType;
+  bool? _isAvailable;
+  bool _isLoading = false;
+  String? _error;
+  final _debounce = Debounce(); // 400 ms — prevents firing on every keystroke
 
-  int? cityId;
-  int? propertyTypeId;
-
-  // Initialize the selected values here
-  City? _selectedCity = null;
-  PropertyType? _selectedProperty = null;
-  bool? _isAvailable = null; // New variable for "Available" filter
-
-  // Add a GlobalKey for the form
-  GlobalKey<FormState> formKey = GlobalKey<FormState>();
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _propertyProvider = context.read<PropertyProvider>();
-    _photoProvider = context.read<PhotoProvider>();
-    _propertyTypeProvider = context.read<PropertyTypeProvider>();
-    _cityProvider = context.read<CityProvider>();
-    _fetchProperties();
-  }
+  // ── lifecycle ─────────────────────────────────────────────────────────────
 
   @override
   void initState() {
     super.initState();
+    // Resolved here once — no didChangeDependencies needed (removed double-init)
     _propertyProvider = context.read<PropertyProvider>();
-    _photoProvider = context.read<PhotoProvider>();
     _propertyTypeProvider = context.read<PropertyTypeProvider>();
     _cityProvider = context.read<CityProvider>();
+    _loadReferenceDataThenProperties();
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _minPriceController.dispose();
+    _maxPriceController.dispose();
+    _debounce.dispose();
+    super.dispose();
+  }
+
+  // ── data loading ───────────────────────────────────────────────────────────
+
+  Future<void> _loadReferenceDataThenProperties() async {
+    try {
+      final typesResult = await _propertyTypeProvider.get();
+      final citiesResult = await _cityProvider.get();
+      if (!mounted) return;
+      setState(() {
+        _propertyTypes = typesResult.result;
+        _cities = citiesResult.result;
+      });
+    } catch (_) {}
+    await _fetchProperties();
+  }
+
+  Future<void> _fetchProperties() async {
+    if (!mounted) return;
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+    try {
+      final result = await _propertyProvider.getFiltered(filter: {
+        'name': _nameController.text.trim(),
+        'cityId': _selectedCity?.id,
+        'propertyTypeId': _selectedType?.id,
+        'isAvailable': _isAvailable,
+        'priceFrom': double.tryParse(_minPriceController.text),
+        'priceTo': double.tryParse(_maxPriceController.text),
+      });
+      if (!mounted) return;
+      setState(() => _result = result);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _error = 'Greška pri učitavanju nekretnina.');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _clearFilters() {
+    setState(() {
+      _selectedCity = null;
+      _selectedType = null;
+      _isAvailable = null;
+    });
+    _nameController.clear();
+    _minPriceController.clear();
+    _maxPriceController.clear();
     _fetchProperties();
   }
+
+  Future<void> _deleteProperty(int id) async {
+    // Capture before any await to avoid using BuildContext across async gaps
+    final nav = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await _propertyProvider.deleteById(id);
+      nav.pop();
+      await _fetchProperties();
+      messenger.showSnackBar(const SnackBar(
+          content: Text('Nekretnina uspješno obrisana.'),
+          backgroundColor: Colors.green));
+    } catch (_) {
+      nav.pop();
+      messenger.showSnackBar(const SnackBar(
+          content: Text('Greška pri brisanju.'),
+          backgroundColor: Colors.red));
+    }
+  }
+
+  // ── build ──────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
     return MasterScreenWidget(
-      title_widget: const Text("Property List"),
-      child: Column(children: [_buildContent(), _buildDataListView()]),
+      titleWidget: const Text('Nekretnine'),
+      child: Column(children: [
+        _buildHeader(),
+        _buildSearchBar(),
+        const Divider(height: 1),
+        Expanded(child: _buildBody()),
+      ]),
     );
   }
 
-  Widget _buildContent() {
-    return Column(
-      children: [
-        const Row(
-          children: [
-            SizedBox(
-              width: 100,
-            ),
-            Text(
-              "Properties",
-              style: TextStyle(
-                  fontSize: 30,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF115892)),
-            ),
-            Spacer(), // To push the icon to the right side
-            Icon(
-              Icons
-                  .business, // You can replace this with the building icon you want
-              size: 80,
-              color: Color(0xFF115892),
-            ),
-            SizedBox(
-              width: 100,
-            ),
-          ],
-        ),
-        const Divider(
-          thickness: 2,
-          color: Colors.blue,
-        ),
-
-        Row(
-          children: [
-            const SizedBox(
-              width: 100,
-            ),
-            const Text(
-              "Property list view",
-              style: TextStyle(
-                  fontSize: 30,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF115892)),
-            ),
-            const Spacer(), // To push the icon to the right side
-
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => PropertyAddScreen(),
-                    ),
-                  );
-                },
-                child: const Padding(
-                  padding: EdgeInsets.all(8.0),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      // Add some spacing between the icon and text
-                      Text("Add new property"),
-                      Icon(Icons.add), // Add your desired icon here
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(
-              width: 100,
-            ),
-          ],
-        ),
-        const Divider(
-          thickness: 2,
-          color: Colors.blue,
-        ),
-
-        _buildSearch(), // Your existing _buildSearch widget
-      ],
-    );
-  }
-
-  Widget _buildSearch() {
+  Widget _buildHeader() {
     return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: Column(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      child: Row(children: [
+        const Text('Lista nekretnina',
+            style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF115892))),
+        const Spacer(),
+        ElevatedButton.icon(
+          onPressed: () async {
+            await Navigator.of(context)
+                .push(MaterialPageRoute(builder: (_) => PropertyAddScreen()));
+            await _fetchProperties(); // auto-refresh after add
+          },
+          icon: const Icon(Icons.add),
+          label: const Text('Dodaj nekretninu'),
+        ),
+      ]),
+    );
+  }
+
+  Widget _buildSearchBar() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Wrap(
+        spacing: 12,
+        runSpacing: 8,
+        crossAxisAlignment: WrapCrossAlignment.center,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  decoration: const InputDecoration(
-                    labelText: 'Property name',
+          SizedBox(
+              width: 200,
+              child: TextField(
+                controller: _nameController,
+                decoration: const InputDecoration(
+                    labelText: 'Naziv',
                     prefixIcon: Icon(Icons.search),
-                  ),
-                  controller: _nameController,
-                  onChanged: (value) async => await _fetchProperties(),
-                ),
-              ),
-              const SizedBox(
-                width: 8,
-              ),
-              Expanded(
-                child: DropdownButtonFormField<City?>(
-                  key: UniqueKey(),
-                  value: _selectedCity,
-                  onChanged: (City? newValue) async {
-                    setState(() {
-                      _selectedCity = newValue;
-                      cityId = newValue?.id;
-                    });
-                    await _fetchProperties();
-                  },
-                  items:
-                      (cityResult?.result ?? []).map<DropdownMenuItem<City?>>(
-                    (City? city) {
-                      if (city != null && city.name != null ||
-                          _selectedCity != null) {
-                        return DropdownMenuItem<City?>(
-                          value: city,
-                          child: Text(city!.name!),
-                        );
-                      } else {
-                        return const DropdownMenuItem<City?>(
-                          value: null,
-                          child: Text('Undefined'),
-                        );
-                      }
-                    },
-                  ).toList(),
-                  decoration: const InputDecoration(
-                    labelText: 'City',
-                  ),
-                ),
-              ),
-              const SizedBox(
-                width: 8,
-              ),
-              Expanded(
-                child: DropdownButtonFormField<PropertyType?>(
-                  value: _selectedProperty,
-                  onChanged: (PropertyType? newValue) async {
-                    setState(() {
-                      _selectedProperty = newValue;
-                      propertyTypeId = newValue?.id;
-                    });
-                    await _fetchProperties();
-                  },
-                  items: (propertyTypeResult?.result ?? [])
-                      .map<DropdownMenuItem<PropertyType?>>(
-                    (PropertyType? propertyType) {
-                      if (propertyType != null && propertyType.name != null) {
-                        return DropdownMenuItem<PropertyType?>(
-                          value: propertyType,
-                          child: Text(propertyType.name!),
-                        );
-                      } else {
-                        return const DropdownMenuItem<PropertyType?>(
-                          value: null,
-                          child: Text('Undefined'),
-                        );
-                      }
-                    },
-                  ).toList(),
-                  decoration: const InputDecoration(
-                    labelText: 'Property type',
-                  ),
-                ),
-              ),
-              const SizedBox(
-                width: 8,
-              ),
-              Expanded(
-                child: DropdownButtonFormField<bool?>(
-                  value: _isAvailable,
-                  onChanged: (bool? newValue) {
-                    _fetchProperties();
-                    setState(() {
-                      _isAvailable = newValue;
-                    });
-                  },
-                  items: const [
-                    DropdownMenuItem<bool?>(
-                      value: null,
-                      child: Text('All'),
-                    ),
-                    DropdownMenuItem<bool?>(
-                      value: true,
-                      child: Text('Available'),
-                    ),
-                    DropdownMenuItem<bool?>(
-                      value: false,
-                      child: Text('Rented'),
-                    ),
-                  ],
-                  decoration: const InputDecoration(
-                    labelText: 'Available',
-                  ),
-                ),
-              ),
-              const SizedBox(
-                width: 8,
-              ),
-              Expanded(
-                child: TextFormField(
-                  decoration: const InputDecoration(
-                    labelText: 'Min Price',
-                    prefixIcon: Icon(Icons.attach_money),
-                  ),
-                  keyboardType: TextInputType.number,
-                  controller: _minPriceController,
-                  onChanged: (value) async {
-                    await _fetchProperties();
-                  },
-                ),
-              ),
-              const SizedBox(
-                width: 8,
-              ),
-              Expanded(
-                child: TextFormField(
-                  decoration: const InputDecoration(
-                    labelText: 'Max Price',
-                    prefixIcon: Icon(Icons.attach_money),
-                  ),
-                  keyboardType: TextInputType.number,
-                  controller: _maxPriceController,
-                  onChanged: (value) async {
-                    await _fetchProperties();
-                  },
-                ),
-              ),
-              ElevatedButton(
-                onPressed: () async {
-                  setState(() {
-                    _selectedCity = null;
-                    _selectedProperty = null;
-                    _isAvailable = null;
-                    cityId = null;
-                    propertyTypeId = null;
-                  });
-
-                  formKey.currentState?.reset();
-                  await _fetchProperties();
-
-                  _nameController.clear();
+                    isDense: true),
+                onChanged: (_) => _debounce.run(_fetchProperties),
+              )),
+          SizedBox(
+              width: 160,
+              child: DropdownButtonFormField<City?>(
+                value: _selectedCity,
+                decoration:
+                    const InputDecoration(labelText: 'Grad', isDense: true),
+                items: [
+                  const DropdownMenuItem<City?>(
+                      value: null, child: Text('Svi gradovi')),
+                  ..._cities.map((c) => DropdownMenuItem<City?>(
+                      value: c, child: Text(c.name ?? ''))),
+                ],
+                onChanged: (v) {
+                  setState(() => _selectedCity = v);
+                  _fetchProperties();
                 },
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.clear), // Add your desired icon here
-                    SizedBox(
-                        width: 4), // Add some spacing between the icon and text
-                    Text("Clear filters"),
-                  ],
-                ),
-              )
-            ],
-          ),
-          const SizedBox(
-            height: 8,
+              )),
+          SizedBox(
+              width: 160,
+              child: DropdownButtonFormField<PropertyType?>(
+                value: _selectedType,
+                decoration:
+                    const InputDecoration(labelText: 'Tip', isDense: true),
+                items: [
+                  const DropdownMenuItem<PropertyType?>(
+                      value: null, child: Text('Svi tipovi')),
+                  ..._propertyTypes.map((t) => DropdownMenuItem<PropertyType?>(
+                      value: t, child: Text(t.name ?? ''))),
+                ],
+                onChanged: (v) {
+                  setState(() => _selectedType = v);
+                  _fetchProperties();
+                },
+              )),
+          SizedBox(
+              width: 140,
+              child: DropdownButtonFormField<bool?>(
+                value: _isAvailable,
+                decoration:
+                    const InputDecoration(labelText: 'Status', isDense: true),
+                items: const [
+                  DropdownMenuItem<bool?>(value: null, child: Text('Sve')),
+                  DropdownMenuItem<bool?>(
+                      value: true, child: Text('Dostupno')),
+                  DropdownMenuItem<bool?>(
+                      value: false, child: Text('Iznajmljeno')),
+                ],
+                onChanged: (v) {
+                  setState(() => _isAvailable = v);
+                  _fetchProperties();
+                },
+              )),
+          SizedBox(
+              width: 120,
+              child: TextField(
+                controller: _minPriceController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                    labelText: 'Cijena od', isDense: true),
+                onChanged: (_) => _debounce.run(_fetchProperties),
+              )),
+          SizedBox(
+              width: 120,
+              child: TextField(
+                controller: _maxPriceController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                    labelText: 'Cijena do', isDense: true),
+                onChanged: (_) => _debounce.run(_fetchProperties),
+              )),
+          TextButton.icon(
+            onPressed: _clearFilters,
+            icon: const Icon(Icons.clear),
+            label: const Text('Očisti'),
           ),
         ],
       ),
     );
   }
 
-  Future<void> _fetchProperties() async {
-    try {
-      propertyTypeResult = await _propertyTypeProvider.get();
-      cityResult = await _cityProvider.get();
-
-      // Parse the minimum and maximum prices from the text input fields
-      double? minPrice;
-      double? maxPrice;
-      if (_minPriceController.text.isNotEmpty) {
-        minPrice = double.tryParse(_minPriceController.text);
-      }
-      if (_maxPriceController.text.isNotEmpty) {
-        maxPrice = double.tryParse(_maxPriceController.text);
-      }
-
-      var properties = await _propertyProvider.getFiltered(filter: {
-        'name': _nameController.text,
-        'cityId': cityId,
-        'propertyTypeId': propertyTypeId,
-        'isAvailable': _isAvailable,
-        // Include the price range filter
-        'priceFrom': minPrice,
-        'priceTo': maxPrice,
-      });
-
-      setState(() {
-        result = properties;
-      });
-    } catch (error) {
-      // Handle errors here
+  Widget _buildBody() {
+    if (_isLoading) return const Center(child: CircularProgressIndicator());
+    if (_error != null) {
+      return Center(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Text(_error!, style: const TextStyle(color: Colors.red)),
+        const SizedBox(height: 12),
+        ElevatedButton(
+            onPressed: _fetchProperties,
+            child: const Text('Pokušaj ponovo')),
+      ]));
     }
-  }
-
-  Future<void> _handleDeleteProperty(int? propertyId) async {
-    try {
-      await _propertyProvider.deleteById(propertyId);
-
-      await _fetchProperties();
-      Navigator.of(context).pop();
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Property deleted successfully'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } catch (error) {
-      print("Error deleting property: $error");
+    final rows = _result?.result ?? [];
+    if (rows.isEmpty) {
+      return const Center(child: Text('Nema pronađenih nekretnina.'));
     }
-  }
 
-  Widget _buildDataListView() {
-    return Expanded(
+    return SingleChildScrollView(
       child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
         child: DataTable(
+          headingRowColor:
+              MaterialStateProperty.all(const Color(0xFFE3F2FD)),
           columns: const [
-            DataColumn(
-              label: Expanded(
-                child: Text(
-                  "Property type",
-                  style: TextStyle(fontStyle: FontStyle.italic),
-                ),
-              ),
-            ),
-            DataColumn(
-              label: Expanded(
-                child: Text(
-                  "Name",
-                  style: TextStyle(fontStyle: FontStyle.italic),
-                ),
-              ),
-            ),
-            DataColumn(
-              label: Expanded(
-                child: Text(
-                  "City",
-                  style: TextStyle(fontStyle: FontStyle.italic),
-                ),
-              ),
-            ),
-            DataColumn(
-              label: Expanded(
-                child: Text(
-                  "Address",
-                  style: TextStyle(fontStyle: FontStyle.italic),
-                ),
-              ),
-            ),
-            DataColumn(
-              label: Expanded(
-                child: Text(
-                  "Unit price",
-                  style: TextStyle(fontStyle: FontStyle.italic),
-                ),
-              ),
-            ),
-            DataColumn(
-              label: Expanded(
-                child: Text(
-                  "Vacancy status",
-                  style: TextStyle(fontStyle: FontStyle.italic),
-                ),
-              ),
-            ),
-            DataColumn(
-              label: Expanded(
-                child: Text(
-                  "Actions",
-                  style: TextStyle(fontStyle: FontStyle.italic),
-                ),
-              ),
-            ),
+            DataColumn(label: Text('Tip')),
+            DataColumn(label: Text('Naziv')),
+            DataColumn(label: Text('Grad')),
+            DataColumn(label: Text('Adresa')),
+            DataColumn(label: Text('Cijena')),
+            DataColumn(label: Text('Status')),
+            DataColumn(label: Text('Akcije')),
           ],
-          rows: result?.result
-                  .map((Property e) => DataRow(cells: [
-                        DataCell(Text(e.propertyType?.name ?? "/")),
-                        DataCell(Text(e.name ?? "/")),
-                        DataCell(Text(e.city?.name ?? "/")),
-                        DataCell(Text(e.address ?? "/")),
-                        if (e.isDaily == true)
-                          DataCell(Text('${e.dailyPrice}BAM/Day' ?? "/")),
-                        if (e.isMonthly == true)
-                          DataCell(Text('${e.monthlyPrice}BAM/Month' ?? "/")),
-                        if (e.isAvailable == true)
-                          const DataCell(Text('Available')),
-                        if (e.isAvailable == false)
-                          const DataCell(Text('Rented')),
-                        DataCell(
-                          Row(
-                            children: [
-                              InkWell(
-                                onTap: () {
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (context) => PropertyEditScreen(
-                                        property: e,
-                                      ),
-                                    ),
-                                  );
-                                },
-                                child: const Icon(Icons.edit),
-                              ),
-                              const SizedBox(width: 8),
-                              GestureDetector(
-                                onTap: () {
-                                  showDialog(
-                                    context: context,
-                                    builder: (BuildContext context) {
-                                      return AlertDialog(
-                                        title: const Text("Confirm Delete"),
-                                        content: const Text(
-                                            "Are you sure you want to delete this property?"),
-                                        actions: <Widget>[
-                                          TextButton(
-                                            child: const Text("Cancel"),
-                                            onPressed: () {
-                                              Navigator.of(context).pop();
-                                            },
-                                          ),
-                                          TextButton(
-                                            child: const Text("Delete"),
-                                            onPressed: () async {
-                                              _handleDeleteProperty(e.id);
-                                            },
-                                          ),
-                                        ],
-                                      );
-                                    },
-                                  );
-                                },
-                                child: const Icon(Icons.delete),
-                              ),
-                              const SizedBox(width: 8),
-                              InkWell(
-                                onTap: () {
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          PropertyDetailScreen(
-                                        property: e,
-                                      ),
-                                    ),
-                                  );
-                                },
-                                child: const Icon(Icons.info),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ]))
-                  .toList() ??
-              [],
+          rows: rows.map((e) {
+            // FIXED: always exactly 7 cells, no conditional if inside cells list
+            final priceLabel = e.isDaily == true
+                ? '${e.dailyPrice} BAM/dan'
+                : e.isMonthly == true
+                    ? '${e.monthlyPrice} BAM/mj.'
+                    : '/';
+            final statusLabel =
+                e.isAvailable == true ? 'Dostupno' : 'Iznajmljeno';
+            final statusColor =
+                e.isAvailable == true ? Colors.green : Colors.orange;
+            return DataRow(cells: [
+              DataCell(Text(e.propertyType?.name ?? '/')),
+              DataCell(Text(e.name ?? '/')),
+              DataCell(Text(e.city?.name ?? '/')),
+              DataCell(Text(e.address ?? '/')),
+              DataCell(Text(priceLabel)),
+              DataCell(Text(statusLabel,
+                  style: TextStyle(
+                      color: statusColor, fontWeight: FontWeight.w600))),
+              DataCell(_buildActions(e)),
+            ]);
+          }).toList(),
         ),
+      ),
+    );
+  }
+
+  Widget _buildActions(Property e) {
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      IconButton(
+          icon: const Icon(Icons.edit, size: 20),
+          tooltip: 'Uredi',
+          onPressed: () async {
+            await Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => PropertyEditScreen(property: e)));
+            await _fetchProperties(); // auto-refresh after edit
+          }),
+      IconButton(
+          icon: const Icon(Icons.delete, size: 20, color: Colors.red),
+          tooltip: 'Obriši',
+          onPressed: () => _showDeleteDialog(e)),
+      IconButton(
+          icon: const Icon(Icons.info_outline, size: 20),
+          tooltip: 'Detalji',
+          onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => PropertyDetailScreen(property: e)))),
+    ]);
+  }
+
+  void _showDeleteDialog(Property e) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Potvrda brisanja'),
+        content: Text(
+            'Jeste li sigurni da želite obrisati "${e.name ?? "ovu nekretninu"}"?'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Odustani')),
+          TextButton(
+            onPressed: () => _deleteProperty(e.id!),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Obriši'),
+          ),
+        ],
       ),
     );
   }

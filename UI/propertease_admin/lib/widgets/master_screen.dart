@@ -1,52 +1,63 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/src/widgets/framework.dart';
-import 'package:flutter/src/widgets/placeholder.dart';
 import 'package:propertease_admin/main.dart';
 import 'package:propertease_admin/screens/property_list_screen.dart';
 import 'package:propertease_admin/screens/reservation/reservation_list_screen.dart';
 
-class MasterScreenWidget extends StatefulWidget {
-  Widget? child;
-  String? title;
-  Widget? title_widget;
-  MasterScreenWidget({this.child, this.title, this.title_widget, super.key});
-  @override
-  State<MasterScreenWidget> createState() => _MasterScreenWidgetState();
-}
+class MasterScreenWidget extends StatelessWidget {
+  final Widget? child;
+  final String? title;
+  final Widget? titleWidget;
 
-class _MasterScreenWidgetState extends State<MasterScreenWidget> {
+  const MasterScreenWidget({
+    this.child,
+    this.title,
+    this.titleWidget,
+    super.key,
+  });
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: widget.title_widget ?? Text(widget.title ?? ""),
+        title: titleWidget ?? Text(title ?? ''),
       ),
       drawer: Drawer(
         child: ListView(children: [
+          const DrawerHeader(
+            decoration: BoxDecoration(color: Color(0xFF115892)),
+            child: Text('PropertEase',
+                style: TextStyle(color: Colors.white, fontSize: 20)),
+          ),
           ListTile(
-            title: Text("Login"),
+            leading: const Icon(Icons.home),
+            title: const Text('Nekretnine'),
             onTap: () {
-              Navigator.of(context)
-                  .push(MaterialPageRoute(builder: (context) => LoginWidget()));
+              Navigator.of(context).pushReplacement(MaterialPageRoute(
+                  builder: (_) => const PropertyListWidget()));
             },
           ),
           ListTile(
-            title: Text("Nekretnine"),
+            leading: const Icon(Icons.calendar_month),
+            title: const Text('Rezervacije'),
             onTap: () {
-              Navigator.of(context).push(MaterialPageRoute(
-                  builder: (context) => const PropertyListWidget()));
+              Navigator.of(context).pushReplacement(MaterialPageRoute(
+                  builder: (_) => const ReservationListWidget()));
             },
           ),
+          const Divider(),
           ListTile(
-            title: Text("Reservations"),
+            leading: const Icon(Icons.logout),
+            title: const Text('Odjava'),
             onTap: () {
-              Navigator.of(context).push(MaterialPageRoute(
-                  builder: (context) => const ReservationListWidget()));
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => const LoginWidget()),
+                (_) => false,
+              );
             },
           ),
         ]),
       ),
-      body: widget.child!,
+      body: child ?? const SizedBox.shrink(),
     );
   }
 }

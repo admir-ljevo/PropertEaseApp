@@ -351,14 +351,20 @@ namespace MobiFon.Infrastructure.Migrations
 
             modelBuilder.Entity("MobiFon.Core.Entities.Identity.ApplicationUserRole", b =>
                 {
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("RoleId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
@@ -366,17 +372,9 @@ namespace MobiFon.Infrastructure.Migrations
                     b.Property<DateTime?>("ModifiedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<int>("RoleId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
+                    b.HasKey("UserId", "RoleId");
 
                     b.HasIndex("RoleId");
-
-                    b.HasIndex("UserId");
 
                     b.ToTable("AspNetUserRoles", (string)null);
                 });
@@ -749,6 +747,10 @@ namespace MobiFon.Infrastructure.Migrations
 
                     b.HasIndex("CityId");
 
+                    b.HasIndex("IsAvailable");
+
+                    b.HasIndex("IsDeleted");
+
                     b.HasIndex("PropertyTypeId");
 
                     b.ToTable("Properties");
@@ -778,8 +780,8 @@ namespace MobiFon.Infrastructure.Migrations
                     b.Property<int>("PropertyId")
                         .HasColumnType("int");
 
-                    b.Property<float>("Rating")
-                        .HasColumnType("real");
+                    b.Property<double>("Rating")
+                        .HasColumnType("float");
 
                     b.Property<int>("ReviewerId")
                         .HasColumnType("int");
@@ -851,14 +853,18 @@ namespace MobiFon.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<float>("TotalPrice")
-                        .HasColumnType("real");
+                    b.Property<double>("TotalPrice")
+                        .HasColumnType("float");
 
                     b.HasKey("Id");
 
                     b.HasIndex("ClientId");
 
+                    b.HasIndex("IsActive");
+
                     b.HasIndex("PropertyId");
+
+                    b.HasIndex("DateOfOccupancyStart", "DateOfOccupancyEnd");
 
                     b.ToTable("PropertyReservations");
                 });

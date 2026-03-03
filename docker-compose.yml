@@ -1,0 +1,107 @@
+version: '3.9'
+
+services:
+
+  # ─────────────────────── SQL SERVER ───────────────────────
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: propertease-sqlserver
+    environment:
+      ACCEPT_EULA: "Y"
+      SA_PASSWORD: "${SA_PASSWORD:-PropertEase_Dev#2024}"
+      MSSQL_PID: "Developer"
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+    networks:
+      - propertease-net
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P $$SA_PASSWORD -Q 'SELECT 1' || exit 1"]
+      interval: 10s
+      retries: 10
+      start_period: 30s
+
+  # ─────────────────────── RABBITMQ ─────────────────────────
+  rabbitmq:
+    image: rabbitmq:3.12-management
+    container_name: propertease-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: "${RABBITMQ_USER:-guest}"
+      RABBITMQ_DEFAULT_PASS: "${RABBITMQ_PASS:-guest}"
+    ports:
+      - "5672:5672"
+      - "15672:15672"   # Management UI
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - propertease-net
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 10s
+      retries: 10
+      start_period: 20s
+
+  # ─────────────────────── MAIN API ─────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: MobiFonApi/Dockerfile
+    container_name: propertease-api
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Production"
+      ASPNETCORE_URLS: "http://+:80"
+      ConnectionStrings__DefaultConnection: "Server=sqlserver;Database=PropertEaseDb;User Id=sa;Password=${SA_PASSWORD:-PropertEase_Dev#2024};TrustServerCertificate=True;MultipleActiveResultSets=true"
+      JWTConfig__TokenKey: "${JWT_TOKEN_KEY:-change-this-in-production-must-be-32-chars}"
+      JWTConfig__TokenValidityInMinutes: "120"
+      RabbitMQ__Host: "rabbitmq"
+      RabbitMQ__Port: "5672"
+      RabbitMQ__Username: "${RABBITMQ_USER:-guest}"
+      RabbitMQ__Password: "${RABBITMQ_PASS:-guest}"
+      Uploads__DirectoryPath: "/app/uploads/images"
+      ApiBaseUrl: "http://api:80"
+    ports:
+      - "5000:80"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    volumes:
+      - uploads_data:/app/uploads
+    networks:
+      - propertease-net
+    restart: unless-stopped
+
+  # ─────────────────────── WORKER SERVICE ───────────────────
+  worker:
+    build:
+      context: .
+      dockerfile: PropertEase.Worker/Dockerfile
+    container_name: propertease-worker
+    environment:
+      DOTNET_ENVIRONMENT: "Production"
+      RabbitMQ__Host: "rabbitmq"
+      RabbitMQ__Port: "5672"
+      RabbitMQ__Username: "${RABBITMQ_USER:-guest}"
+      RabbitMQ__Password: "${RABBITMQ_PASS:-guest}"
+      Smtp__Host: "${SMTP_HOST:-smtp.gmail.com}"
+      Smtp__Port: "${SMTP_PORT:-587}"
+      Smtp__Username: "${SMTP_USERNAME}"
+      Smtp__Password: "${SMTP_PASSWORD}"
+      Smtp__FromName: "PropertEase"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - propertease-net
+    restart: unless-stopped
+
+volumes:
+  sqlserver_data:
+  rabbitmq_data:
+  uploads_data:
+
+networks:
+  propertease-net:
+    driver: bridge

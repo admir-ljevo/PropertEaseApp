@@ -1,18 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:propertease_admin/models/property_reservation.dart';
-import 'package:propertease_admin/models/property_type.dart';
+import 'package:propertease_admin/providers/auth_provider.dart';
 import 'package:propertease_admin/providers/city_provider.dart';
 import 'package:propertease_admin/providers/image_provider.dart';
 import 'package:propertease_admin/providers/property_provider.dart';
 import 'package:propertease_admin/providers/property_reservation_provider.dart';
 import 'package:propertease_admin/providers/property_type_provider.dart';
 import 'package:propertease_admin/screens/property_list_screen.dart';
-import 'package:propertease_admin/utils/authorization.dart';
 import 'package:provider/provider.dart';
 
 void main() {
   runApp(MultiProvider(
     providers: [
+      ChangeNotifierProvider(create: (_) => AuthProvider()),
       ChangeNotifierProvider(create: (_) => PropertyProvider()),
       ChangeNotifierProvider(create: (_) => PhotoProvider()),
       ChangeNotifierProvider(create: (_) => PropertyTypeProvider()),
@@ -26,104 +25,148 @@ void main() {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'PropertEase',
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // Try running your application with "flutter run". You'll see the
-        // application has a blue toolbar. Then, without quitting the app, try
-        // changing the primarySwatch below to Colors.green and then invoke
-        // "hot reload" (press "r" in the console where you ran "flutter run",
-        // or simply save your changes to "hot reload" in a Flutter IDE).
-        // Notice that the counter didn't reset back to zero; the application
-        // is not restarted.
         primarySwatch: Colors.blue,
+        inputDecorationTheme: const InputDecorationTheme(
+          border: OutlineInputBorder(),
+          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+        ),
       ),
-      home: LoginWidget(),
+      home: const LoginWidget(),
     );
   }
 }
 
-// class MyBarWidget extends StatelessWidget {
-//   String title;
+class LoginWidget extends StatefulWidget {
+  const LoginWidget({super.key});
 
-//   MyBarWidget({super.key, required this.title});
+  @override
+  State<LoginWidget> createState() => _LoginWidgetState();
+}
 
-//   @override
-//   Widget build(BuildContext context) {
-//     return Text(title);
-//   }
-// }
+class _LoginWidgetState extends State<LoginWidget> {
+  final _formKey = GlobalKey<FormState>();
+  final _usernameController = TextEditingController();
+  final _passwordController = TextEditingController();
+  bool _obscurePassword = true;
 
-class LoginWidget extends StatelessWidget {
-  LoginWidget({super.key});
+  @override
+  void dispose() {
+    _usernameController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
 
-  TextEditingController _usernameController = new TextEditingController();
-  TextEditingController _passwordController = new TextEditingController();
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    final auth = context.read<AuthProvider>();
+    final success = await auth.login(
+      _usernameController.text.trim(),
+      _passwordController.text,
+    );
+
+    if (!mounted) return;
+
+    if (success) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const PropertyListWidget()),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final auth = context.watch<AuthProvider>();
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Login'),
-      ),
+      appBar: AppBar(title: const Text('PropertEase – Prijava')),
       body: Center(
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 400, maxHeight: 400),
-          width: 400,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 400),
           child: Card(
+            margin: const EdgeInsets.all(24),
             child: Padding(
-              padding: const EdgeInsets.all(10.10),
-              child: Column(
-                children: [
-                  Image.asset(
-                    "assets/images/OIP.jpg",
-                    height: 100,
-                    width: 100,
-                  ),
-                  const SizedBox(
-                    height: 10,
-                    width: 10,
-                  ),
-                  TextField(
-                    decoration: const InputDecoration(
-                        labelText: 'Username', prefixIcon: Icon(Icons.mail)),
-                    controller: _usernameController,
-                  ),
-                  const SizedBox(
-                    height: 10,
-                    width: 10,
-                  ),
-                  TextField(
-                    decoration: const InputDecoration(
-                        labelText: "Password",
-                        prefixIcon: Icon(Icons.password)),
-                    controller: _passwordController,
-                  ),
-                  const SizedBox(
-                    height: 10,
-                    width: 10,
-                  ),
-                  ElevatedButton(
-                      onPressed: () {
-                        var password = _passwordController.text;
-                        var username = _usernameController.text;
-                        Authorization.username = username;
-                        Authorization.password = password;
-                        print(username + "  " + password);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const PropertyListWidget(),
+              padding: const EdgeInsets.all(24),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Image.asset('assets/images/OIP.jpg', height: 80, width: 80),
+                    const SizedBox(height: 24),
+
+                    // Username
+                    TextFormField(
+                      controller: _usernameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Korisničko ime',
+                        prefixIcon: Icon(Icons.person),
+                      ),
+                      validator: (v) => (v == null || v.trim().isEmpty)
+                          ? 'Unesite korisničko ime.'
+                          : null,
+                      textInputAction: TextInputAction.next,
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Password
+                    TextFormField(
+                      controller: _passwordController,
+                      obscureText: _obscurePassword,
+                      decoration: InputDecoration(
+                        labelText: 'Lozinka',
+                        prefixIcon: const Icon(Icons.lock),
+                        suffixIcon: IconButton(
+                          icon: Icon(_obscurePassword
+                              ? Icons.visibility_off
+                              : Icons.visibility),
+                          onPressed: () => setState(
+                              () => _obscurePassword = !_obscurePassword),
+                        ),
+                      ),
+                      validator: (v) =>
+                          (v == null || v.isEmpty) ? 'Unesite lozinku.' : null,
+                      textInputAction: TextInputAction.done,
+                      onFieldSubmitted: (_) => _submit(),
+                    ),
+                    const SizedBox(height: 8),
+
+                    // API error message
+                    if (auth.errorMessage != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4, bottom: 4),
+                        child: Text(
+                          auth.errorMessage!,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.error,
+                            fontSize: 13,
                           ),
-                        );
-                      },
-                      child: const Text("Login"))
-                ],
+                        ),
+                      ),
+                    const SizedBox(height: 16),
+
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: auth.isLoading ? null : _submit,
+                        child: auth.isLoading
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Text('Prijava'),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

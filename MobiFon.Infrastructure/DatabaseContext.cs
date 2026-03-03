@@ -32,8 +32,52 @@ namespace MobiFon.Infrastructure
 
             modelBuilder.ApplyConfigurationsFromAssembly(typeof(BaseEntityTypeConfiguration<>).Assembly);
 
+            // Indexes for frequently filtered/joined FK columns
+            modelBuilder.Entity<Property>(e =>
+            {
+                e.HasIndex(p => p.CityId);
+                e.HasIndex(p => p.PropertyTypeId);
+                e.HasIndex(p => p.ApplicationUserId);
+                e.HasIndex(p => p.IsAvailable);
+                e.HasIndex(p => p.IsDeleted);
+            });
 
-            //SeedData(modelBuilder);
+            modelBuilder.Entity<PropertyReservation>(e =>
+            {
+                e.HasIndex(r => r.PropertyId);
+                e.HasIndex(r => r.ClientId);
+                e.HasIndex(r => r.IsActive);
+                e.HasIndex(r => new { r.DateOfOccupancyStart, r.DateOfOccupancyEnd });
+            });
+
+            modelBuilder.Entity<PropertyRating>(e =>
+            {
+                e.HasIndex(r => r.PropertyId);
+                e.HasIndex(r => r.ReviewerId);
+            });
+
+            modelBuilder.Entity<Conversation>(e =>
+            {
+                e.HasIndex(c => c.PropertyId);
+                e.HasIndex(c => c.ClientId);
+                e.HasIndex(c => c.RenterId);
+            });
+
+            modelBuilder.Entity<Message>(e =>
+            {
+                e.HasIndex(m => m.ConversationId);
+                e.HasIndex(m => m.SenderId);
+            });
+
+            modelBuilder.Entity<Photo>(e =>
+            {
+                e.HasIndex(p => p.PropertyId);
+            });
+
+            modelBuilder.Entity<Notification>(e =>
+            {
+                e.HasIndex(n => n.UserId);
+            });
         }
 
     }

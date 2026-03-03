@@ -21,7 +21,7 @@ namespace MobiFon.Core.Entities
         public DateTime DateOfOccupancyEnd { get; set; }  
         public int NumberOfDays { get; set; }
         public int NumberOfMonths { get; set; }
-        public float TotalPrice { get; set; }
+        public double TotalPrice { get; set; }
         public bool IsMonthly { get; set; }
         public bool IsDaily { get; set; }  
         public bool IsActive { get; set; }  

@@ -29,18 +29,21 @@ namespace MobiFon.Services.Services.PropertyReservationBackgroundService
 
         private async void DoWork(object? state)
         {
-            logger.LogInformation("runjetluk");
-            using (var scope = serviceProvider.CreateScope())
+            try
             {
+                using var scope = serviceProvider.CreateScope();
                 var propertyReservationService = scope.ServiceProvider.GetRequiredService<IPropertyReservationService>();
-                //var propertyService = scope.ServiceProvider.GetRequiredService<IPropertyService>();
                 List<PropertyReservationDto> reservations = await propertyReservationService.GetAllAsync();
                 foreach (var reservation in reservations.Where(r => r.DateOfOccupancyEnd <= DateTime.Now && !r.IsActive))
                 {
-                    logger.LogInformation($"Updating reservation: {reservation.Id}");
+                    logger.LogInformation("Updating reservation: {ReservationId}", reservation.Id);
                     reservation.IsActive = false;
-                   await propertyReservationService.UpdateAsync(reservation);
+                    await propertyReservationService.UpdateAsync(reservation);
                 }
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "PropertyReservationBackgroundService error");
             }
         }
 

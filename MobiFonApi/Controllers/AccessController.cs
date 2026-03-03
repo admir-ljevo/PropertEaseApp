@@ -9,7 +9,7 @@ using static MobiFon.Services.AccessManager.AccessManager;
 namespace MobiFon.Controllers
 {
     [ApiController]
-    [Route("[controller]/[action]")]
+    [Route("api/[controller]/[action]")]
     public class AccessController : ControllerBase
     {
         private readonly IAccessManager _accessManager;

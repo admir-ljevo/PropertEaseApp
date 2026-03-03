@@ -10,7 +10,7 @@ namespace MobiFon.Core.Entities
         public ApplicationUser Reviewer { get; set; }
         public int ReviewerId { get; set; }
         public string ReviewerName { get; set; }
-        public float Rating { get; set; }
+        public double Rating { get; set; }
         public string Description { get; set; }
 
     }

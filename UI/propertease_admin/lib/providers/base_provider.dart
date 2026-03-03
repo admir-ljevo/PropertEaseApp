@@ -6,16 +6,15 @@ import 'package:http/http.dart';
 import 'package:propertease_admin/models/search_result.dart';
 import 'package:propertease_admin/utils/authorization.dart';
 
-import '../models/property.dart';
-
 abstract class BaseProvider<T> with ChangeNotifier {
-  static String? _baseUrl;
+  static const String _baseUrl = String.fromEnvironment(
+    'baseUrl',
+    defaultValue: 'http://localhost:5028/api/',
+  );
   late String _endpoint;
 
   BaseProvider(String endpoint) {
     _endpoint = endpoint;
-    _baseUrl = const String.fromEnvironment("baseUrl",
-        defaultValue: "https://localhost:44340/api/");
   }
 
   Future<SearchResult<T>> get({dynamic filter}) async {
@@ -148,15 +147,11 @@ abstract class BaseProvider<T> with ChangeNotifier {
   }
 
   Map<String, String> createHeaders() {
-    // String username = Authorization.username ?? "";
-    // String password = Authorization.password ?? "";
-
-    // String basicAuth =
-    //     "Basic ${base64Encode(utf8.encode('$username:$password'))}";
-    var headers = {
-      "Content-Type": "application/json",
-      // "Authorization": basicAuth,
-    };
+    final headers = <String, String>{'Content-Type': 'application/json'};
+    final token = Authorization.token;
+    if (token != null && token.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $token';
+    }
     return headers;
   }
 

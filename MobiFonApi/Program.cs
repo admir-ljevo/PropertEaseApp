@@ -1,83 +1,81 @@
+using FluentValidation;
+using FluentValidation.AspNetCore;
 using MobiFon.Infrastructure;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.OpenApi.Models;
-using MobiFon.Core.Entities.Identity;
-using MobiFon.Shared.Models;
-using Swashbuckle.AspNetCore.Filters;
-using Microsoft.IdentityModel.Tokens;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using System.Text;
-using MobiFon.Shared.Constants;
 using MobiFon.Infrastructure.Mapper;
-using MobiFon.Shared.Services.LoggedUserData;
+using MobiFon.Infrastructure.Messaging;
+using MobiFon.Infrastructure.Repositories.ApplicationRolesRepository;
+using MobiFon.Infrastructure.Repositories.ApplicationUserRolesRepository;
+using MobiFon.Infrastructure.Repositories.ApplicationUsersRepository;
+using MobiFon.Infrastructure.Repositories.ConversationRepository;
+using MobiFon.Infrastructure.Repositories.MessageRepository;
+using MobiFon.Infrastructure.Repositories.NotificationRepository;
+using MobiFon.Infrastructure.Repositories.PersonsRepository;
+using MobiFon.Infrastructure.Repositories.PhotoRepository;
+using MobiFon.Infrastructure.Repositories.PropertyRatingRepository;
+using MobiFon.Infrastructure.Repositories.PropertyRepository;
+using MobiFon.Infrastructure.Repositories.PropertyReservationRepository;
+using MobiFon.Infrastructure.Repositories.PropertyTypeRepository;
+using MobiFon.Infrastructure.Seed;
+using MobiFon.Infrastructure.UnitOfWork;
+using MobiFon.Core.Entities.Identity;
 using MobiFon.Services.AccessManager;
 using MobiFon.Services.EnumManager;
 using MobiFon.Services.FileManager;
-using MobiFon.Shared.Services.Crypto;
-using MobiFon.Infrastructure.UnitOfWork;
-using MobiFon.Infrastructure.Repositories.ApplicationUsersRepository;
-using MobiFon.Infrastructure.Repositories.ApplicationRolesRepository;
-using MobiFon.Infrastructure.Repositories.ApplicationUserRolesRepository;
+using MobiFon.Services.Recommendations;
+using MobiFon.Services.Reports;
 using MobiFon.Services.Services.ApplicationRolesService;
-using MobiFon.Services.Services.ApplicationUsersService;
 using MobiFon.Services.Services.ApplicationUserRolesService;
-using MobiFon.Infrastructure.Repositories.PersonsRepository;
-using Microsoft.AspNetCore.Http.Features;
-using Microsoft.AspNetCore.DataProtection.AuthenticatedEncryption.ConfigurationModel;
-using Microsoft.AspNetCore.DataProtection.AuthenticatedEncryption;
-using Microsoft.AspNetCore.DataProtection;
-using MobiFon.Infrastructure.Repositories.PropertyTypeRepository;
-using MobiFon.Services.Services.PropertyTypeService;
-using MobiFon.Infrastructure.Repositories.PropertyRepository;
-using MobiFon.Services.Services.PropertyService;
-using MobiFon.Infrastructure.Repositories.PropertyRatingRepository;
-using MobiFon.Services.Services.PropertyRatingService;
-using System;
-using MobiFon.Services.Services.PhotoService;
-using MobiFon.Infrastructure.Repositories.PhotoRepository;
-using MobiFon.Services.Services.PropertyReservationService;
-using MobiFon.Infrastructure.Repositories.PropertyReservationRepository;
-using Microsoft.Extensions.DependencyInjection;
-using MobiFon.Services.Services.PropertyReservationBackgroundService;
-using MobiFon.Infrastructure.Repositories.ConversationRepository;
+using MobiFon.Services.Services.ApplicationUsersService;
 using MobiFon.Services.Services.ConversationService;
-using MobiFon.Infrastructure.Repositories.MessageRepository;
 using MobiFon.Services.Services.MessageService;
-using MobiFon.Infrastructure.Repositories.NotificationRepository;
 using MobiFon.Services.Services.NotificationService;
+using MobiFon.Services.Services.PhotoService;
+using MobiFon.Services.Services.PropertyRatingService;
+using MobiFon.Services.Services.PropertyReservationBackgroundService;
+using MobiFon.Services.Services.PropertyReservationService;
+using MobiFon.Services.Services.PropertyService;
+using MobiFon.Services.Services.PropertyTypeService;
+using MobiFon.Services.Validation;
+using MobiFon.Shared.Constants;
+using MobiFon.Shared.Models;
+using MobiFon.Shared.Services.Crypto;
+using MobiFon.Shared.Services.LoggedUserData;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.DataProtection.AuthenticatedEncryption;
+using Microsoft.AspNetCore.DataProtection.AuthenticatedEncryption.ConfigurationModel;
+using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using PropertEase.Infrastructure.Repositories.CityRepository;
 using PropertEase.Services.Services.CityService;
+using Swashbuckle.AspNetCore.Filters;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-#region DBContext
-
+// ─── DATABASE ────────────────────────────────────────────────────────────────
 builder.Services.AddDbContext<DatabaseContext>(options =>
-               options.UseSqlServer(
-                   builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(
+        builder.Configuration.GetConnectionString("DefaultConnection")));
 
-
-
-#endregion
-
-#region MappingAndValidation
-
-builder.Services.AddScoped<ILoggedUserData, LoggedUserData>();
+// ─── AUTOMAPPER ──────────────────────────────────────────────────────────────
 builder.Services.AddAutoMapper(typeof(Program), typeof(Profiles));
 
-#endregion
+// ─── FLUENTVALIDATION ────────────────────────────────────────────────────────
+builder.Services.AddFluentValidationAutoValidation();
+builder.Services.AddValidatorsFromAssemblyContaining<PropertyReservationValidator>();
 
-#region Api
-
-// Add services to the container.
+// ─── HTTP / API ──────────────────────────────────────────────────────────────
 builder.Services.AddSession();
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddNewtonsoftJson(opt =>
+        opt.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore);
 builder.Services.AddSignalR();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
 builder.Services.Configure<FormOptions>(o =>
 {
     o.ValueLengthLimit = int.MaxValue;
@@ -85,20 +83,24 @@ builder.Services.Configure<FormOptions>(o =>
     o.MemoryBufferThreshold = int.MaxValue;
 });
 
-#endregion
+// ─── RABBITMQ ────────────────────────────────────────────────────────────────
+builder.Services.Configure<RabbitMQSettings>(builder.Configuration.GetSection("RabbitMQ"));
+builder.Services.AddSingleton<IRabbitMQPublisher, RabbitMQPublisher>();
 
-#region CustomServices
-
+// ─── CUSTOM SERVICES ─────────────────────────────────────────────────────────
+builder.Services.AddScoped<ILoggedUserData, LoggedUserData>();
 builder.Services.AddScoped<IAccessManager, AccessManager>();
 builder.Services.AddSingleton<ICrypto, Crypto>();
 builder.Services.AddScoped<IFileManager, FileManager>();
 builder.Services.AddScoped<IEnumManager, EnumManager>();
+builder.Services.AddScoped<IReportService, ReportService>();
 
+// ─── RECOMMENDATION ENGINE ───────────────────────────────────────────────────
+builder.Services.Configure<RecommendationConfig>(
+    builder.Configuration.GetSection("RecommendationEngine"));
+builder.Services.AddScoped<IRecommendationEngine, AssociationRulesEngine>();
 
-#endregion
-
-#region Repositories
-
+// ─── REPOSITORIES ────────────────────────────────────────────────────────────
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IApplicationUsersRepository, ApplicationUsersRepository>();
 builder.Services.AddScoped<IApplicationRolesRepository, ApplicationRolesRepository>();
@@ -114,10 +116,7 @@ builder.Services.AddScoped<IMessageRepository, MessageRepository>();
 builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
 builder.Services.AddScoped<ICityRepository, CityRepository>();
 
-#endregion
-
-#region Services
-
+// ─── SERVICES ────────────────────────────────────────────────────────────────
 builder.Services.AddScoped<IApplicationUsersService, ApplicationUsersService>();
 builder.Services.AddScoped<IApplicationUserRolesService, ApplicationUserRolesService>();
 builder.Services.AddScoped<IApplicationRolesService, ApplicationRolesService>();
@@ -132,19 +131,16 @@ builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<ICityService, CityService>();
 builder.Services.AddHostedService<PropertyReservationBackgroundService>();
 
-
-#endregion
-
+// ─── DATA PROTECTION ─────────────────────────────────────────────────────────
 builder.Services.AddDataProtection()
-                .UseCryptographicAlgorithms(new AuthenticatedEncryptorConfiguration()
-                {
-                    EncryptionAlgorithm = EncryptionAlgorithm.AES_256_GCM,
-                    ValidationAlgorithm = ValidationAlgorithm.HMACSHA256
-                })
-                .SetApplicationName("MyCommonName");
+    .UseCryptographicAlgorithms(new AuthenticatedEncryptorConfiguration
+    {
+        EncryptionAlgorithm = EncryptionAlgorithm.AES_256_GCM,
+        ValidationAlgorithm = ValidationAlgorithm.HMACSHA256
+    })
+    .SetApplicationName("PropertEase");
 
-#region AspNetCoreIdentity
-
+// ─── IDENTITY ────────────────────────────────────────────────────────────────
 builder.Services.Configure<JWTConfig>(builder.Configuration.GetSection("JWTConfig"));
 builder.Services.Configure<CookiePolicyOptions>(options =>
 {
@@ -170,73 +166,77 @@ builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
 .AddEntityFrameworkStores<DatabaseContext>()
 .AddDefaultTokenProviders();
 
-
-builder.Services.AddSwaggerGen(options => {
+// ─── JWT AUTHENTICATION ───────────────────────────────────────────────────────
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new OpenApiInfo { Title = "PropertEase API", Version = "v1" });
     options.AddSecurityDefinition("oauth2", new OpenApiSecurityScheme
     {
         In = ParameterLocation.Header,
         Name = "Authorization",
-        Type = SecuritySchemeType.ApiKey
+        Type = SecuritySchemeType.ApiKey,
+        Description = "Enter: Bearer {your JWT token}"
     });
     options.OperationFilter<SecurityRequirementsOperationFilter>();
 });
+
+var jwtTokenKey = builder.Configuration["JWTConfig:TokenKey"]
+    ?? throw new InvalidOperationException("JWT TokenKey is not configured.");
 
 builder.Services.AddAuthentication(x =>
 {
     x.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
     x.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-}).AddJwtBearer(
-              options =>
-              {
-                  options.TokenValidationParameters = new TokenValidationParameters()
-                  {
-                      ValidateIssuerSigningKey = true,
-                      IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration.GetSection(ConfigurationValues.TokenKey).Value)),
-                      ValidateIssuer = false,
-                      ValidateAudience = false,
-                      ValidateLifetime = true
-                  };
-              });
-
-#endregion
-
-builder.Logging.ClearProviders();
-builder.Logging.AddConsole(options =>
+})
+.AddJwtBearer(options =>
 {
-    // Set the minimum log level here (e.g., LogLevel.Information)
-    options.LogToStandardErrorThreshold = LogLevel.Information;
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtTokenKey)),
+        ValidateIssuer = false,
+        ValidateAudience = false,
+        ValidateLifetime = true
+    };
 });
 
+// ─── CORS ────────────────────────────────────────────────────────────────────
+var allowedOrigins = builder.Configuration
+    .GetSection("Cors:AllowedOrigins").Get<string[]>()
+    ?? new[] { "https://localhost:44340" };
+
+builder.Services.AddCors(opt =>
+    opt.AddPolicy("DefaultCors", policy =>
+        policy.WithOrigins(allowedOrigins)
+              .AllowAnyMethod()
+              .AllowAnyHeader()
+              .AllowCredentials()));
+
+// ─── LOGGING ─────────────────────────────────────────────────────────────────
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
+
+// ─── BUILD ───────────────────────────────────────────────────────────────────
 var app = builder.Build();
 
-#region App
+// ─── SEED DATABASE ────────────────────────────────────────────────────────────
+await DatabaseSeeder.SeedAsync(app.Services);
 
-// Configure the HTTP request pipeline.
-//if (app.Environment.IsDevelopment())
-//{
+// ─── MIDDLEWARE PIPELINE ─────────────────────────────────────────────────────
 app.UseSwagger();
 app.UseSwaggerUI(c =>
-{
-    c.SwaggerEndpoint("/swagger/v1/swagger.json", "My API V1");
-});
-app.UseDeveloperExceptionPage();
-//}
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "PropertEase API V1"));
 
-app.UseHttpsRedirection();
+if (app.Environment.IsDevelopment())
+    app.UseDeveloperExceptionPage();
+
+if (!app.Environment.IsDevelopment())
+    app.UseHttpsRedirection();
 app.UseSession();
-app.UseAuthentication();
 app.UseStaticFiles();
-
-// global cors policy
-app.UseCors(x => x
-    .AllowAnyMethod()
-    .AllowAnyHeader()
-    .WithOrigins("https://localhost:44340") // allow any origin
-                                        //.WithOrigins("https://localhost:44340")); // Allow only this origin can also have multiple origins separated with comma
-    .AllowCredentials()); // allow credentials
+app.UseCors("DefaultCors");
+app.UseAuthentication();
 app.UseAuthorization();
-
 app.MapControllers();
 
 await app.RunAsync();
-#endregion
