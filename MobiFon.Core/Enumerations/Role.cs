@@ -8,9 +8,9 @@ namespace MobiFon.Core.Enumerations
 {
     public enum Role
     {
-        Administrator,
-        CompanyOwner,
-        Client,
-        Employee
+        Administrator = 0,
+        CompanyOwner = 2,
+        Client = 4,
+        Employee = 3
     }
 }

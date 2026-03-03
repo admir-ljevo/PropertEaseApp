@@ -32,7 +32,7 @@ namespace MobiFon.Services.Services.ApplicationRolesService
 
         public async Task<List<ApplicationRoleDto>> GetAllAsync()
         {
-            throw new NotImplementedException();
+            return await _unitOfWork.ApplicationRolesRepository.GetAllAsync();
 
         }
         public Task<ApplicationRoleDto> GetByIdAsync(int id)

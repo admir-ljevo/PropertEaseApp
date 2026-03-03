@@ -8,7 +8,7 @@ namespace MobiFon.Core.Enumerations
 {
     public enum Position
     {
-        Prodavač,
-        Knjigovođa,
+        Client,
+        Renter,
     }
 }

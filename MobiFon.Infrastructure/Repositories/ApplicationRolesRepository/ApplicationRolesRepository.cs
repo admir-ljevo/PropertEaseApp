@@ -24,8 +24,8 @@ namespace MobiFon.Infrastructure.Repositories.ApplicationRolesRepository
         }
         public async Task<List<ApplicationRoleDto>> GetAllAsync()
         {
-            List<ApplicationRoleDto> roles = await ProjectToListAsync<ApplicationRoleDto>(DatabaseContext.Roles.Where(x=>!x.IsDeleted));
-            return roles;
+           return await ProjectToListAsync<ApplicationRoleDto>(DatabaseContext.Roles.Where(x=>!x.IsDeleted));
+            
         }
     }
 }

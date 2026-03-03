@@ -33,6 +33,7 @@ PropertyReservation _$PropertyReservationFromJson(Map<String, dynamic> json) =>
       client: json['client'] == null
           ? null
           : ApplicationUser.fromJson(json['client'] as Map<String, dynamic>),
+      description: json['description'] as String?,
     )
       ..createdAt = json['createdAt'] == null
           ? null
@@ -63,4 +64,5 @@ Map<String, dynamic> _$PropertyReservationToJson(
       'isActive': instance.isActive,
       'reservationNumber': instance.reservationNumber,
       'client': instance.client,
+      'description': instance.description,
     };

@@ -1,10 +1,12 @@
-﻿using Microsoft.Extensions.Hosting;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using MobiFon.Core.Dto.Property;
 using MobiFon.Core.Dto.PropertyReservation;
 using MobiFon.Core.Entities;
 using MobiFon.Infrastructure.UnitOfWork;
 using PropertEase.Core.Filters;
+using PropertEase.Core.SearchObjects;
 
 namespace MobiFon.Services.Services.PropertyReservationService
 {
@@ -24,9 +26,10 @@ namespace MobiFon.Services.Services.PropertyReservationService
             entityDto.IsActive = true;
             Property property = await unitOfWork.PropertyRepository.GetById(entityDto.PropertyId);
             if (property.IsDaily)
-                entityDto.TotalPrice = (float)(property.DailyPrice * entityDto.NumberOfDays);
-            if(property.IsMonthly)
-                entityDto.TotalPrice = (float)(property.MonthlyPrice * entityDto.NumberOfMonths);
+                entityDto.TotalPrice = (double)(property.DailyPrice * entityDto.NumberOfDays);
+            if (property.IsMonthly)
+                entityDto.TotalPrice = (double)(property.MonthlyPrice * entityDto.NumberOfMonths);
+
 
             await unitOfWork.PropertyReservationRepository.AddAsync(entityDto);
             await unitOfWork.SaveChangesAsync();
@@ -72,5 +75,9 @@ namespace MobiFon.Services.Services.PropertyReservationService
             return await unitOfWork.PropertyReservationRepository.GetFiltered(filter);
         }
 
+        public async Task<List<PropertyReservationDto>> GetRenterBusinessReportData(ReportSearchObject search)
+        {
+            return await unitOfWork.PropertyReservationRepository.GetRenterBusinessReportData(search);
+        }
     }
 }

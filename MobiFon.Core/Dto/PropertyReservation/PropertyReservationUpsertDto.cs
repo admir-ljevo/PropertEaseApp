@@ -5,6 +5,7 @@
         public int PropertyId { get; set; }
         public string ReservationNumber { get; set; }
         public string? Description { get; set; }
+        public int RenterId { get; set; }
 
         public int ClientId { get; set; }
         public int NumberOfGuests { get; set; }

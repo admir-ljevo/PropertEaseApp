@@ -51,6 +51,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using PropertEase.Infrastructure.Repositories.CityRepository;
 using PropertEase.Services.Services.CityService;
+using PropertEase.Shared.Hubs;
 using Swashbuckle.AspNetCore.Filters;
 using System.Text;
 
@@ -238,5 +239,6 @@ app.UseCors("DefaultCors");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHub<MessageHub>("/hubs/messageHub");
 
 await app.RunAsync();

@@ -15,6 +15,8 @@ namespace MobiFon.Core.Dto.Person
         public Gender? Gender { get; set; }
         public string ProfilePhoto { get; set; }
         public string ProfilePhotoThumbnail { get; set; }
+        public byte[] ProfilePhotoBytes { get; set; }
+
         public int? BirthPlaceId { get; set; }
         public string JMBG { get; set; }
         public string Qualifications { get; set; }
@@ -27,7 +29,7 @@ namespace MobiFon.Core.Dto.Person
         public string PostCode { get; set; }
         public string Biography { get; set; }
         public Position Position { get; set; }
-        public DateTime DateOfEmployment { get; set; }
+        public DateTime? DateOfEmployment { get; set; }
         public float Pay { get; set; }
         public bool MembershipCard { get; set; }
         public int ApplicationUserId { get; set; }

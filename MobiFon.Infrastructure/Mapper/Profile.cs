@@ -93,12 +93,16 @@ namespace MobiFon.Infrastructure.Mapper
 
             CreateMap<Conversation, ConversationDto>().ReverseMap();
             CreateMap<ConversationDto, ConversationUpsertDto>().ReverseMap();
+            CreateMap<ConversationDto, ConversationDto>(); 
+
 
             #endregion
 
             #region Message
             CreateMap<Message, MessageDto>().ReverseMap();
             CreateMap<MessageDto, MessageUpsertDto>().ReverseMap();
+            CreateMap<MessageDto, MessageDto>().ReverseMap();
+
             #endregion
 
             #region Notification

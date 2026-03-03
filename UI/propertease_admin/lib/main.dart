@@ -2,11 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:propertease_admin/providers/auth_provider.dart';
 import 'package:propertease_admin/providers/city_provider.dart';
 import 'package:propertease_admin/providers/image_provider.dart';
+import 'package:propertease_admin/providers/notification_provider.dart';
 import 'package:propertease_admin/providers/property_provider.dart';
 import 'package:propertease_admin/providers/property_reservation_provider.dart';
 import 'package:propertease_admin/providers/property_type_provider.dart';
-import 'package:propertease_admin/screens/property_list_screen.dart';
+import 'package:propertease_admin/screens/property/property_list_screen.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'providers/application_role_provider.dart';
+import 'providers/application_user_provider.dart';
+import 'providers/conversation_provider.dart';
+import 'providers/message_provider.dart';
 
 void main() {
   runApp(MultiProvider(
@@ -17,6 +24,11 @@ void main() {
       ChangeNotifierProvider(create: (_) => PropertyTypeProvider()),
       ChangeNotifierProvider(create: (_) => CityProvider()),
       ChangeNotifierProvider(create: (_) => PropertyReservationProvider()),
+      ChangeNotifierProvider(create: (_) => NotificationProvider()),
+      ChangeNotifierProvider(create: (_) => UserProvider()),
+      ChangeNotifierProvider(create: (_) => RoleProvider()),
+      ChangeNotifierProvider(create: (_) => ConversationProvider()),
+      ChangeNotifierProvider(create: (_) => MessageProvider()),
     ],
     child: const MyApp(),
   ));

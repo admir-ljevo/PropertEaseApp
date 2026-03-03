@@ -1,6 +1,8 @@
 ﻿
+using Microsoft.AspNetCore.SignalR;
 using MobiFon.Core.Dto.Message;
 using MobiFon.Infrastructure.UnitOfWork;
+using PropertEase.Shared.Hubs;
 
 namespace MobiFon.Services.Services.MessageService
 {
@@ -8,15 +10,36 @@ namespace MobiFon.Services.Services.MessageService
     {
 
         private readonly UnitOfWork unitOfWork;
+        
+
+
 
         public MessageService(IUnitOfWork unitOfWork)
         {
             this.unitOfWork = (UnitOfWork)unitOfWork;
         }
 
+
+        public async Task<MessageDto> AddAsyncSignalR(MessageDto entityDto, IHubContext<MessageHub> hubContext)
+        {
+            await unitOfWork.MessageRepository.AddAsync(entityDto);
+
+            var conversation = await unitOfWork.ConversationRepository.GetByIdAsync(entityDto.ConversationId);
+            conversation.LastMessage = entityDto.Content;
+            conversation.LastSent = DateTime.Now;
+
+            await unitOfWork.SaveChangesAsync();
+
+            await hubContext.Clients.All.SendAsync("newMessage", entityDto);
+
+            return entityDto;
+        }
         public async Task<MessageDto> AddAsync(MessageDto entityDto)
         {
             await unitOfWork.MessageRepository.AddAsync(entityDto);
+           var conversation = await unitOfWork.ConversationRepository.GetByIdAsync(entityDto.ConversationId);
+            conversation.LastMessage = entityDto.Content;
+            conversation.LastSent = DateTime.Now;
             await unitOfWork.SaveChangesAsync();
             return entityDto;
         }
@@ -26,9 +49,9 @@ namespace MobiFon.Services.Services.MessageService
             throw new NotImplementedException();
         }
 
-        public async Task<List<MessageDto>> GetByConversationId(int conversationId, int senderId)
+        public async Task<List<MessageDto>> GetByConversationId(int conversationId)
         {
-            return await unitOfWork.MessageRepository.GetByConversationId(conversationId, senderId);
+            return await unitOfWork.MessageRepository.GetByConversationId(conversationId);
         }
 
         public async Task<MessageDto> GetByIdAsync(int id)

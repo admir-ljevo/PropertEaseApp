@@ -1,0 +1,13 @@
+C:\Users\Admir\Desktop\PropertEaseApp\PropertEase.Reporting\bin\Debug\net6.0\Reports\RentersReport.rdlc
+C:\Users\Admir\Desktop\PropertEaseApp\PropertEase.Reporting\bin\Debug\net6.0\PropertEase.Reporting.deps.json
+C:\Users\Admir\Desktop\PropertEaseApp\PropertEase.Reporting\bin\Debug\net6.0\PropertEase.Reporting.dll
+C:\Users\Admir\Desktop\PropertEaseApp\PropertEase.Reporting\bin\Debug\net6.0\PropertEase.Reporting.pdb
+C:\Users\Admir\Desktop\PropertEaseApp\PropertEase.Reporting\obj\Debug\net6.0\PropertEase.Reporting.csproj.AssemblyReference.cache
+C:\Users\Admir\Desktop\PropertEaseApp\PropertEase.Reporting\obj\Debug\net6.0\PropertEase.Reporting.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Admir\Desktop\PropertEaseApp\PropertEase.Reporting\obj\Debug\net6.0\PropertEase.Reporting.AssemblyInfoInputs.cache
+C:\Users\Admir\Desktop\PropertEaseApp\PropertEase.Reporting\obj\Debug\net6.0\PropertEase.Reporting.AssemblyInfo.cs
+C:\Users\Admir\Desktop\PropertEaseApp\PropertEase.Reporting\obj\Debug\net6.0\PropertEase.Reporting.csproj.CoreCompileInputs.cache
+C:\Users\Admir\Desktop\PropertEaseApp\PropertEase.Reporting\obj\Debug\net6.0\PropertEase.Reporting.dll
+C:\Users\Admir\Desktop\PropertEaseApp\PropertEase.Reporting\obj\Debug\net6.0\refint\PropertEase.Reporting.dll
+C:\Users\Admir\Desktop\PropertEaseApp\PropertEase.Reporting\obj\Debug\net6.0\PropertEase.Reporting.pdb
+C:\Users\Admir\Desktop\PropertEaseApp\PropertEase.Reporting\obj\Debug\net6.0\ref\PropertEase.Reporting.dll

@@ -14,6 +14,8 @@ namespace MobiFon.Core.Entities
         public int UserId { get; set; }
         public ApplicationUser User { get; set; }
         public string? Image { get; set; }
+        public byte[]? ImageBytes { get; set; }
+
         public string Text { get; set; }
     }
 }

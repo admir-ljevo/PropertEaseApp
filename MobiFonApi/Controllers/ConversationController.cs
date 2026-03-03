@@ -24,10 +24,24 @@ namespace MobiFon.Controllers
         }
 
 
-        [HttpGet("GetByPropertyAndRenter/propertyId/{propertyId:int}/renterId/{renterId:int}")]
-        public async Task<IActionResult> GetByPropertyAndRenter(int propertyId, int renterId)
+        [HttpGet("GetByPropertyAndRenter")]
+        public async Task<IActionResult> GetByPropertyAndRenter([FromQuery] int? propertyId, [FromQuery] int renterId)
         {
             var conversations = await conversationService.GetByPropertyAndRenter(propertyId, renterId);
+            return Ok(conversations);
+        }
+
+
+        [HttpGet("GetByClient/clientId/{clientId:int}")]
+        public async Task<IActionResult> GetByClient(int clientId)
+        {
+            var conversations = await conversationService.GetByClient(clientId);
+            return Ok(conversations);
+        }
+        [HttpGet("GetLastByClient/{clientId}")]
+        public async Task<IActionResult> GetLastByClient(int clientId)
+        {
+            var conversations = await conversationService.GetLastByClient(clientId);
             return Ok(conversations);
         }
 

@@ -12,7 +12,7 @@ class PhotoProvider with ChangeNotifier {
 
   PhotoProvider() {
     _baseUrl = const String.fromEnvironment("baseUrl",
-        defaultValue: "https://localhost:44340/api/");
+        defaultValue: "https://localhost:7137/api/");
   }
   Future<List<Photo>> getImagesByProperty(int? propertyId) async {
     var url = "$_baseUrl$_endpoint/propertyId/$propertyId";
@@ -78,7 +78,7 @@ class PhotoProvider with ChangeNotifier {
     if (response.statusCode == 200) {
       Photo data = Photo.fromJson(jsonDecode(response.body));
       String? imgUrl = data.url;
-      return Image.network("https://localhost:44340/$imgUrl");
+      return Image.network("https://localhost:7137/$imgUrl");
     } else {
       return Image.asset("assets/images/house_placeholder.jpg");
     }

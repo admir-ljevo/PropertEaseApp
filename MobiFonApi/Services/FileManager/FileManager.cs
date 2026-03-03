@@ -15,9 +15,8 @@ namespace MobiFon.Services.FileManager
 
         public string GeneratePathForReport(string path)
         {
-            return "https://api.p2100.app.fit.ba//uploads/" + path;
+            return "https://localhost:44340//uploads/" + path;
         }
-
         public async Task<string> UploadFile(IFormFile file)
         {
             var filePath = GetFilePath(file);
@@ -60,7 +59,15 @@ namespace MobiFon.Services.FileManager
             return "/" + path.Replace(Path.DirectorySeparatorChar, '/');
         }
 
-       
+        public async Task<byte[]> UploadFileAsBase64String(IFormFile file)
+        {
+            using (var memoryStream = new MemoryStream())
+            {
+                await file.CopyToAsync(memoryStream);
+                return memoryStream.ToArray();
+            }
+        }
+
 
     }
 }

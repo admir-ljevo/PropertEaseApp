@@ -1,7 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:propertease_admin/main.dart';
-import 'package:propertease_admin/screens/property_list_screen.dart';
+import 'package:propertease_admin/screens/notifications/notification-list-screen.dart';
+import 'package:propertease_admin/screens/reports/renter_reservation_report_screen.dart';
+import 'package:propertease_admin/utils/authorization.dart';
+
 import 'package:propertease_admin/screens/reservation/reservation_list_screen.dart';
+import 'package:propertease_admin/screens/users/user_list_screen.dart';
+
+import '../screens/messaging/conversation_list_screen.dart';
+import '../screens/property/property_list_screen.dart';
 
 class MasterScreenWidget extends StatelessWidget {
   final Widget? child;
@@ -46,9 +53,42 @@ class MasterScreenWidget extends StatelessWidget {
           ),
           const Divider(),
           ListTile(
+            title: const Text("Reports"),
+            onTap: () {
+              Navigator.of(context).push(MaterialPageRoute(
+                  builder: (context) => const RenterReservationReportScreen()));
+            },
+          ),
+          ListTile(
+            title: const Text("Notifications"),
+            onTap: () {
+              Navigator.of(context).push(MaterialPageRoute(
+                  builder: (context) => const NewsListWidget()));
+            },
+          ),
+          if (Authorization.role == 'Administrator')
+            ListTile(
+              title: const Text("Users"),
+              onTap: () {
+                Navigator.of(context).push(MaterialPageRoute(
+                    builder: (context) => const UserListWidget()));
+              },
+            ),
+          ListTile(
+            title: const Text("Conversations"),
+            onTap: () {
+              Navigator.of(context).push(MaterialPageRoute(
+                  builder: (context) => ConversationListScreen(
+                        renterId: Authorization.userId,
+                      )));
+            },
+          ),
+          const Divider(),
+          ListTile(
             leading: const Icon(Icons.logout),
             title: const Text('Odjava'),
             onTap: () {
+              Authorization.clear();
               Navigator.of(context).pushAndRemoveUntil(
                 MaterialPageRoute(builder: (_) => const LoginWidget()),
                 (_) => false,

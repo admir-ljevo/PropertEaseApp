@@ -21,10 +21,9 @@ namespace MobiFon.Services.Services.ApplicationUserRolesService
         {
             return _unitOfWork.ApplicationUserRolesRepository.AddRangeAsync(entitiesDto);
         }
-
-        public Task<ApplicationUserRoleDto> AddAsync(ApplicationUserRoleDto country)
+        public async Task<ApplicationUserRoleDto> AddAsync(ApplicationUserRoleDto entity)
         {
-            throw new NotImplementedException();
+            return await _unitOfWork.ApplicationUserRolesRepository.AddAsync(entity);
         }
 
         public Task<List<ApplicationUserRoleDto>> GetAllAsync()

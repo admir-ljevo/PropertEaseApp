@@ -1,6 +1,6 @@
 ﻿using MobiFon.Core.Dto.Notification;
 using MobiFon.Infrastructure.UnitOfWork;
-
+using PropertEase.Core.Filters;
 
 namespace MobiFon.Services.Services.NotificationService
 {
@@ -34,6 +34,11 @@ namespace MobiFon.Services.Services.NotificationService
         public async Task<List<NotificationDto>> GetByNameAsync(string name)
         {
             return await unitOfWork.NotificationRepository.GetByNameAsync(name);
+        }
+
+        public async Task<List<NotificationDto>> GetFiltered(NotificationFilter filter)
+        {
+            return await unitOfWork.NotificationRepository.GetFiltered(filter);
         }
 
         public async Task RemoveByIdAsync(int id, bool isSoft = true)

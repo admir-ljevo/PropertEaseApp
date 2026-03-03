@@ -42,9 +42,9 @@ namespace MobiFon.Services.AccessManager
 
         }
 
-        public async Task<IdentityResult> ChangePassword(string currentPassword, string newPassword)
+        public async Task<IdentityResult> ChangePassword(string currentPassword, string newPassword, string userId)
         {
-            return await _userManager.ChangePasswordAsync(await _userManager.FindByIdAsync("testId"), currentPassword, newPassword);
+            return await _userManager.ChangePasswordAsync(await _userManager.FindByIdAsync(userId), currentPassword, newPassword);
         }
 
         public Task ResetPassword(string email)

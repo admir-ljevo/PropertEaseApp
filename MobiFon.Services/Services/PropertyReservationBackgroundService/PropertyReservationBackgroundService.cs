@@ -22,7 +22,7 @@ namespace MobiFon.Services.Services.PropertyReservationBackgroundService
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
-            timer = new Timer(DoWork, null, TimeSpan.Zero, interval);
+           timer = new Timer(DoWork, null, TimeSpan.Zero, interval);
 
             return Task.CompletedTask;
         }

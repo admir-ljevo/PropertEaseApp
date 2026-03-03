@@ -15,6 +15,8 @@ using System.Net.Mail;
 using System.Text;
 using System.Threading.Tasks;
 using System.Globalization;
+using PropertEase.Core.Filters;
+using PropertEase.Core.Dto.ApplicationUser;
 
 namespace MobiFon.Services.Services.ApplicationUsersService
 {
@@ -41,47 +43,7 @@ namespace MobiFon.Services.Services.ApplicationUsersService
             return user;
         }
 
-        public async Task<ApplicationUserDto> AddClientAsync(ClientInsertDto user)
-        {
-            var newUser = new ApplicationUserDto();
-            newUser.Person = new PersonDto
-            {
-                FirstName = user.FirstName,
-                LastName = user.LastName,
-                Address = user.Address,
-                BirthDate = user.BirthDate,
-                MarriageStatus = user.MarriageStatus,
-                PostCode = user.PostCode,
-                Gender = user.Gender,
-                Biography = "",
-            };
-            newUser.Active = true;
-            newUser.Email = user.Email;
-            newUser.NormalizedEmail = user.Email.ToUpper();
-            newUser.UserName = user.UserName;
-            newUser.NormalizedUserName = user.UserName.ToUpper();
-            newUser.PhoneNumber = user.PhoneNumber;
-            newUser.EmailConfirmed = true;
-            newUser.ConcurrencyStamp = Guid.NewGuid().ToString();
-            newUser.PasswordHash = _passwordHasher.HashPassword(new ApplicationUser(), user.Password);
-            newUser.IsClient = true;
-            
-            newUser = await _unitOfWork.ApplicationUsersRepository.AddAsync(newUser);
-            await _unitOfWork.SaveChangesAsync();
-
-            var role = await _applicationRolesRepository.GetByRoleLevelOrName((int)Role.Employee, Role.Employee.ToString());
-            await _applicationUserRolesRepository.AddAsync(new ApplicationUserRoleDto
-            {
-                UserId = newUser.Id,
-                RoleId = role.Id
-            });
-            await _unitOfWork.SaveChangesAsync();
-
-            return newUser;
-
-
-        }
-
+      
         public async Task<ApplicationUserDto> AddEmployeeAsync(EmployeeInsertDto user)
         {
             var newUser = new ApplicationUserDto();
@@ -103,7 +65,7 @@ namespace MobiFon.Services.Services.ApplicationUsersService
                 Nationality = user.Nationality,
                 Pay = user.Pay,
                 PlaceOfResidenceId = user.PlaceOfResidenceId,
-                Position = user.Position,
+                Position = Position.Renter,
                 ProfilePhoto = user.ProfilePhoto,
                 ProfilePhotoThumbnail = user.ProfilePhoto,
                 Qualifications = user.Qualifications,
@@ -119,7 +81,7 @@ namespace MobiFon.Services.Services.ApplicationUsersService
              newUser.EmailConfirmed = true;
             newUser.PhoneNumber = user.PhoneNumber;
             newUser.ConcurrencyStamp = Guid.NewGuid().ToString();
-            newUser.PasswordHash = _passwordHasher.HashPassword(new ApplicationUser(), passwd);
+            newUser.PasswordHash = _passwordHasher.HashPassword(new ApplicationUser(), user.Password);
             newUser.IsEmployee = true;
             newUser = await _unitOfWork.ApplicationUsersRepository.AddAsync(newUser);
             await _unitOfWork.SaveChangesAsync();
@@ -141,8 +103,126 @@ namespace MobiFon.Services.Services.ApplicationUsersService
             _unitOfWork.PersonsRepository.Update(entityDto.Person);
             await _unitOfWork.SaveChangesAsync();
         }
+          public async Task<ApplicationUserDto> AddClientAsync(ClientInsertDto user)
+        {
+            var newUser = new ApplicationUserDto();
+            newUser.Person = new PersonDto();
+            newUser.Person.FirstName = user.FirstName;
+            newUser.Person.LastName = user.LastName;
+            newUser.Person.MarriageStatus = 0;
+            newUser.Person.Citizenship = "";
+            newUser.Person.Biography = "";
+            newUser.Person.MembershipCard = false;
+            newUser.Person.BirthDate = user.BirthDate;
+            newUser.Person.Address = user.Address;
+            newUser.Person.PostCode = user.PostCode;
+            newUser.Person.BirthPlaceId = user.BirthPlaceId;
+            newUser.Person.DateOfEmployment = null;
+            newUser.Person.Gender = user.Gender;
+            newUser.Person.JMBG = user.Jmbg;
+            newUser.Person.Nationality = null;
+            newUser.Person.Pay = 0;
+            newUser.Person.PlaceOfResidenceId = user.PlaceOfResidenceId;
+            newUser.Person.Position = 0;
+            newUser.Person.ProfilePhoto = user.ProfilePhoto;
+            newUser.Person.ProfilePhotoThumbnail = user.ProfilePhoto;
+            newUser.Person.ProfilePhotoBytes = user.ProfilePhotoBytes;
+            newUser.Person.Qualifications = "";
+            newUser.Person.WorkExperience = false;
 
-        public async Task<ApplicationUserDto> EditEmployee(EmployeeInsertDto user)
+            newUser.Person.PlaceOfResidence = null;
+            newUser.Person.BirthPlace = null;
+            newUser.Active = true;
+            newUser.Email = user.Email;
+            newUser.NormalizedEmail = user.Email.ToUpper();
+            newUser.UserName = user.UserName;
+            newUser.NormalizedUserName = user.UserName.ToUpper();
+            newUser.PhoneNumber = user.PhoneNumber;
+            newUser.EmailConfirmed = true;
+            newUser.ConcurrencyStamp = Guid.NewGuid().ToString();
+            newUser.PasswordHash = _passwordHasher.HashPassword(new ApplicationUser(), user.Password);
+            newUser.IsClient = true;
+            
+            newUser = await _unitOfWork.ApplicationUsersRepository.AddAsync(newUser);
+            await _unitOfWork.SaveChangesAsync();
+
+            var role = await _applicationRolesRepository.GetByRoleLevelOrName((int)Role.Client, Role.Client.ToString());
+            await _applicationUserRolesRepository.AddAsync(new ApplicationUserRoleDto
+            {
+                UserId = newUser.Id,
+                RoleId = role.Id
+            });
+            await _unitOfWork.SaveChangesAsync();
+
+            return newUser;
+
+
+        }
+
+        public async Task<ApplicationUserDto> EditClient(ClientUpdateDto user)
+        {
+            try
+            {
+                var editedUser = await _unitOfWork.ApplicationUsersRepository.GetByIdAsync(user.Id);
+                var editUser = await _unitOfWork.ApplicationUsersRepository.GetByIdAsync(user.Id);
+                editUser.Person.FirstName = user.FirstName;
+                editUser.Person.LastName = user.LastName;
+                editUser.Person.MarriageStatus = 0;
+                editUser.Person.Citizenship = "";
+                editUser.Person.Biography = "";
+                editUser.Person.MembershipCard = false;
+                editUser.Person.BirthDate = user.BirthDate;
+                editUser.Person.Address = user.Address;
+                editUser.Person.PostCode = user.PostCode;
+                editUser.Person.BirthPlaceId = user.BirthPlaceId;
+                editUser.Person.DateOfEmployment = null;
+                editUser.Person.Gender = user.Gender;
+                editUser.Person.JMBG = user.Jmbg;
+                editUser.Person.Nationality = null;
+                editUser.Person.Pay = 0;
+                editUser.Person.PlaceOfResidenceId = user.PlaceOfResidenceId;
+                editUser.Person.Position = 0;
+                editUser.Person.ProfilePhoto = user.ProfilePhoto;
+                editUser.Person.ProfilePhotoThumbnail = user.ProfilePhoto;
+                editUser.Person.ProfilePhotoBytes = user.ProfilePhotoBytes;
+                editUser.Person.Qualifications = "";
+                editUser.Person.WorkExperience = false;
+
+                editUser.Person.PlaceOfResidence = null;
+                editUser.Person.BirthPlace = null;
+
+                if (editUser.Person.PlaceOfResidenceId == 0)
+                {
+                    editUser.Person.PlaceOfResidenceId = null;
+                }
+                if (editUser.Person.BirthPlaceId == 0)
+                {
+                    editUser.Person.BirthPlaceId = null;
+                }
+                _unitOfWork.PersonsRepository.Update(editUser.Person);
+
+                editUser.Email = user.Email;
+                editUser.NormalizedEmail = user.Email.ToUpper();
+                editUser.UserName = user.UserName;
+                editUser.NormalizedUserName = user.UserName.ToUpper();
+                editUser.IsEmployee = false;
+                editedUser.IsClient = true;
+                editUser.PhoneNumber = user.PhoneNumber;
+                editUser.UserRoles = null;
+                editUser.Person = null;
+                _unitOfWork.ApplicationUsersRepository.Update(editUser);
+                await _unitOfWork.SaveChangesAsync();
+
+                return editUser;
+            }
+            catch (Exception ex)
+            {
+
+                throw new Exception(ex.Message);
+            }
+        }
+
+        public async Task<ApplicationUserDto> EditEmployee(EmployeeUpdateDto user)
         {
             try
             {
@@ -206,9 +286,9 @@ namespace MobiFon.Services.Services.ApplicationUsersService
             return await _unitOfWork.ApplicationUsersRepository.FindByUserNameOrEmailAsync(pUserName);
         }
 
-        public Task<List<ApplicationUserDto>> GetAllAsync()
+        public async Task<List<ApplicationUserDto>> GetAllAsync()
         {
-            throw new NotImplementedException();
+            return await _unitOfWork.ApplicationUsersRepository.GetAllAsync();
         }
 
         public async Task<ApplicationUserDto> GetByIdAsync(int id)
@@ -226,9 +306,15 @@ namespace MobiFon.Services.Services.ApplicationUsersService
             return await _unitOfWork.ApplicationUsersRepository.GetEmployees();
         }
 
-        public Task RemoveByIdAsync(int id, bool isSoft = true)
+        public async Task<List<ApplicationUserDto>> GetFiltered(UserFilter filter)
         {
-            throw new NotImplementedException();
+            return await _unitOfWork.ApplicationUsersRepository.GetFiltered(filter);
+        }
+
+        public async Task RemoveByIdAsync(int id, bool isSoft = true)
+        {
+            await _unitOfWork.ApplicationUsersRepository.RemoveByIdAsync(id, isSoft);
+            await _unitOfWork.SaveChangesAsync();
         }
 
         public void Update(ApplicationUserDto entity)

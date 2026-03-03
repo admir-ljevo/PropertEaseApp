@@ -11,7 +11,6 @@ namespace MobiFon.Core.Dto.ApplicationUser
     public class EmployeeInsertDto
     {
 
-    
         public int Id { get; set; }
         public string Email { get; set; }
         public string UserName { get; set; }
@@ -22,6 +21,8 @@ namespace MobiFon.Core.Dto.ApplicationUser
         public Gender? Gender { get; set; }
         public string? ProfilePhoto { get; set; }
         public string? ProfilePhotoThumbnail { get; set; }
+        public byte[]? ProfilePhotoBytes { get; set; }
+
         public int? BirthPlaceId { get; set; }
         public string Jmbg { get; set; }
         public string Qualifications { get; set; }
@@ -37,5 +38,6 @@ namespace MobiFon.Core.Dto.ApplicationUser
         public Position Position { get; set; }
         public DateTime DateOfEmployment { get; set; }
         public float Pay { get; set; }
+        public string Password { get; set; }
     }
 }

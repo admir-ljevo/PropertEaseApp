@@ -4,6 +4,7 @@ using MobiFon.Core.Dto.Property;
 using MobiFon.Core.Dto.PropertyRating;
 using MobiFon.Core.Entities;
 using MobiFon.Infrastructure.Repositories.BaseRepository;
+using PropertEase.Core.Filters;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -28,7 +29,7 @@ namespace MobiFon.Infrastructure.Repositories.PropertyRatingRepository
             return await ProjectToListAsync<PropertyRatingDto>(DatabaseContext.PropertyRatings.Where(pr => pr.Property.Name == name));
         }
 
-       public async Task<List<PropertyRatingDto>> GetAllAsync()
+       public async new Task<List<PropertyRatingDto>> GetAllAsync()
        {
             var propertyRatings = await ProjectToListAsync<PropertyRatingDto>(DatabaseContext.PropertyRatings.Where(pr => !pr.IsDeleted));
             return propertyRatings;
@@ -37,6 +38,14 @@ namespace MobiFon.Infrastructure.Repositories.PropertyRatingRepository
         public async Task<List<PropertyRatingDto>> GetByPropertyId(int id)
         {
             return await ProjectToListAsync<PropertyRatingDto>(DatabaseContext.PropertyRatings.Where(pr=>pr.PropertyId == id && !pr.IsDeleted));
+        }
+
+        public async Task<List<PropertyRatingDto>> GetFiltered(RatingsFilter filter)
+        {
+            return await ProjectToListAsync<PropertyRatingDto>(DatabaseContext.PropertyRatings.Where(pr => 
+             (filter.PropertyId == pr.PropertyId) 
+            && (!filter.CreatedFrom.HasValue || filter.CreatedFrom <= pr.CreatedAt)
+            && (!filter.CreatedTo.HasValue || filter.CreatedTo>=pr.CreatedAt)));
         }
     }
 }

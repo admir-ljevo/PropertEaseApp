@@ -7,10 +7,14 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="AspNetCore.Reporting" Version="2.1.0" />
     <PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="12.0.1" />
     <PackageReference Include="Microsoft.AspNetCore.Cryptography.KeyDerivation" Version="6.0.13" />
+    <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="6.0.6" />
     <PackageReference Include="Microsoft.AspNetCore.Identity" Version="2.2.0" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="6.0.1" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR" Version="1.1.0" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.StackExchangeRedis" Version="5.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="7.0.5" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="7.0.5" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="7.0.5">
@@ -20,7 +24,10 @@
     <PackageReference Include="Microsoft.Extensions.Identity.Core" Version="6.0.13" />
     <PackageReference Include="Microsoft.Extensions.Identity.Stores" Version="6.0.13" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="7.0.0" />
+    <PackageReference Include="Microsoft.ReportingServices.ReportViewerControl.WebForms" Version="150.1586.0" />
+    <PackageReference Include="ReportViewerCore.NETCore" Version="15.1.18" />
     <PackageReference Include="SixLabors.ImageSharp" Version="3.0.1" />
+    <PackageReference Include="System.Security.Permissions" Version="7.0.0" />
     <PackageReference Include="System.Text.Encoding.CodePages" Version="6.0.0" />
   </ItemGroup>
 

@@ -1,9 +1,15 @@
 using AutoMapper;
+using AutoMapper.QueryableExtensions;
+using Microsoft.EntityFrameworkCore;
+using MobiFon.Core.Dto;
+using MobiFon.Core.Dto.ApplicationUser;
+using MobiFon.Core.Dto.Person;
+using MobiFon.Core.Dto.Property;
 using MobiFon.Core.Dto.PropertyReservation;
 using MobiFon.Core.Entities;
 using MobiFon.Infrastructure.Repositories.BaseRepository;
-using Microsoft.EntityFrameworkCore;
 using PropertEase.Core.Filters;
+using PropertEase.Core.SearchObjects;
 
 namespace MobiFon.Infrastructure.Repositories.PropertyReservationRepository
 {
@@ -44,18 +50,96 @@ namespace MobiFon.Infrastructure.Repositories.PropertyReservationRepository
 
         public async Task<List<PropertyReservationDto>> GetFiltered(PropertyReservationFilter filter)
         {
-            return await ProjectToListAsync<PropertyReservationDto>(
-                DatabaseContext.PropertyReservations
-                    .AsNoTracking()
-                    .Where(pr =>
-                        (string.IsNullOrEmpty(filter.propertyName) || pr.Property.Name.Contains(filter.propertyName)) &&
-                        (!filter.DateOccupancyStarted.HasValue || pr.DateOfOccupancyStart >= filter.DateOccupancyStarted.Value) &&
-                        (!filter.DateOccupancyEnded.HasValue || pr.DateOfOccupancyEnd <= filter.DateOccupancyEnded.Value) &&
-                        (!filter.totalPriceFrom.HasValue || pr.TotalPrice >= filter.totalPriceFrom.Value) &&
-                        (!filter.totalPriceTo.HasValue || pr.TotalPrice <= filter.totalPriceTo.Value) &&
-                        (filter.propertyTypeId == 0 || pr.Property.PropertyTypeId == filter.propertyTypeId) &&
-                        (!filter.isActive.HasValue || pr.IsActive == filter.isActive.Value)
-                    ));
+            var reservationsQuery = DatabaseContext.PropertyReservations
+                .Where(pr =>
+                    (!filter.DateOccupancyStartedStart.HasValue || pr.DateOfOccupancyStart >= filter.DateOccupancyStartedStart.Value) &&
+                    (!filter.DateOccupancyStartedEnd.HasValue || pr.DateOfOccupancyStart <= filter.DateOccupancyStartedEnd.Value) &&
+                    (!filter.DateOccupancyEnded.HasValue || pr.DateOfOccupancyEnd <= filter.DateOccupancyEnded.Value) &&
+                    (!filter.totalPriceFrom.HasValue || pr.TotalPrice >= filter.totalPriceFrom.Value) &&
+                    (!filter.totalPriceTo.HasValue || pr.TotalPrice <= filter.totalPriceTo.Value) &&
+                    (!filter.clientId.HasValue || pr.ClientId == filter.clientId) &&
+                    (!filter.propertyId.HasValue || pr.PropertyId == filter.propertyId) &&
+                    (!filter.renterId.HasValue || pr.RenterId == filter.renterId) &&
+                    (!filter.isActive.HasValue || pr.IsActive == filter.isActive.Value) &&
+                    (filter.propertyTypeId == null || filter.propertyTypeId == pr.Property.PropertyTypeId) &&
+                    !pr.IsDeleted);
+            reservationsQuery = reservationsQuery.Include(pr => pr.Client.Person);
+            reservationsQuery = reservationsQuery.Include(pr => pr.Renter.Person);
+            if (!string.IsNullOrEmpty(filter.propertyName))
+            {
+                reservationsQuery = reservationsQuery.Where(pr => pr.Property.Name.Contains(filter.propertyName));
+            }
+
+            var reservations = await reservationsQuery
+                .Include(pr => pr.Property)
+                .OrderBy(pr => pr.DateOfOccupancyStart)
+                .ToListAsync();
+
+            foreach (var reservation in reservations)
+            {
+                await DatabaseContext.Entry(reservation.Property).Reference(p => p.City).LoadAsync();
+                await DatabaseContext.Entry(reservation.Property).Reference(p => p.PropertyType).LoadAsync();
+            }
+
+            var reservationsDto = reservations.Select(pr => new PropertyReservationDto
+            {
+                Client = new ApplicationUserDto
+                {
+                    Person = new PersonDto
+                    {
+                        FirstName = pr.Client.Person.FirstName,
+                        LastName = pr.Client.Person.LastName,
+                    }
+                },
+                Renter = new ApplicationUserDto
+                {
+                    Person = new PersonDto
+                    {
+                        FirstName = pr.Renter.Person.FirstName,
+                        LastName = pr.Renter.Person.LastName,
+                    }
+                },
+                Property = new PropertyDto
+                {
+                    Id = pr.PropertyId,
+                    Name = pr.Property.Name,
+                    City = new Core.Dto.City.CityDto
+                    {
+                        Id = pr.Property.City.Id,
+                        Name = pr.Property.City.Name,
+                        CountryId = pr.Property.City.CountryId,
+                    },
+                    PropertyTypeId = pr.Property.PropertyTypeId,
+                    PropertyType = new Core.Dto.PropertyType.PropertyTypeDto
+                    {
+                        Id = pr.Property.PropertyType.Id,
+                        Name = pr.Property.PropertyType.Name,
+                    }
+                },
+                ReservationNumber = pr.ReservationNumber,
+                Description = pr.Description,
+                PropertyId = pr.PropertyId,
+                RenterId = pr.RenterId,
+                ClientId = pr.ClientId,
+                NumberOfGuests = pr.NumberOfGuests,
+                DateOfOccupancyStart = pr.DateOfOccupancyStart,
+                DateOfOccupancyEnd = pr.DateOfOccupancyEnd,
+                NumberOfDays = pr.NumberOfDays,
+                NumberOfMonths = pr.NumberOfMonths,
+                TotalPrice = pr.TotalPrice,
+                IsMonthly = pr.IsMonthly,
+                IsDaily = pr.IsDaily,
+                IsActive = pr.IsActive
+            }).ToList();
+
+            return reservationsDto;
+        }
+
+        public async new Task<List<PropertyReservationDto>> GetRenterBusinessReportData(ReportSearchObject search)
+        {
+            var result = await ProjectToListAsync<PropertyReservationDto>(DatabaseContext.PropertyReservations.Where(
+                x => !x.IsDeleted && search.DateFrom <= x.CreatedAt && search.DateTo >= x.CreatedAt && search.RenterId == x.RenterId));
+            return result;
         }
     }
 }

@@ -70,6 +70,12 @@ namespace MobiFon.Infrastructure.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
+                    b.Property<string>("LastMessage")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("LastSent")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime?>("ModifiedAt")
                         .HasColumnType("datetime2");
 
@@ -465,6 +471,9 @@ namespace MobiFon.Infrastructure.Migrations
                     b.Property<string>("Image")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<byte[]>("ImageBytes")
+                        .HasColumnType("varbinary(max)");
+
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
@@ -567,6 +576,9 @@ namespace MobiFon.Infrastructure.Migrations
                     b.Property<string>("ProfilePhoto")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<byte[]>("ProfilePhotoBytes")
+                        .HasColumnType("varbinary(max)");
+
                     b.Property<string>("ProfilePhotoThumbnail")
                         .HasColumnType("nvarchar(max)");
 
@@ -598,6 +610,9 @@ namespace MobiFon.Infrastructure.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<byte[]>("ImageBytes")
+                        .HasColumnType("varbinary(max)");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
@@ -849,6 +864,9 @@ namespace MobiFon.Infrastructure.Migrations
                     b.Property<int>("PropertyId")
                         .HasColumnType("int");
 
+                    b.Property<int>("RenterId")
+                        .HasColumnType("int");
+
                     b.Property<string>("ReservationNumber")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -865,6 +883,8 @@ namespace MobiFon.Infrastructure.Migrations
                     b.HasIndex("PropertyId");
 
                     b.HasIndex("DateOfOccupancyStart", "DateOfOccupancyEnd");
+
+                    b.HasIndex("RenterId");
 
                     b.ToTable("PropertyReservations");
                 });
@@ -1116,9 +1136,17 @@ namespace MobiFon.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("MobiFon.Core.Entities.Identity.ApplicationUser", "Renter")
+                        .WithMany()
+                        .HasForeignKey("RenterId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.Navigation("Client");
 
                     b.Navigation("Property");
+
+                    b.Navigation("Renter");
                 });
 
             modelBuilder.Entity("MobiFon.Core.Entities.Conversation", b =>
