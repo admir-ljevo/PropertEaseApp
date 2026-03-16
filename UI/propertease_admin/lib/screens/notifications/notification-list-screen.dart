@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:propertease_admin/config/app_config.dart';
 import 'package:propertease_admin/providers/notification_provider.dart';
 import 'package:propertease_admin/screens/notifications/notification-detail-screen.dart';
 import 'package:propertease_admin/screens/notifications/notification_add_screen.dart';
+import 'package:propertease_admin/utils/authorization.dart';
 import 'package:propertease_admin/widgets/master_screen.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../models/new.dart';
+
+const _kPrimary = Color(0xFF115892);
 
 class NewsListWidget extends StatefulWidget {
   const NewsListWidget({super.key});
@@ -18,347 +21,425 @@ class NewsListWidget extends StatefulWidget {
 
 class NewsListWidgetState extends State<NewsListWidget> {
   late NotificationProvider _newsProvider;
-  List<New> _news = [];
   List<New> news = [];
-  late DateTime? selectedDateStart;
-  late DateTime? seletedDateEnd;
-  String? formattedStartDate;
-  String? formattedEndDate;
+  int _currentPage = 1;
+  int _totalCount = 0;
+  bool _isLoading = false;
+  final int _pageSize = 10;
 
-  String? firstName;
-  String? lastName;
-  String photoUrl = 'https://localhost:7137';
-  int? roleId;
-  Future<void> getUserIdFromSharedPreferences() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    setState(() {
-      firstName = prefs.getString('firstName');
-      lastName = prefs.getString('lastName');
-      photoUrl = 'https://localhost:7137${prefs.getString('profilePhoto')}';
-      roleId = prefs.getInt('roleId')!;
-    });
-  }
-
-  TextEditingController _searchController = TextEditingController();
-  Future<void> _fetchData() async {
-    _news = await _newsProvider.get(filter: {
-      'Name': _searchController.text,
-      'CreatedFrom': formattedStartDate,
-      'CreatedTo': formattedEndDate,
-    });
-    setState(() {
-      news = _news;
-    });
-  }
+  String? _formattedStartDate;
+  String? _formattedEndDate;
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
     _newsProvider = context.read<NotificationProvider>();
-    getUserIdFromSharedPreferences();
     _fetchData();
   }
 
-  @override
-  void didChangeDependencies() {
-    // TODO: implement didChangeDependencies
-    super.didChangeDependencies();
-    _newsProvider = context.read<NotificationProvider>();
-    getUserIdFromSharedPreferences();
+  Future<void> _fetchData() async {
+    if (!mounted) return;
+    setState(() => _isLoading = true);
+    try {
+      final result = await _newsProvider.get(filter: {
+        'Name': _searchController.text,
+        if (_formattedStartDate != null) 'CreatedFrom': _formattedStartDate,
+        if (_formattedEndDate != null) 'CreatedTo': _formattedEndDate,
+        'Page': _currentPage,
+        'PageSize': _pageSize,
+      });
+      if (!mounted) return;
+      setState(() {
+        news = result.result;
+        _totalCount = result.totalCount > 0 ? result.totalCount : result.count;
+        _isLoading = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _pickDate({required bool isStart}) async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2101),
+    );
+    if (picked == null) return;
+    setState(() {
+      if (isStart) {
+        _formattedStartDate = DateFormat('yyyy-MM-dd').format(picked);
+      } else {
+        _formattedEndDate = DateFormat('yyyy-MM-dd').format(picked);
+      }
+      _currentPage = 1;
+    });
     _fetchData();
   }
 
-  Future<void> _selectDateStart(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2101),
-    );
-
-    if (picked != null && picked != DateTime.now()) {
-      selectedDateStart = picked;
-
-      formattedStartDate = DateFormat('yyyy-MM-dd').format(selectedDateStart!);
-      _fetchData();
-    }
+  void _clearFilters() {
+    setState(() {
+      _searchController.clear();
+      _formattedStartDate = null;
+      _formattedEndDate = null;
+      _currentPage = 1;
+    });
+    _fetchData();
   }
-
-  Future<void> _selectDateEnd(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2101),
-    );
-
-    if (picked != null && picked != DateTime.now()) {
-      seletedDateEnd = picked;
-      formattedEndDate = DateFormat('yyyy-MM-dd').format(seletedDateEnd!);
-      _fetchData();
-    }
-  }
-
-  bool isHovered = false;
-
-  int hoveredIndex = -1;
 
   @override
   Widget build(BuildContext context) {
+    final totalPages = (_totalCount / _pageSize).ceil().clamp(1, 9999);
     return MasterScreenWidget(
-      title_widget: const Text('News list'),
+      titleWidget: const Text('Vijesti'),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // First child: Search input field and date pickers
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                flex: 2,
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: TextFormField(
-                    onChanged: (value) async {
-                      await _fetchData();
-                    },
-                    controller: _searchController,
-                    decoration: const InputDecoration(
-                      hintText: 'Search by headline',
-                      prefixIcon:
-                          Icon(Icons.search), // Add the search icon here
-                    ),
-                  ),
+          _buildToolbar(context),
+          const SizedBox(height: 8),
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : news.isEmpty
+                    ? _buildEmpty()
+                    : _buildNewsList(),
+          ),
+          if (!_isLoading && news.isNotEmpty)
+            _buildPagination(totalPages),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildToolbar(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      child: Row(
+        children: [
+          // Search
+          Expanded(
+            flex: 3,
+            child: TextField(
+              controller: _searchController,
+              onChanged: (_) {
+                setState(() => _currentPage = 1);
+                _fetchData();
+              },
+              decoration: InputDecoration(
+                hintText: 'Pretraži po naslovu...',
+                prefixIcon: const Icon(Icons.search, color: _kPrimary),
+                filled: true,
+                fillColor: Colors.grey.shade50,
+                contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 12),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: Colors.grey.shade300),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: Colors.grey.shade300),
                 ),
               ),
-              Expanded(
-                child: TextButton(
-                  onPressed: () {
-                    _selectDateStart(context); // Show date picker dialog
-                  },
-                  child: const Text('Created from'),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: TextButton(
-                  onPressed: () {
-                    _selectDateEnd(context); // Show date picker dialog
-                  },
-                  child: const Text('Created to'),
-                ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          // Date from
+          _DateFilterChip(
+            label: _formattedStartDate != null
+                ? 'Od: $_formattedStartDate'
+                : 'Od datuma',
+            isActive: _formattedStartDate != null,
+            onTap: () => _pickDate(isStart: true),
+          ),
+          const SizedBox(width: 8),
+          // Date to
+          _DateFilterChip(
+            label: _formattedEndDate != null
+                ? 'Do: $_formattedEndDate'
+                : 'Do datuma',
+            isActive: _formattedEndDate != null,
+            onTap: () => _pickDate(isStart: false),
+          ),
+          if (_formattedStartDate != null || _formattedEndDate != null || _searchController.text.isNotEmpty) ...[
+            const SizedBox(width: 8),
+            IconButton(
+              icon: const Icon(Icons.close, color: Colors.grey),
+              tooltip: 'Očisti filtere',
+              onPressed: _clearFilters,
+            ),
+          ],
+          const Spacer(),
+          if (Authorization.isAdmin)
+            FilledButton.icon(
+              style: FilledButton.styleFrom(backgroundColor: _kPrimary),
+              icon: const Icon(Icons.add),
+              label: const Text('Dodaj vijest'),
+              onPressed: () => Navigator.of(context)
+                  .push(MaterialPageRoute(
+                      builder: (_) => const NotificationAddScreen()))
+                  .then((_) => _fetchData()),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmpty() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.newspaper, size: 72, color: Colors.grey.shade300),
+          const SizedBox(height: 16),
+          Text('Nema vijesti',
+              style: TextStyle(fontSize: 18, color: Colors.grey.shade500)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNewsList() {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: ListView.separated(
+        itemCount: news.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 12),
+        itemBuilder: (context, index) => _NewsCard(
+          item: news[index],
+          onTap: () => Navigator.of(context)
+              .push(MaterialPageRoute(
+                  builder: (_) =>
+                      NotificationDetailScreen(notification: news[index])))
+              .then((_) => _fetchData()),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPagination(int totalPages) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.chevron_left),
+            onPressed: _currentPage > 1
+                ? () {
+                    setState(() => _currentPage--);
+                    _fetchData();
+                  }
+                : null,
+          ),
+          Text(
+            '$_currentPage / $totalPages',
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+          IconButton(
+            icon: const Icon(Icons.chevron_right),
+            onPressed: _currentPage < totalPages
+                ? () {
+                    setState(() => _currentPage++);
+                    _fetchData();
+                  }
+                : null,
+          ),
+          const SizedBox(width: 16),
+          Text(
+            'Ukupno: $_totalCount',
+            style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── News card (horizontal) ─────────────────────────────────────────────────────
+
+class _NewsCard extends StatefulWidget {
+  final New item;
+  final VoidCallback onTap;
+  const _NewsCard({required this.item, required this.onTap});
+
+  @override
+  State<_NewsCard> createState() => _NewsCardState();
+}
+
+class _NewsCardState extends State<_NewsCard> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final n = widget.item;
+    final date = n.createdAt != null
+        ? DateFormat('dd.MM.yyyy').format(n.createdAt!)
+        : '';
+    final author =
+        '${n.user?.person?.firstName ?? ''} ${n.user?.person?.lastName ?? ''}'.trim();
+    final preview = (n.text ?? '').length > 120
+        ? '${n.text!.substring(0, 120)}...'
+        : (n.text ?? '');
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: _hovered ? _kPrimary : Colors.grey.shade200,
+              width: _hovered ? 1.5 : 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(_hovered ? 0.08 : 0.04),
+                blurRadius: _hovered ? 12 : 6,
+                offset: const Offset(0, 2),
               ),
             ],
           ),
-
-          if (roleId == 1)
-            Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => const NotificationAddScreen(),
-                    ),
-                  );
-                },
-                child: const Padding(
-                  padding: EdgeInsets.all(20.0),
-                  child: Text("Add notification"),
+          child: Row(
+            children: [
+              // Image
+              ClipRRect(
+                borderRadius: const BorderRadius.horizontal(
+                    left: Radius.circular(14)),
+                child: SizedBox(
+                  width: 180,
+                  height: 120,
+                  child: _buildImage(n),
                 ),
               ),
-            ),
-
-          // Second child: Your existing MasterScreenWidget
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: ListView.builder(
-                itemCount: news.length + 1, // +1 for the "News overview" row
-                itemBuilder: (BuildContext context, int index) {
-                  if (index == 0) {
-                    // This is the "News overview" row
-                    return const Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            SizedBox(
-                              width: 100,
-                            ),
-                            Text(
-                              "News overview",
+              // Content
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 20, vertical: 14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        n.name ?? '',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: _kPrimary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        preview,
+                        style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey.shade700,
+                            height: 1.4),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Icon(Icons.person_outline,
+                              size: 14, color: Colors.grey.shade500),
+                          const SizedBox(width: 4),
+                          Text(author.isNotEmpty ? author : '—',
                               style: TextStyle(
-                                fontSize: 30,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF115892),
-                              ),
-                            ),
-                            Spacer(),
-                            Icon(
-                              Icons.article,
-                              size: 80,
-                              color: Color(0xFF115892),
-                            ),
-                            SizedBox(
-                              width: 100,
-                            ),
-                          ],
-                        ),
-                        Divider(
-                          thickness: 2,
-                          color: Colors.blue,
-                        ),
-                        SizedBox(height: 10.0),
-                      ],
-                    );
-                  }
-
-                  final currentNews = news[index - 1];
-
-                  String truncatedText = currentNews.text ?? "";
-                  if (truncatedText.length > 40) {
-                    truncatedText = truncatedText.substring(0, 40) + "...";
-                  }
-
-                  return InkWell(
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => NotificationDetailScreen(
-                            notification: currentNews,
-                          ),
-                        ),
-                      );
-                    },
-                    onHover: (hover) {
-                      setState(() {
-                        hoveredIndex = hover ? index - 1 : -1;
-                      });
-                    },
-                    child: Container(
-                      width: 200,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(10.0),
-                        border: index - 1 == hoveredIndex
-                            ? Border.all(
-                                color: Colors.blue,
-                                width: 2.0,
-                              )
-                            : null,
+                                  fontSize: 12,
+                                  color: Colors.grey.shade500)),
+                          const SizedBox(width: 16),
+                          Icon(Icons.calendar_today_outlined,
+                              size: 14, color: Colors.grey.shade500),
+                          const SizedBox(width: 4),
+                          Text(date,
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade500)),
+                        ],
                       ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Card(
-                          elevation: 4,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10.0),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: <Widget>[
-                              Center(
-                                child: Container(
-                                  height: 180,
-                                  width: 300,
-                                  decoration: const BoxDecoration(
-                                    borderRadius: BorderRadius.vertical(
-                                      top: Radius.circular(10.0),
-                                    ),
-                                  ),
-                                  child: FittedBox(
-                                    fit: BoxFit.cover,
-                                    alignment: Alignment
-                                        .center, // Center the image within the box
-                                    child: SizedBox(
-                                      width: 250, // Set the maximum width
-                                      height: 120, // Set the maximum height
-                                      child: Image.network(
-                                        'https://localhost:7137/${currentNews.image}',
-                                        alignment: Alignment
-                                            .center, // Center the image within its box
-                                        width: double
-                                            .infinity, // Allow the image to take the maximum width
-                                        height:
-                                            110, // Allow the image to take the maximum height
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: const Color.fromARGB(
-                                        255, 231, 231, 231),
-                                    borderRadius: BorderRadius.circular(10.0),
-                                  ),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Row(
-                                      children: [
-                                        const Icon(Icons.edit),
-                                        Text(
-                                          '${currentNews.user?.person?.firstName ?? ""} ${currentNews.user?.person?.lastName ?? ""}',
-                                          style: const TextStyle(
-                                            fontSize: 16.0,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.green,
-                                    borderRadius: BorderRadius.circular(10.0),
-                                  ),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Text(
-                                      currentNews.name ?? "",
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Row(
-                                  children: [
-                                    const Icon(Icons.calendar_today),
-                                    const SizedBox(width: 8.0),
-                                    Text(
-                                      'Posted at: ${currentNews.createdAt}',
-                                      style: const TextStyle(
-                                        color: Colors.grey,
-                                        fontSize: 12.0,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Text(truncatedText),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                },
+                    ],
+                  ),
+                ),
               ),
-            ),
+              Padding(
+                padding: const EdgeInsets.only(right: 16),
+                child: Icon(Icons.chevron_right,
+                    color: _hovered ? _kPrimary : Colors.grey.shade300),
+              ),
+            ],
           ),
-        ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildImage(New n) {
+    if (n.image != null && n.image!.isNotEmpty) {
+      return Image.network(
+        '${AppConfig.serverBase}/${n.image}',
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => _placeholder(),
+      );
+    }
+    return _placeholder();
+  }
+
+  Widget _placeholder() => Container(
+        color: Colors.grey.shade100,
+        child: const Center(
+            child: Icon(Icons.newspaper, size: 40, color: Colors.grey)),
+      );
+}
+
+// ── Date filter chip ───────────────────────────────────────────────────────────
+
+class _DateFilterChip extends StatelessWidget {
+  final String label;
+  final bool isActive;
+  final VoidCallback onTap;
+  const _DateFilterChip(
+      {required this.label, required this.isActive, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: onTap,
+      child: Container(
+        padding:
+            const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: isActive ? _kPrimary.withOpacity(0.08) : Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+              color: isActive ? _kPrimary : Colors.grey.shade300),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.calendar_today_outlined,
+                size: 14,
+                color: isActive ? _kPrimary : Colors.grey.shade600),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                  fontSize: 13,
+                  color: isActive ? _kPrimary : Colors.grey.shade700,
+                  fontWeight:
+                      isActive ? FontWeight.w600 : FontWeight.normal),
+            ),
+          ],
+        ),
       ),
     );
   }

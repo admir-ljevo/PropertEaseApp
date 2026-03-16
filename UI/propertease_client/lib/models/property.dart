@@ -2,6 +2,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 import 'application_user.dart';
 import 'city.dart';
+import 'photo.dart';
 import 'property_type.dart';
 
 part 'property.g.dart';
@@ -47,10 +48,13 @@ class Property {
   double? longitude;
   double? averageRating;
   bool? isAvailable;
+  DateTime? availableFrom;
+  String? firstPhotoUrl;
   PropertyType? propertyType;
   ApplicationUser? applicationUser;
-
   City? city;
+  @JsonKey(includeToJson: false)
+  List<Photo>? photos;
   Property({
     this.id = 0,
     this.createdAt,

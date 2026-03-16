@@ -21,21 +21,14 @@ class Person {
   int? birthPlaceId;
   City? birthPlace;
   String? jmbg;
-  String? qualifications;
   int? placeOfResidenceId;
   City? placeOfResidence;
   int? marriageStatus; // Enum values are stored as integers
   String? marriageStatusName;
   String? nationality;
   String? citizenship;
-  bool? workExperience;
   String? address;
   String? postCode;
-  String? biography;
-  int? position;
-  String? positionName;
-  DateTime? dateOfEmployment;
-  double? pay;
   bool? membershipCard;
   int? applicationUserId;
   String? profilePhotoBytes;

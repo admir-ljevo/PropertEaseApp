@@ -30,7 +30,6 @@ Person _$PersonFromJson(Map<String, dynamic> json) => Person()
       ? null
       : City.fromJson(json['birthPlace'] as Map<String, dynamic>)
   ..jmbg = json['jmbg'] as String?
-  ..qualifications = json['qualifications'] as String?
   ..placeOfResidenceId = json['placeOfResidenceId'] as int?
   ..placeOfResidence = json['placeOfResidence'] == null
       ? null
@@ -39,16 +38,8 @@ Person _$PersonFromJson(Map<String, dynamic> json) => Person()
   ..marriageStatusName = json['marriageStatusName'] as String?
   ..nationality = json['nationality'] as String?
   ..citizenship = json['citizenship'] as String?
-  ..workExperience = json['workExperience'] as bool?
   ..address = json['address'] as String?
   ..postCode = json['postCode'] as String?
-  ..biography = json['biography'] as String?
-  ..position = json['position'] as int?
-  ..positionName = json['positionName'] as String?
-  ..dateOfEmployment = json['dateOfEmployment'] == null
-      ? null
-      : DateTime.parse(json['dateOfEmployment'] as String)
-  ..pay = (json['pay'] as num?)?.toDouble()
   ..membershipCard = json['membershipCard'] as bool?
   ..applicationUserId = json['applicationUserId'] as int?
   ..profilePhotoBytes = json['profilePhotoBytes'] as String?;
@@ -69,21 +60,14 @@ Map<String, dynamic> _$PersonToJson(Person instance) => <String, dynamic>{
       'birthPlaceId': instance.birthPlaceId,
       'birthPlace': instance.birthPlace,
       'jmbg': instance.jmbg,
-      'qualifications': instance.qualifications,
       'placeOfResidenceId': instance.placeOfResidenceId,
       'placeOfResidence': instance.placeOfResidence,
       'marriageStatus': instance.marriageStatus,
       'marriageStatusName': instance.marriageStatusName,
       'nationality': instance.nationality,
       'citizenship': instance.citizenship,
-      'workExperience': instance.workExperience,
       'address': instance.address,
       'postCode': instance.postCode,
-      'biography': instance.biography,
-      'position': instance.position,
-      'positionName': instance.positionName,
-      'dateOfEmployment': instance.dateOfEmployment?.toIso8601String(),
-      'pay': instance.pay,
       'membershipCard': instance.membershipCard,
       'applicationUserId': instance.applicationUserId,
       'profilePhotoBytes': instance.profilePhotoBytes,

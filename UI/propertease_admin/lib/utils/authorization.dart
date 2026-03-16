@@ -6,14 +6,34 @@ class Authorization {
   static String? username;
   static int? userId;
   static String? role;
+  static int? roleId;
+  static bool isRenter = false;
+  static String? firstName;
+  static String? lastName;
+  static String? profilePhoto;
+  static String? profilePhotoBytes;
 
   static bool get isLoggedIn => token != null && token!.isNotEmpty;
+  static bool get isAdmin => roleId == 1;
+
+  static String get displayName {
+    final parts = [firstName, lastName]
+        .where((s) => s != null && s.isNotEmpty)
+        .toList();
+    return parts.isNotEmpty ? parts.join(' ') : (username ?? '');
+  }
 
   static void clear() {
     token = null;
     username = null;
     userId = null;
     role = null;
+    roleId = null;
+    isRenter = false;
+    firstName = null;
+    lastName = null;
+    profilePhoto = null;
+    profilePhotoBytes = null;
   }
 }
 

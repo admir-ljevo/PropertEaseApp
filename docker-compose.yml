@@ -17,10 +17,10 @@ services:
     networks:
       - propertease-net
     healthcheck:
-      test: ["CMD-SHELL", "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P $$SA_PASSWORD -Q 'SELECT 1' || exit 1"]
-      interval: 10s
-      retries: 10
-      start_period: 30s
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$SA_PASSWORD\" -Q 'SELECT 1' -No || /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P \"$$SA_PASSWORD\" -Q 'SELECT 1' || exit 1"]
+      interval: 15s
+      retries: 12
+      start_period: 60s
 
   # ─────────────────────── RABBITMQ ─────────────────────────
   rabbitmq:
@@ -46,7 +46,7 @@ services:
   api:
     build:
       context: .
-      dockerfile: MobiFonApi/Dockerfile
+      dockerfile: PropertEaseApi/Dockerfile
     container_name: propertease-api
     environment:
       ASPNETCORE_ENVIRONMENT: "Production"
@@ -58,7 +58,8 @@ services:
       RabbitMQ__Port: "5672"
       RabbitMQ__Username: "${RABBITMQ_USER:-guest}"
       RabbitMQ__Password: "${RABBITMQ_PASS:-guest}"
-      Uploads__DirectoryPath: "/app/uploads/images"
+      RabbitMQ__Exchange: "propertease.exchange"
+      Uploads__DirectoryPath: "uploads/images"
       ApiBaseUrl: "http://api:80"
     ports:
       - "5000:80"
@@ -68,7 +69,7 @@ services:
       rabbitmq:
         condition: service_healthy
     volumes:
-      - uploads_data:/app/uploads
+      - uploads_data:/app/wwwroot/uploads
     networks:
       - propertease-net
     restart: unless-stopped
@@ -81,6 +82,7 @@ services:
     container_name: propertease-worker
     environment:
       DOTNET_ENVIRONMENT: "Production"
+      ConnectionStrings__DefaultConnection: "Server=sqlserver;Database=PropertEaseDb;User Id=sa;Password=${SA_PASSWORD:-PropertEase_Dev#2024};TrustServerCertificate=True;MultipleActiveResultSets=true"
       RabbitMQ__Host: "rabbitmq"
       RabbitMQ__Port: "5672"
       RabbitMQ__Username: "${RABBITMQ_USER:-guest}"
@@ -92,6 +94,8 @@ services:
       Smtp__FromName: "PropertEase"
     depends_on:
       rabbitmq:
+        condition: service_healthy
+      sqlserver:
         condition: service_healthy
     networks:
       - propertease-net

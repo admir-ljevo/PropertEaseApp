@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 import 'package:intl/intl.dart';
+import 'package:propertease_admin/config/app_config.dart';
+import 'package:propertease_admin/models/application_role.dart';
 import 'package:propertease_admin/models/application_user.dart';
+import 'package:propertease_admin/providers/application_role_provider.dart';
 import 'package:propertease_admin/providers/application_user_provider.dart';
 import 'package:provider/provider.dart';
 
 class UserDetailScreen extends StatefulWidget {
+  // ignore: must_be_immutable
   ApplicationUser? user;
-
   UserDetailScreen({super.key, this.user});
 
   @override
@@ -16,733 +18,378 @@ class UserDetailScreen extends StatefulWidget {
 
 class UserDetailScreenState extends State<UserDetailScreen> {
   late UserProvider _userProvider;
-  TextEditingController _biographyController = TextEditingController();
+  late RoleProvider _roleProvider;
+  List<Map<String, dynamic>> _userRoles = [];
+  List<ApplicationRole> _allRoles = [];
 
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
     _userProvider = context.read<UserProvider>();
-    _biographyController.text = widget.user?.person?.biography ?? '';
+    _roleProvider = context.read<RoleProvider>();
+    _loadRoles();
   }
 
-  @override
-  void didChangeDependencies() {
-    // TODO: implement didChangeDependencies
-    super.didChangeDependencies();
-    _userProvider = context.read<UserProvider>();
-    _biographyController.text = widget.user?.person?.biography ?? '';
-  }
-
-  String formatBirthDate(DateTime? birthDate) {
-    if (birthDate != null) {
-      final dateFormat = DateFormat('MM-dd-yyyy');
-      return dateFormat.format(birthDate);
-    } else {
-      return 'N/A';
+  Future<void> _loadRoles() async {
+    try {
+      final results = await Future.wait([
+        _userProvider.getUserRoles(widget.user!.id!),
+        _roleProvider.get(),
+      ]);
+      if (mounted) {
+        setState(() {
+          _userRoles = results[0] as List<Map<String, dynamic>>;
+          _allRoles = (results[1] as dynamic).result as List<ApplicationRole>;
+        });
+      }
+    } catch (e) {
+      rethrow;
     }
   }
 
-  Widget buildUserRoleRow(ApplicationUser user) {
-    if (user.userRoles?[0].role?.roleLevel == 2) {
-      return Padding(
-        padding: const EdgeInsets.all(30.0),
-        child: Column(
-          children: [
-            const Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.info, // Replace this with the icon of your choice
-                  color: Colors.blue, // Customize the icon color
-                  size: 24.0, // Adjust the icon size as needed
-                ),
-                SizedBox(width: 5), // Add spacing between the icon and the text
-                Text(
-                  'Employee information',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18, // Adjust the font size as needed
-                  ),
-                ),
-              ],
-            ),
-            Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  Column(
-                    children: [
-                      Column(
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: <Widget>[
-                              const Text(
-                                'Position',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              Container(
-                                  width: 200.0,
-                                  decoration: BoxDecoration(
-                                    border: Border.all(
-                                      color: Colors.grey,
-                                    ),
-                                    borderRadius: BorderRadius.circular(5.0),
-                                  ),
-                                  padding: const EdgeInsets.all(10.0),
-                                  margin: const EdgeInsets.all(10.0),
-                                  alignment: Alignment
-                                      .center, // Set the fixed width you desire
-                                  child: Text(
-                                    widget.user?.person?.position == 0
-                                        ? 'Client'
-                                        : widget.user?.person?.position == 1
-                                            ? 'Renter'
-                                            : '',
-                                    style: const TextStyle(
-                                      color: Colors.black,
-                                    ),
-                                  )),
-                            ],
-                          ),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: <Widget>[
-                              const Text(
-                                'Qualifications',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              Container(
-                                  width: 200.0,
-                                  decoration: BoxDecoration(
-                                    border: Border.all(
-                                      color: Colors.grey,
-                                    ),
-                                    borderRadius: BorderRadius.circular(5.0),
-                                  ),
-                                  padding: const EdgeInsets.all(10.0),
-                                  margin: const EdgeInsets.all(10.0),
-                                  alignment: Alignment
-                                      .center, // Set the fixed width you desire
-                                  child: Text(
-                                    widget.user?.person?.qualifications ?? '',
-                                    style: const TextStyle(
-                                      color: Colors.black,
-                                    ),
-                                  )),
-                            ],
-                          ),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: <Widget>[
-                              const Text(
-                                'Date of employment (MM-dd-yyyy)',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              Container(
-                                width: 200.0,
-                                decoration: BoxDecoration(
-                                  border: Border.all(
-                                    color: Colors.grey,
-                                  ),
-                                  borderRadius: BorderRadius.circular(5.0),
-                                ),
-                                padding: const EdgeInsets.all(10.0),
-                                margin: const EdgeInsets.all(10.0),
-                                alignment: Alignment.center,
-                                child: Text(
-                                  formatBirthDate(
-                                      widget.user?.person?.dateOfEmployment),
-                                  style: const TextStyle(
-                                    color: Colors.black,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  Column(
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          const Text(
-                            'Work experience',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Container(
-                            width: 200.0,
-                            decoration: BoxDecoration(
-                              border: Border.all(
-                                color: Colors.grey,
-                              ),
-                              borderRadius: BorderRadius.circular(5.0),
-                            ),
-                            padding: const EdgeInsets.all(10.0),
-                            margin: const EdgeInsets.all(10.0),
-                            alignment: Alignment.center,
-                            child: widget.user?.person?.workExperience == true
-                                ? const Icon(
-                                    Icons.check, // Icon for true condition
-                                    color: Colors.green, // Customize the color
-                                    size: 30.0, // Customize the size
-                                  )
-                                : const Icon(
-                                    Icons.clear, // To use the clear icon
-                                    color: Colors.red, // Customize the color
-                                    size: 30.0, // Customize the size
-                                  ),
-                          )
-                        ],
-                      ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          const Text(
-                            'Pay',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Container(
-                            width: 200.0,
-                            decoration: BoxDecoration(
-                              border: Border.all(
-                                color: Colors.grey,
-                              ),
-                              borderRadius: BorderRadius.circular(5.0),
-                            ),
-                            padding: const EdgeInsets.all(10.0),
-                            margin: const EdgeInsets.all(10.0),
-                            alignment: Alignment.center,
-                            child: Text(
-                              '${widget.user?.person?.pay.toString()} BAM' ??
-                                  '',
-                              style: const TextStyle(
-                                color: Colors.black,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  Column(
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          const Text(
-                            'Biography',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          // TextArea Widget
-                          Container(
-                            width:
-                                800.0, // Increase the width value to make it wider
-                            decoration: BoxDecoration(
-                              border: Border.all(
-                                color: Colors.grey,
-                              ),
-                              borderRadius: BorderRadius.circular(5.0),
-                            ),
-                            padding: const EdgeInsets.all(10.0),
-                            margin: const EdgeInsets.all(10.0),
-                            alignment: Alignment.center,
-                            child: TextFormField(
-                              maxLines: 30,
-                              minLines: 8,
-                              enabled: false,
-                              controller: _biographyController,
-                              style: const TextStyle(color: Colors.black),
-                              decoration: const InputDecoration(
-                                hintText: 'Enter additional information',
-                                border: InputBorder.none,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  )
-                ],
-              ),
-            ),
-            const Divider(
-              thickness: 2,
-              color: Colors.grey,
-            ),
+  Future<void> _assignRole() async {
+    final assignedRoleIds = _userRoles.map((r) => r['roleId'] as int?).toSet();
+    final available = _allRoles.where((r) => !assignedRoleIds.contains(r.id)).toList();
+    if (available.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('All roles are already assigned.')),
+      );
+      return;
+    }
+
+    ApplicationRole? selected;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDlg) => AlertDialog(
+          title: const Text('Assign Role'),
+          content: DropdownButtonFormField<ApplicationRole>(
+            decoration: const InputDecoration(labelText: 'Role'),
+            items: available.map((r) => DropdownMenuItem(value: r, child: Text(r.name ?? ''))).toList(),
+            onChanged: (v) => setDlg(() => selected = v),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+            ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Assign')),
           ],
         ),
-      );
-    } else {
-      // User has no role, return an empty Row
-      return const Row();
+      ),
+    );
+    if (confirmed != true || selected == null) return;
+    try {
+      await _userProvider.assignRole(widget.user!.id!, selected!.id!);
+      await _loadRoles();
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red));
     }
   }
 
-  Widget buildUserDetailsRow() {
-    return Row(
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Container(
-            constraints: const BoxConstraints(
-              maxWidth: 600, // Set the maximum width for the image
-              maxHeight: 400, // Set the maximum height for the image
-            ),
-            child: widget.user?.person?.profilePhoto != null
-                ? Image.network(
-                    "https://localhost:7137/${widget.user?.person?.profilePhoto}",
-                    fit: BoxFit.cover,
-                  )
-                : Image.asset("assets/images/user_placeholder.jpg",
-                    fit: BoxFit.cover),
+  Future<void> _removeRole(Map<String, dynamic> userRole) async {
+    final name = userRole['role']?['name'] ?? 'this role';
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Remove Role'),
+        content: Text('Remove "$name" from this user?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Remove'),
           ),
-        ),
-        Expanded(
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              Column(
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      const Text(
-                        'First name',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Container(
-                        width: 200.0,
-                        decoration: BoxDecoration(
-                          border: Border.all(
-                            color: Colors.grey,
-                          ),
-                          borderRadius: BorderRadius.circular(5.0),
-                        ),
-                        padding: const EdgeInsets.all(10.0),
-                        margin: const EdgeInsets.all(10.0),
-                        alignment:
-                            Alignment.center, // Set the fixed width you desire
-                        child: Text(
-                          widget.user?.person?.firstName ?? '',
-                          style: const TextStyle(
-                            color: Colors.black,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      const Text(
-                        'Last name',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Container(
-                        width: 200.0,
-                        decoration: BoxDecoration(
-                          border: Border.all(
-                            color: Colors.grey,
-                          ),
-                          borderRadius: BorderRadius.circular(5.0),
-                        ),
-                        padding: const EdgeInsets.all(10.0),
-                        margin: const EdgeInsets.all(10.0),
-                        alignment:
-                            Alignment.center, // Set the fixed width you desire
-                        child: Text(
-                          widget.user?.person?.lastName ?? '',
-                          style: const TextStyle(
-                            color: Colors.black,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      const Text(
-                        'Username',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Container(
-                        width: 200.0,
-                        decoration: BoxDecoration(
-                          border: Border.all(
-                            color: Colors.grey,
-                          ),
-                          borderRadius: BorderRadius.circular(5.0),
-                        ),
-                        padding: const EdgeInsets.all(10.0),
-                        margin: const EdgeInsets.all(10.0),
-                        alignment:
-                            Alignment.center, // Set the fixed width you desire
-                        child: Text(
-                          widget.user?.userName ?? '',
-                          style: const TextStyle(
-                            color: Colors.black,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      const Text(
-                        'Email',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Container(
-                        width: 200.0,
-                        decoration: BoxDecoration(
-                          border: Border.all(
-                            color: Colors.grey,
-                          ),
-                          borderRadius: BorderRadius.circular(5.0),
-                        ),
-                        padding: const EdgeInsets.all(10.0),
-                        margin: const EdgeInsets.all(10.0),
-                        alignment:
-                            Alignment.center, // Set the fixed width you desire
-                        child: Text(
-                          widget.user?.email ?? '',
-                          style: const TextStyle(
-                            color: Colors.black,
-                          ),
-                        ),
-                      ),
-                    ],
-                  )
-                ],
-              ),
-              Column(
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      const Text(
-                        'Phone number',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Container(
-                        width: 200.0,
-                        decoration: BoxDecoration(
-                          border: Border.all(
-                            color: Colors.grey,
-                          ),
-                          borderRadius: BorderRadius.circular(5.0),
-                        ),
-                        padding: const EdgeInsets.all(10.0),
-                        margin: const EdgeInsets.all(10.0),
-                        alignment:
-                            Alignment.center, // Set the fixed width you desire
-                        child: Text(
-                          widget.user?.phoneNumber ?? '',
-                          style: const TextStyle(
-                            color: Colors.black,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      const Text(
-                        'Residence',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Container(
-                        width: 200.0,
-                        decoration: BoxDecoration(
-                          border: Border.all(
-                            color: Colors.grey,
-                          ),
-                          borderRadius: BorderRadius.circular(5.0),
-                        ),
-                        padding: const EdgeInsets.all(10.0),
-                        margin: const EdgeInsets.all(10.0),
-                        alignment:
-                            Alignment.center, // Set the fixed width you desire
-                        child: Text(
-                          widget.user?.person?.placeOfResidence?.name ?? '',
-                          style: const TextStyle(
-                            color: Colors.black,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      const Text(
-                        'Address',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Container(
-                        width: 200.0,
-                        decoration: BoxDecoration(
-                          border: Border.all(
-                            color: Colors.grey,
-                          ),
-                          borderRadius: BorderRadius.circular(5.0),
-                        ),
-                        padding: const EdgeInsets.all(10.0),
-                        margin: const EdgeInsets.all(10.0),
-                        alignment:
-                            Alignment.center, // Set the fixed width you desire
-                        child: Text(
-                          widget.user?.person?.address ?? '',
-                          style: const TextStyle(
-                            color: Colors.black,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      const Text(
-                        'Postcode',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Container(
-                        width: 200.0,
-                        decoration: BoxDecoration(
-                          border: Border.all(
-                            color: Colors.grey,
-                          ),
-                          borderRadius: BorderRadius.circular(5.0),
-                        ),
-                        padding: const EdgeInsets.all(10.0),
-                        margin: const EdgeInsets.all(10.0),
-                        alignment:
-                            Alignment.center, // Set the fixed width you desire
-                        child: Text(
-                          widget.user?.person?.postCode ?? '',
-                          style: const TextStyle(
-                            color: Colors.black,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              Column(
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      const Text(
-                        'Role',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Container(
-                        width: 200.0,
-                        decoration: BoxDecoration(
-                          border: Border.all(
-                            color: Colors.grey,
-                          ),
-                          borderRadius: BorderRadius.circular(5.0),
-                        ),
-                        padding: const EdgeInsets.all(10.0),
-                        margin: const EdgeInsets.all(10.0),
-                        alignment:
-                            Alignment.center, // Set the fixed width you desire
-                        child: Text(
-                          widget.user?.userRoles?[0].role?.name ?? '',
-                          style: const TextStyle(
-                            color: Colors.black,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      const Text(
-                        'JMBG',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Container(
-                        width: 200.0,
-                        decoration: BoxDecoration(
-                          border: Border.all(
-                            color: Colors.grey,
-                          ),
-                          borderRadius: BorderRadius.circular(5.0),
-                        ),
-                        padding: const EdgeInsets.all(10.0),
-                        margin: const EdgeInsets.all(10.0),
-                        alignment:
-                            Alignment.center, // Set the fixed width you desire
-                        child: Text(
-                          widget.user?.person?.jmbg ?? '',
-                          style: const TextStyle(
-                            color: Colors.black,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      const Text(
-                        'Date of birth (MM-dd-yyyy)',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Container(
-                        width: 200.0,
-                        decoration: BoxDecoration(
-                          border: Border.all(
-                            color: Colors.grey,
-                          ),
-                          borderRadius: BorderRadius.circular(5.0),
-                        ),
-                        padding: const EdgeInsets.all(10.0),
-                        margin: const EdgeInsets.all(10.0),
-                        alignment: Alignment.center,
-                        child: Text(
-                          formatBirthDate(widget.user?.person?.birthDate),
-                          style: const TextStyle(
-                            color: Colors.black,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      const Text(
-                        'Gender',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Container(
-                        width: 200.0,
-                        decoration: BoxDecoration(
-                          border: Border.all(
-                            color: Colors.grey,
-                          ),
-                          borderRadius: BorderRadius.circular(5.0),
-                        ),
-                        padding: const EdgeInsets.all(10.0),
-                        margin: const EdgeInsets.all(10.0),
-                        alignment: Alignment.center,
-                        child: Text(
-                          widget.user?.person?.gender == 0 ? 'Male' : 'Female',
-                          style: const TextStyle(
-                            color: Colors.black,
-                          ),
-                        ),
-                      ),
-                    ],
-                  )
-                ],
-              ),
-            ],
-          ),
-        )
-      ],
+        ],
+      ),
     );
+    if (confirmed != true) return;
+    try {
+      await _userProvider.removeUserRole(widget.user!.id!, userRole['roleId'] as int);
+      await _loadRoles();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Uloga "$name" uklonjena'), backgroundColor: Colors.green),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Greška pri uklanjanju uloge: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
   }
+
+  String _fmt(DateTime? d) =>
+      d != null ? DateFormat('dd.MM.yyyy').format(d) : '—';
 
   @override
   Widget build(BuildContext context) {
+    final u = widget.user;
+    final photoUrl = u?.person?.profilePhoto != null
+        ? '${AppConfig.serverBase}${u!.person!.profilePhoto}'
+        : null;
+    final roleName = u?.userRoles?.isNotEmpty == true
+        ? u!.userRoles![0].role?.name ?? '—'
+        : '—';
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("User detail screen"),
-      ),
+      appBar: AppBar(title: const Text('Detalji korisnika')),
       body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Center(
+            // ── Profile header card ─────────────────────────────────────────
+            Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(color: Colors.grey.shade200),
+              ),
               child: Padding(
-                padding: EdgeInsets.all(8.0),
+                padding: const EdgeInsets.all(24),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(
-                      Icons.info, // Replace this with the icon of your choice
-                      color: Colors.blue, // Customize the icon color
-                      size: 24.0, // Adjust the icon size as needed
+                    CircleAvatar(
+                      radius: 52,
+                      backgroundColor: Colors.blue.shade50,
+                      backgroundImage: photoUrl != null
+                          ? NetworkImage(photoUrl) as ImageProvider
+                          : null,
+                      child: photoUrl == null
+                          ? Icon(Icons.person,
+                              size: 56, color: Colors.blue.shade200)
+                          : null,
                     ),
-                    SizedBox(
-                        width: 5), // Add spacing between the icon and the text
-                    Text(
-                      'User information',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 24, // Adjust the font size as needed
+                    const SizedBox(width: 20),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${u?.person?.firstName ?? ''} ${u?.person?.lastName ?? ''}'
+                                .trim(),
+                            style: const TextStyle(
+                                fontSize: 22, fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '@${u?.userName ?? ''}',
+                            style: TextStyle(
+                                fontSize: 14, color: Colors.grey.shade500),
+                          ),
+                          const SizedBox(height: 10),
+                          Wrap(
+                            spacing: 8,
+                            children: [
+                              Chip(
+                                avatar: const Icon(
+                                    Icons.verified_user_outlined,
+                                    size: 14),
+                                label: Text(roleName),
+                                backgroundColor: Colors.blue.shade50,
+                                labelStyle: TextStyle(
+                                    color: Colors.blue.shade700,
+                                    fontSize: 12),
+                                padding: EdgeInsets.zero,
+                              ),
+                              if (u?.person?.gender != null)
+                                Chip(
+                                  avatar: Icon(
+                                    u!.person!.gender == 0
+                                        ? Icons.male
+                                        : Icons.female,
+                                    size: 14,
+                                  ),
+                                  label: Text(u.person!.gender == 0
+                                      ? 'Muški'
+                                      : 'Ženski'),
+                                  backgroundColor: Colors.grey.shade100,
+                                  labelStyle: const TextStyle(fontSize: 12),
+                                  padding: EdgeInsets.zero,
+                                ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
               ),
             ),
-            const Divider(
-              // Add a divider
-              thickness: 2, // Customize the thickness of the divider
-              color: Colors.grey, // Customize the color of the divider
+            const SizedBox(height: 16),
+
+            // ── Lični podaci ────────────────────────────────────────────────
+            _SectionCard(
+              title: 'Lični podaci',
+              child: Column(
+                children: [
+                  Row(children: [
+                    Expanded(
+                        child: _InfoTile(
+                            Icons.badge_outlined,
+                            'JMBG',
+                            u?.person?.jmbg ?? '—')),
+                    const SizedBox(width: 16),
+                    Expanded(
+                        child: _InfoTile(
+                            Icons.cake_outlined,
+                            'Datum rođenja',
+                            _fmt(u?.person?.birthDate))),
+                  ]),
+                  const SizedBox(height: 12),
+                  Row(children: [
+                    Expanded(
+                        child: _InfoTile(
+                            Icons.location_city_outlined,
+                            'Grad',
+                            u?.person?.placeOfResidence?.name ?? '—')),
+                    const SizedBox(width: 16),
+                    Expanded(
+                        child: _InfoTile(
+                            Icons.home_outlined,
+                            'Adresa',
+                            u?.person?.address ?? '—')),
+                  ]),
+                  const SizedBox(height: 12),
+                  Row(children: [
+                    Expanded(
+                        child: _InfoTile(
+                            Icons.markunread_mailbox_outlined,
+                            'Poštanski broj',
+                            u?.person?.postCode ?? '—')),
+                    const SizedBox(width: 16),
+                    const Expanded(child: SizedBox.shrink()),
+                  ]),
+                ],
+              ),
             ),
-            buildUserDetailsRow(),
-            const Divider(
-              // Add a divider
-              thickness: 2, // Customize the thickness of the divider
-              color: Colors.grey, // Customize the color of the divider
+            const SizedBox(height: 16),
+
+            // ── Podaci naloga ───────────────────────────────────────────────
+            _SectionCard(
+              title: 'Podaci naloga',
+              child: Column(
+                children: [
+                  Row(children: [
+                    Expanded(
+                        child: _InfoTile(
+                            Icons.person_outline,
+                            'Korisničko ime',
+                            u?.userName ?? '—')),
+                    const SizedBox(width: 16),
+                    Expanded(
+                        child: _InfoTile(
+                            Icons.email_outlined,
+                            'Email',
+                            u?.email ?? '—')),
+                  ]),
+                  const SizedBox(height: 12),
+                  Row(children: [
+                    Expanded(
+                        child: _InfoTile(
+                            Icons.phone_outlined,
+                            'Telefon',
+                            u?.phoneNumber ?? '—')),
+                    const SizedBox(width: 16),
+                    const Expanded(child: SizedBox.shrink()),
+                  ]),
+                ],
+              ),
             ),
-            buildUserRoleRow(widget.user!),
+            const SizedBox(height: 16),
+
+            // ── Roles ───────────────────────────────────────────────────────
+            _SectionCard(
+              title: 'Roles',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      ..._userRoles.map((ur) => Chip(
+                            label: Text(ur['role']?['name'] ?? ''),
+                            deleteIcon: const Icon(Icons.close, size: 16),
+                            onDeleted: () => _removeRole(ur),
+                            backgroundColor: Colors.blue.shade50,
+                            labelStyle: TextStyle(color: Colors.blue.shade700, fontSize: 12),
+                          )),
+                      ActionChip(
+                        avatar: const Icon(Icons.add, size: 16),
+                        label: const Text('Assign role'),
+                        onPressed: _assignRole,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _InfoTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+
+  const _InfoTile(this.icon, this.label, this.value);
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 18, color: Colors.blue.shade300),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label,
+                  style: TextStyle(
+                      fontSize: 11, color: Colors.grey.shade500)),
+              const SizedBox(height: 2),
+              Text(value.isEmpty ? '—' : value,
+                  style: const TextStyle(fontSize: 14)),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SectionCard extends StatelessWidget {
+  final String title;
+  final Widget child;
+  const _SectionCard({required this.title, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.grey.shade200),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title,
+                style: const TextStyle(
+                    fontWeight: FontWeight.bold, fontSize: 14)),
+            const Divider(height: 20),
+            child,
           ],
         ),
       ),

@@ -5,234 +5,122 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart';
 import 'package:http/io_client.dart';
 import 'package:propertease_client/models/conversation.dart';
+import 'package:propertease_client/config/app_config.dart';
+import 'package:propertease_client/utils/authorization.dart';
 
-import '../models/property.dart';
 import '../models/search_result.dart';
 
 class ConversationProvider with ChangeNotifier {
-  static String? _baseUrl;
-  late String _endpoint;
-  HttpClient client = HttpClient();
-  IOClient? http;
-  ConversationProvider() {
-    _endpoint = "Conversation";
-    _baseUrl = const String.fromEnvironment("baseUrl",
-        defaultValue: "https://10.0.2.2:7137/api/");
+  String get _baseUrl => AppConfig.apiBase;
+  final String _endpoint = 'Conversation';
+  late final IOClient http;
 
-    client.badCertificateCallback = (cert, host, port) => true;
+  ConversationProvider() {
+    final client = HttpClient()
+      ..badCertificateCallback = (cert, host, port) => true;
     http = IOClient(client);
   }
 
-  Future<SearchResult<Conversation>> get({dynamic filter}) async {
-    var url = "$_baseUrl$_endpoint";
-
-    if (filter != null) {
-      var queryString = getQueryString(filter);
-      url = "$url?$queryString";
+  Map<String, String> createHeaders() {
+    final headers = <String, String>{'Content-Type': 'application/json'};
+    if (Authorization.token != null && Authorization.token!.isNotEmpty) {
+      headers['Authorization'] = 'Bearer ${Authorization.token}';
     }
-
-    var uri = Uri.parse(url);
-    var headers = createHeaders();
-    var response = await http!.get(uri, headers: headers);
-
-    var result = SearchResult<Conversation>();
-
-    List data = jsonDecode(response.body);
-
-    result.count = data.length;
-
-    if (isValidResponse(response)) {
-      for (var item in data) {
-        result.result.add(fromJson(item));
-      }
-      return result;
-    }
-    print(response.statusCode);
-    throw Exception("Something is wrong");
-  }
-
-  Future<SearchResult<Conversation>> getByClient(int clientId) async {
-    var url = "$_baseUrl$_endpoint/GetByClient/clientId/$clientId";
-    var uri = Uri.parse(url);
-    var headers = createHeaders();
-    var response = await http!.get(uri, headers: headers);
-
-    var result = SearchResult<Conversation>();
-
-    List data = jsonDecode(response.body);
-    result.count = data.length;
-    print(url);
-    if (isValidResponse(response)) {
-      for (var item in data) {
-        result.result.add(Conversation.fromJson(item));
-      }
-
-      return result;
-    }
-    throw Exception("Somethink is wronk");
-  }
-
-  Future<Conversation> getLastByClient(int clientId) async {
-    var url = "$_baseUrl$_endpoint/GetLastByClient/$clientId";
-    var uri = Uri.parse(url);
-    var headers = createHeaders();
-    var response = await http!.get(uri, headers: headers);
-
-    print(url);
-    if (isValidResponse(response)) {
-      var data = jsonDecode(response.body);
-
-      // Check if there is data
-      if (data != null) {
-        // Convert the JSON data to a Conversation object
-        var lastConversation = Conversation.fromJson(data);
-        return lastConversation;
-      } else {
-        // No conversation found
-        throw Exception("No conversation found");
-      }
-    }
-
-    throw Exception("Something is wrong");
-  }
-
-  Future<Conversation> updateAsync(int? id, Conversation data) async {
-    var url = "$_baseUrl$_endpoint/$id";
-    var headers = createHeaders();
-    var requestBody =
-        jsonEncode(toJson(data)); // Make sure data has toJson() method
-
-    var response = await http!.put(
-      Uri.parse(url),
-      headers: headers,
-      body: requestBody,
-    );
-
-    if (isValidResponse(response)) {
-      return fromJson(jsonDecode(response.body));
-    } else {
-      throw Exception("Failed to update item");
-    }
-  }
-
-  Future<Conversation> addAsync(Conversation data) async {
-    var url = "$_baseUrl$_endpoint";
-    var headers = createHeaders();
-    var requestBody = jsonEncode(toJson(data));
-
-    var response =
-        await http!.post(Uri.parse(url), headers: headers, body: requestBody);
-    if (isValidResponse(response)) {
-      return Conversation.fromJson(jsonDecode(response.body));
-    } else {
-      final responseStatusCode = response.statusCode;
-      final responseBody = response.body;
-      final errorMessage =
-          "Failed to insert item. Status Code: $responseStatusCode, Response Body: $responseBody";
-      print(errorMessage);
-      throw Exception(errorMessage);
-    }
-  }
-
-  Future<void> deleteById(int? id) async {
-    var url = "$_baseUrl$_endpoint/$id";
-    final headers = createHeaders();
-
-    final response = await http!.delete(Uri.parse(url), headers: headers);
-    print(url);
-    if (response.statusCode == 200) {
-      // Successful deletion
-      print("Property deleted successfully");
-    } else if (response.statusCode == 404) {
-      // Property not found, handle as needed
-      throw Exception("Property not found");
-    } else {
-      // Handle other error cases
-      throw Exception(
-          "Failed to delete property. Status code: ${response.statusCode}");
-    }
-  }
-
-  Future<SearchResult<Conversation>> getFiltered({dynamic filter}) async {
-    var url = "$_baseUrl$_endpoint/GetFilteredData";
-
-    if (filter != null) {
-      var queryString = getQueryString(filter);
-      url = "$url?$queryString";
-    }
-
-    var uri = Uri.parse(url);
-    var headers = createHeaders();
-    var response = await http!.get(uri, headers: headers);
-
-    var result = SearchResult<Conversation>();
-
-    List data = jsonDecode(response.body);
-
-    result.count = data.length;
-    print(url);
-    if (isValidResponse(response)) {
-      for (var item in data) {
-        result.result.add(Conversation.fromJson(item));
-      }
-
-      return result;
-    }
-    throw Exception("Something is wrong");
-  }
-
-  Conversation fromJson(data) {
-    throw Exception("Method not implemented");
-  }
-
-  Map<String, dynamic> toJson(Conversation data) {
-    return data.toJson();
+    return headers;
   }
 
   bool isValidResponse(Response response) {
-    if (response.statusCode < 299) {
-      return true;
-    }
-    if (response.statusCode == 401) {
-      throw Exception("Wrong credentials");
-    }
-    if (response.statusCode == 500) {
-      throw Exception("Something else is wrong");
-    }
-    throw Exception("runje");
+    if (response.statusCode < 300) return true;
+    if (response.statusCode == 401) throw Exception('Unauthorized');
+    if (response.statusCode == 403) throw Exception('Forbidden');
+    throw Exception('HTTP ${response.statusCode}: ${response.body}');
   }
 
-  Map<String, String> createHeaders() {
-    // String username = Authorization.username ?? "";
-    // String password = Authorization.password ?? "";
+  Future<SearchResult<Conversation>> getByClient(int clientId) async {
+    final url = '$_baseUrl$_endpoint/GetByClient/clientId/$clientId';
+    final response =
+        await http.get(Uri.parse(url), headers: createHeaders());
+    if (isValidResponse(response)) {
+      final List data = jsonDecode(response.body);
+      final result = SearchResult<Conversation>();
+      result.count = data.length;
+      for (var item in data) {
+        result.result.add(Conversation.fromJson(item as Map<String, dynamic>));
+      }
+      return result;
+    }
+    throw Exception('Failed to load conversations');
+  }
 
-    // String basicAuth =
-    //     "Basic ${base64Encode(utf8.encode('$username:$password'))}";
-    var headers = {
-      "Content-Type": "application/json",
-      // "Authorization": basicAuth,
-    };
-    return headers;
+  Future<Conversation> getLastByClient(int clientId) async {
+    final url = '$_baseUrl$_endpoint/GetLastByClient/$clientId';
+    final response =
+        await http.get(Uri.parse(url), headers: createHeaders());
+    if (isValidResponse(response)) {
+      final data = jsonDecode(response.body);
+      if (data != null) return Conversation.fromJson(data as Map<String, dynamic>);
+    }
+    throw Exception('No conversation found');
+  }
+
+  Future<List<Conversation>> getByPropertyAndRenter(
+      int propertyId, int renterId) async {
+    final url =
+        '$_baseUrl$_endpoint/GetByPropertyAndRenter?propertyId=$propertyId&renterId=$renterId';
+    final response =
+        await http.get(Uri.parse(url), headers: createHeaders());
+    if (isValidResponse(response)) {
+      final List data = jsonDecode(response.body);
+      return data
+          .map((e) => Conversation.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+    return [];
+  }
+
+  Future<int> getUnreadCount(int recipientId) async {
+    final url = '${_baseUrl}Message/UnreadCount/$recipientId';
+    final response =
+        await http.get(Uri.parse(url), headers: createHeaders());
+    if (isValidResponse(response)) {
+      return jsonDecode(response.body) as int? ?? 0;
+    }
+    return 0;
+  }
+
+  Future<Conversation> addAsync(Conversation data) async {
+    final url = '$_baseUrl$_endpoint';
+    final response = await http.post(
+      Uri.parse(url),
+      headers: createHeaders(),
+      body: jsonEncode(data.toJson()),
+    );
+    if (isValidResponse(response)) {
+      return Conversation.fromJson(
+          jsonDecode(response.body) as Map<String, dynamic>);
+    }
+    throw Exception(
+        'Failed to create conversation. Status: ${response.statusCode}');
+  }
+
+  Future<void> deleteById(int? id) async {
+    final url = '$_baseUrl$_endpoint/$id';
+    final response =
+        await http.delete(Uri.parse(url), headers: createHeaders());
+    if (response.statusCode == 404) throw Exception('Not found');
+    if (response.statusCode >= 300) {
+      throw Exception('Failed to delete. Status: ${response.statusCode}');
+    }
   }
 
   String getQueryString(Map params, {String prefix = '&'}) {
     String query = '';
     params.forEach((key, value) {
       if (value != null) {
-        if (value is String ||
-            value is int ||
-            value is double ||
-            value is bool) {
-          var encoded = Uri.encodeComponent(value.toString());
-          query += '$prefix$key=$encoded';
+        if (value is String || value is int || value is double || value is bool) {
+          query += '$prefix$key=${Uri.encodeComponent(value.toString())}';
         } else if (value is DateTime) {
           query += '$prefix$key=${value.toIso8601String()}';
-        } else if (value is List) {
-          for (var item in value) {
-            query += getQueryString({key: item}, prefix: '$prefix$key[]');
-          }
-        } else if (value is Map) {
-          query += getQueryString(value, prefix: '$prefix$key.');
         }
       }
     });

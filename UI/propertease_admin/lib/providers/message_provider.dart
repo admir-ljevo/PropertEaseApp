@@ -4,20 +4,20 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart';
 import 'package:http/io_client.dart';
+import 'package:propertease_admin/config/app_config.dart';
 import 'package:propertease_admin/models/message.dart';
+import 'package:propertease_admin/utils/authorization.dart';
 
 import '../models/property.dart';
 import '../models/search_result.dart';
 
 class MessageProvider with ChangeNotifier {
-  static String? _baseUrl;
+  static String get _baseUrl => AppConfig.apiBase;
   late String _endpoint;
   HttpClient client = HttpClient();
   IOClient? http;
   MessageProvider() {
     _endpoint = "Message";
-    _baseUrl = const String.fromEnvironment("baseUrl",
-        defaultValue: "https://localhost:7137/api/");
 
     client.badCertificateCallback = (cert, host, port) => true;
     http = IOClient(client);
@@ -200,15 +200,11 @@ class MessageProvider with ChangeNotifier {
   }
 
   Map<String, String> createHeaders() {
-    // String username = Authorization.username ?? "";
-    // String password = Authorization.password ?? "";
-
-    // String basicAuth =
-    //     "Basic ${base64Encode(utf8.encode('$username:$password'))}";
-    var headers = {
-      "Content-Type": "application/json",
-      // "Authorization": basicAuth,
-    };
+    final headers = <String, String>{'Content-Type': 'application/json'};
+    final token = Authorization.token;
+    if (token != null && token.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $token';
+    }
     return headers;
   }
 

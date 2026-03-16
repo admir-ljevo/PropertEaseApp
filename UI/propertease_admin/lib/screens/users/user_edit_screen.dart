@@ -1,21 +1,23 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:propertease_admin/config/app_config.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:propertease_admin/models/application_role.dart';
 import 'package:propertease_admin/models/application_user.dart';
+import 'package:propertease_admin/providers/application_role_provider.dart';
 import 'package:propertease_admin/providers/application_user_provider.dart';
-import 'package:propertease_admin/providers/city_provider.dart';
 import 'package:provider/provider.dart';
 
-import '../../models/city.dart';
-import '../../models/search_result.dart';
-import '../../providers/application_role_provider.dart';
+import '../../widgets/country_city_selector.dart';
+
 
 class UserEditScreen extends StatefulWidget {
+  // ignore: must_be_immutable
   ApplicationUser? user;
   UserEditScreen({super.key, this.user});
+
   @override
   State<StatefulWidget> createState() => UserEditScreenState();
 }
@@ -23,52 +25,103 @@ class UserEditScreen extends StatefulWidget {
 class UserEditScreenState extends State<UserEditScreen> {
   late ApplicationUser editedUser = ApplicationUser();
   File? selectedImage;
-  SearchResult<City>? cityResult;
-  SearchResult<ApplicationRole>? roleResult;
+
   final _formKey = GlobalKey<FormState>();
 
-  late CityProvider _cityProvider;
-  late RoleProvider _roleProvider;
   late UserProvider _userProvider;
-  final TextEditingController _firstNameController = TextEditingController();
-  final TextEditingController _lastNameController = TextEditingController();
-  final TextEditingController _userNameController = TextEditingController();
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _phoneNumberController = TextEditingController();
-  final TextEditingController _addressController = TextEditingController();
-  final TextEditingController _postalCodeController = TextEditingController();
-  final TextEditingController _jmbgController = TextEditingController();
-  final TextEditingController _biographyController = TextEditingController();
-  final TextEditingController _qualificationsController =
-      TextEditingController();
-  final TextEditingController _payController = TextEditingController();
+  late RoleProvider _roleProvider;
 
+  List<Map<String, dynamic>> _userRoles = [];
+  List<ApplicationRole> _allRoles = [];
+  ApplicationRole? _selectedRole;
+
+  final _firstNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
+  final _userNameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _phoneNumberController = TextEditingController();
+  final _addressController = TextEditingController();
+  final _postalCodeController = TextEditingController();
+  final _jmbgController = TextEditingController();
   DateTime selectedDate = DateTime.now();
-  DateTime selectedEmploymentDate = DateTime.now();
-  int selectedGender = 0; // 0 for Male, 1 for Female
-  int selectedRole = 0;
-  void _onGenderChanged(int newValue) {
-    setState(() {
-      selectedGender = newValue;
-      widget.user?.person?.gender = newValue;
-      print(widget.user?.person?.gender);
-    });
+
+  @override
+  void initState() {
+    super.initState();
+    _userProvider = context.read<UserProvider>();
+    _roleProvider = context.read<RoleProvider>();
+
+    _firstNameController.text = widget.user?.person?.firstName ?? '';
+    _lastNameController.text = widget.user?.person?.lastName ?? '';
+    _userNameController.text = widget.user?.userName ?? '';
+    _emailController.text = widget.user?.email ?? '';
+    _phoneNumberController.text = widget.user?.phoneNumber ?? '';
+    _addressController.text = widget.user?.person?.address ?? '';
+    _postalCodeController.text = widget.user?.person?.postCode ?? '';
+    _jmbgController.text = widget.user?.person?.jmbg ?? '';
+    selectedDate = widget.user?.person?.birthDate ?? DateTime.now();
+
+    _loadRoles();
   }
 
-  Future<DateTime?> _selectDate(BuildContext context, DateTime? date) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: date ?? DateTime.now(),
-      firstDate: DateTime(1900),
-      lastDate: DateTime(2101),
-    );
-    return picked;
+  Future<void> _loadRoles() async {
+    try {
+      final results = await Future.wait([
+        _userProvider.getUserRoles(widget.user!.id!),
+        _roleProvider.get(),
+      ]);
+      if (mounted) {
+        setState(() {
+          _userRoles = results[0] as List<Map<String, dynamic>>;
+          _allRoles = (results[1] as dynamic).result as List<ApplicationRole>;
+          _selectedRole = null;
+        });
+      }
+  } catch (e) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Greška pri učitavanju uloga: $e'), backgroundColor: Colors.orange),
+      );
+    }
+  }
+  }
+
+  Future<void> _assignRole() async {
+    if (_selectedRole == null) return;
+    try {
+      await _userProvider.assignRole(widget.user!.id!, _selectedRole!.id!);
+      await _loadRoles();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Greška: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  Future<void> _removeRole(Map<String, dynamic> userRole) async {
+    final name = userRole['role']?['name'] ?? 'uloga';
+    try {
+      await _userProvider.removeUserRole(widget.user!.id!, userRole['roleId'] as int);
+      await _loadRoles();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Uloga "$name" uklonjena'), backgroundColor: Colors.green),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Greška pri uklanjanju uloge: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
   }
 
   Future<void> _pickImage() async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-
     if (pickedFile != null) {
       setState(() {
         selectedImage = File(pickedFile.path);
@@ -80,8 +133,7 @@ class UserEditScreenState extends State<UserEditScreen> {
   }
 
   Future<void> _updateEmployee() async {
-    double? parsedPay = double.tryParse(_payController.text);
-
+    if (!_formKey.currentState!.validate()) return;
     editedUser = widget.user!;
     editedUser.person?.gender = widget.user?.person?.gender;
     editedUser.person?.firstName = _firstNameController.text;
@@ -91,766 +143,354 @@ class UserEditScreenState extends State<UserEditScreen> {
     editedUser.person?.address = _addressController.text;
     editedUser.person?.postCode = _postalCodeController.text;
     editedUser.person?.jmbg = _jmbgController.text;
-    editedUser.person?.biography = _biographyController.text;
-    editedUser.person?.qualifications = _qualificationsController.text;
     editedUser.email = _emailController.text;
-    if (_formKey.currentState!.validate()) {
-      if (widget.user?.userRoles?[0].role?.id == 3) {
+
+    try {
+      final roleName = widget.user?.userRoles?.isNotEmpty == true
+          ? widget.user!.userRoles![0].role?.name
+          : null;
+
+      if (roleName == 'Client') {
+        await _userProvider.updateClient(editedUser, editedUser.id!);
+      } else {
         await _userProvider.updateEmployee(editedUser, editedUser.id!);
       }
-      if (widget.user?.userRoles?[0].role?.id == 4) {
-        await _userProvider.updateClient(editedUser, editedUser.id!);
-      }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(
-              'User ${editedUser.person?.firstName} ${editedUser.person?.lastName} edited successfully'),
+              'Korisnik ${editedUser.person?.firstName} ${editedUser.person?.lastName} uspješno izmijenjen'),
           backgroundColor: Colors.green,
-        ),
+        ));
+        Navigator.of(context).pop();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Greška pri izmjeni: $e'),
+          backgroundColor: Colors.red,
+        ));
+      }
+    }
+  }
+
+  Future<DateTime?> _selectDate(DateTime? current) => showDatePicker(
+        context: context,
+        initialDate: current ?? DateTime.now(),
+        firstDate: DateTime(1900),
+        lastDate: DateTime(2101),
       );
-      Navigator.of(context).pop();
-    }
-  }
 
-  Future<void> _fetchRoles() async {
-    var roles = await _roleProvider.get();
-    setState(() {
-      roleResult = roles;
-    });
-  }
-
-  String formatBirthDate(DateTime? birthDate) {
-    if (birthDate != null) {
-      final dateFormat = DateFormat('MM-dd-yyyy');
-      return dateFormat.format(birthDate);
-    } else {
-      return 'N/A';
-    }
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _firstNameController.text = widget.user?.person?.firstName ?? '';
-    _lastNameController.text = widget.user?.person?.lastName ?? '';
-    _userNameController.text = widget.user?.userName ?? '';
-    _emailController.text = widget.user?.email ?? '';
-    _phoneNumberController.text = widget.user?.phoneNumber ?? '';
-    _addressController.text = widget.user?.person?.address ?? '';
-    _postalCodeController.text = widget.user?.person?.postCode ?? '';
-    _jmbgController.text = widget.user?.person?.jmbg ?? '';
-    _biographyController.text = widget.user?.person?.biography ?? '';
-    _qualificationsController.text = widget.user?.person?.qualifications ?? '';
-    _payController.text = widget.user?.person?.pay.toString() ?? '0';
-    _cityProvider = context.read<CityProvider>();
-    _roleProvider = context.read<RoleProvider>();
-    _userProvider = context.read<UserProvider>();
-    print(widget.user?.userRoles?.length);
-    _fetchCities();
-    _fetchRoles();
-  }
-
-  @override
-  void didChangeDependencies() {
-    // TODO: implement didChangeDependencies
-    super.didChangeDependencies();
-    _cityProvider = context.read<CityProvider>();
-    _roleProvider = context.read<RoleProvider>();
-    _userProvider = context.read<UserProvider>();
-
-    _fetchCities();
-    _fetchRoles();
-  }
-
-  Widget buildUserRoleRow(ApplicationUser user) {
-    if (user.userRoles?[0].role?.roleLevel == 2) {
-      return Padding(
-        padding: const EdgeInsets.all(30.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Row(
-              children: [
-                Icon(
-                  Icons.info,
-                  color: Colors.blue,
-                  size: 24.0,
-                ),
-                SizedBox(width: 5),
-                Text(
-                  'Employee information',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Column(
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            const Text(
-                              'Position',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Container(
-                              width: 200.0,
-                              decoration: BoxDecoration(
-                                border: Border.all(
-                                  color: Colors.grey,
-                                ),
-                                borderRadius: BorderRadius.circular(5.0),
-                              ),
-                              padding: const EdgeInsets.all(10.0),
-                              margin: const EdgeInsets.all(10.0),
-                              alignment: Alignment.center,
-                              child: Text(
-                                widget.user?.person?.position == 0
-                                    ? 'Client'
-                                    : widget.user?.person?.position == 1
-                                        ? 'Renter'
-                                        : '',
-                                style: const TextStyle(
-                                  color: Colors.black,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            const Text(
-                              'Qualifications',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Container(
-                              width: 200.0,
-                              decoration: BoxDecoration(
-                                border: Border.all(
-                                  color: Colors.grey,
-                                ),
-                                borderRadius: BorderRadius.circular(5.0),
-                              ),
-                              padding: const EdgeInsets.all(10.0),
-                              margin: const EdgeInsets.all(10.0),
-                              alignment: Alignment.center,
-                              child: TextFormField(
-                                controller: _qualificationsController,
-                                validator: (value) {
-                                  if (value!.isEmpty) {
-                                    return 'This field is required.';
-                                  }
-                                  return null;
-                                },
-                                style: const TextStyle(
-                                  color: Colors.black,
-                                ),
-                                decoration: const InputDecoration(
-                                  hintText: 'Enter additional information',
-                                  border: InputBorder.none,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        const Text(
-                          'Date of employment',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(
-                          height: 5.0,
-                        ),
-                        Text(
-                          "${widget.user?.person?.dateOfEmployment?.toLocal()}"
-                              .split(' ')[0],
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        ElevatedButton(
-                          onPressed: () async {
-                            DateTime? newDate =
-                                await _selectDate(context, selectedDate);
-                            if (newDate != null) {
-                              setState(() {
-                                selectedEmploymentDate = newDate;
-                                widget.user?.person?.dateOfEmployment =
-                                    selectedEmploymentDate;
-                              });
-                            }
-                          },
-                          child: const Text('Select Date'),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                Column(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Work experience',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Checkbox(
-                      value: widget.user?.person?.workExperience == true,
-                      onChanged: (value) {
-                        setState(() {
-                          widget.user?.person?.workExperience = value;
-                        });
-                      },
-                    ),
-                    const SizedBox(height: 20),
-                    const Text(
-                      'Pay',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Container(
-                      width: 200.0,
-                      decoration: BoxDecoration(
-                        border: Border.all(
-                          color: Colors.grey,
-                        ),
-                        borderRadius: BorderRadius.circular(5.0),
-                      ),
-                      padding: const EdgeInsets.all(10.0),
-                      margin: const EdgeInsets.all(10.0),
-                      alignment: Alignment.center,
-                      child: TextFormField(
-                        controller: _payController,
-                        validator: (value) {
-                          if (value!.isEmpty) {
-                            return 'This field is required.';
-                          }
-                          return null;
-                        },
-                        style: const TextStyle(
-                          color: Colors.black,
-                        ),
-                        decoration: const InputDecoration(
-                          border: InputBorder.none,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Biography',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Container(
-                      width: 800.0,
-                      decoration: BoxDecoration(
-                        border: Border.all(
-                          color: Colors.grey,
-                        ),
-                        borderRadius: BorderRadius.circular(5.0),
-                      ),
-                      padding: const EdgeInsets.all(10.0),
-                      margin: const EdgeInsets.all(10.0),
-                      alignment: Alignment.center,
-                      child: TextFormField(
-                        maxLines: 35,
-                        minLines: 8,
-                        controller: _biographyController,
-                        validator: (value) {
-                          if (value!.isEmpty) {
-                            return 'This field is required.';
-                          }
-                          return null;
-                        },
-                        style: const TextStyle(color: Colors.black),
-                        decoration: const InputDecoration(
-                          hintText: 'Enter additional information',
-                          border: InputBorder.none,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ],
-        ),
-      );
-    } else {
-      // User has no role, return an empty Row
-      return const SizedBox.shrink();
-    }
-  }
-
-  Future<void> _fetchCities() async {
-    var cities = await _cityProvider.get();
-    setState(() {
-      cityResult = cities;
-    });
-  }
+  String get _roleName =>
+      _userRoles.isNotEmpty
+          ? (_userRoles[0]['role']?['name'] ?? '—')
+          : '—';
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('User edit screen')),
-      body: Form(
-          key: _formKey, // Attach the GlobalKey to the Form
+    final photoUrl = widget.user?.person?.profilePhoto != null
+        ? '${AppConfig.serverBase}${widget.user!.person!.profilePhoto}'
+        : null;
 
-          child: SingleChildScrollView(
-              child: Column(
+    return Scaffold(
+      appBar: AppBar(title: const Text('Izmjeni korisnika')),
+      body: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(8.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.person,
-                        color: Colors.blue,
-                        size: 30.0,
+              // ── Avatar ─────────────────────────────────────────────────────
+              Center(
+                child: Column(
+                  children: [
+                    GestureDetector(
+                      onTap: _pickImage,
+                      child: Stack(
+                        children: [
+                          CircleAvatar(
+                            radius: 60,
+                            backgroundColor: Colors.blue.shade50,
+                            backgroundImage: selectedImage != null
+                                ? FileImage(selectedImage!)
+                                : photoUrl != null
+                                    ? NetworkImage(photoUrl) as ImageProvider
+                                    : null,
+                            child:
+                                selectedImage == null && photoUrl == null
+                                    ? Icon(Icons.person,
+                                        size: 64,
+                                        color: Colors.blue.shade200)
+                                    : null,
+                          ),
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: Colors.blue,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                    color: Colors.white, width: 2),
+                              ),
+                              child: const Icon(Icons.photo_camera,
+                                  size: 16, color: Colors.white),
+                            ),
+                          ),
+                        ],
                       ),
-                      SizedBox(width: 5),
-                      Text(
-                        'User information',
+                    ),
+                    const SizedBox(height: 8),
+                    Text('Tapni za promjenu fotografije',
                         style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 24,
+                            fontSize: 12, color: Colors.grey.shade500)),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // ── Lični podaci ────────────────────────────────────────────────
+              _SectionCard(
+                title: 'Lični podaci',
+                child: Column(
+                  children: [
+                    Row(children: [
+                      Expanded(child: _field('Ime', _firstNameController)),
+                      const SizedBox(width: 16),
+                      Expanded(child: _field('Prezime', _lastNameController)),
+                    ]),
+                    const SizedBox(height: 16),
+                    Row(children: [
+                      Expanded(child: _field('JMBG', _jmbgController,
+                          required: false, validator: _validateJmbg)),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: InkWell(
+                          onTap: () async {
+                            final d = await _selectDate(selectedDate);
+                            if (d != null) {
+                              setState(() {
+                                selectedDate = d;
+                                widget.user?.person?.birthDate = d;
+                              });
+                            }
+                          },
+                          borderRadius: BorderRadius.circular(4),
+                          child: InputDecorator(
+                            decoration: const InputDecoration(
+                              labelText: 'Datum rođenja',
+                              border: OutlineInputBorder(),
+                              suffixIcon: Icon(Icons.calendar_today),
+                            ),
+                            child: Text(DateFormat('dd.MM.yyyy')
+                                .format(selectedDate)),
+                          ),
                         ),
+                      ),
+                    ]),
+                    const SizedBox(height: 16),
+                    Row(children: [
+                      Expanded(
+                        child: DropdownButtonFormField<int>(
+                          value: widget.user?.person?.gender,
+                          decoration: const InputDecoration(
+                              labelText: 'Spol',
+                              border: OutlineInputBorder()),
+                          items: const [
+                            DropdownMenuItem(value: 0, child: Text('Muški')),
+                            DropdownMenuItem(
+                                value: 1, child: Text('Ženski')),
+                          ],
+                          onChanged: (v) => setState(
+                              () => widget.user?.person?.gender = v),
+                        ),
+                      ),
+                    ]),
+                    const SizedBox(height: 16),
+                    CountryCitySelector(
+                      initialCity: widget.user?.person?.placeOfResidence,
+                      onCityChanged: (c) {
+                        widget.user?.person?.placeOfResidence = c;
+                        widget.user?.person?.placeOfResidenceId = c?.id;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    Row(children: [
+                      Expanded(
+                          child: _field('Adresa', _addressController)),
+                      const SizedBox(width: 16),
+                      Expanded(
+                          child: _field(
+                              'Poštanski broj', _postalCodeController)),
+                    ]),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // ── Podaci naloga ───────────────────────────────────────────────
+              _SectionCard(
+                title: 'Podaci naloga',
+                child: Column(
+                  children: [
+                    Row(children: [
+                      Expanded(child: _field('Korisničko ime', _userNameController)),
+                      const SizedBox(width: 16),
+                      Expanded(child: _field('Email', _emailController,
+                          validator: _validateEmail)),
+                    ]),
+                    const SizedBox(height: 16),
+                    _field('Telefon', _phoneNumberController,
+                        validator: _validatePhone),
+                    const SizedBox(height: 12),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Chip(
+                        avatar: const Icon(Icons.verified_user_outlined,
+                            size: 16),
+                        label: Text('Uloga: $_roleName'),
+                        backgroundColor: Colors.blue.shade50,
+                        labelStyle: TextStyle(
+                            color: Colors.blue.shade700, fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // ── Uloge ───────────────────────────────────────────────────────
+              if (widget.user?.userRoles?.isEmpty != false ||
+                  widget.user?.userRoles?[0].role?.roleLevel != 1)
+                _SectionCard(
+                  title: 'Uloge',
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: _userRoles.map((ur) => Chip(
+                          label: Text(ur['role']?['name'] ?? ''),
+                          deleteIcon: const Icon(Icons.close, size: 16),
+                          onDeleted: () => _removeRole(ur),
+                          backgroundColor: Colors.blue.shade50,
+                          labelStyle: TextStyle(color: Colors.blue.shade700, fontSize: 12),
+                        )).toList(),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: DropdownButtonFormField<ApplicationRole>(
+                              value: _selectedRole,
+                              decoration: const InputDecoration(
+                                labelText: 'Dodjeli ulogu',
+                                border: OutlineInputBorder(),
+                              ),
+                              items: _allRoles
+                                  .where((r) => !_userRoles.any((ur) => ur['roleId'] == r.id))
+                                  .map((r) => DropdownMenuItem(value: r, child: Text(r.name ?? '')))
+                                  .toList(),
+                              onChanged: (v) => setState(() => _selectedRole = v),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          ElevatedButton.icon(
+                            onPressed: _selectedRole != null ? _assignRole : null,
+                            icon: const Icon(Icons.add),
+                            label: const Text('Dodjeli'),
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ),
-              ),
-              const Padding(
-                padding: EdgeInsets.all(10.0),
-                child: Divider(
-                  thickness: 2,
-                  color: Colors.grey,
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          if (selectedImage == null &&
-                              widget.user?.person?.profilePhoto != null)
-                            Image.network(
-                              "https://localhost:7137${widget.user!.person?.profilePhoto}",
-                              width: 700,
-                              height: 400,
-                            )
-                          else if (selectedImage == null &&
-                              widget.user?.person?.profilePhoto == null)
-                            Image.asset(
-                              "assets/images/user_placeholder.jpg",
-                              width: 600,
-                              height: 400,
-                            )
-                          else if (selectedImage != null)
-                            Image.file(
-                              selectedImage!,
-                              width: 700,
-                              height: 400,
-                            ),
-                          ElevatedButton(
-                            onPressed: _pickImage,
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: <Widget>[
-                                Icon(Icons.image), // Add the icon here
-                                SizedBox(
-                                    width:
-                                        8), // Add some spacing between the icon and text
-                                Text('Select Image'),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Expanded(
-                        child: Padding(
-                      padding: const EdgeInsets.all(30.0),
-                      child: Column(
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'First Name', // Your label text
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                              TextFormField(
-                                controller: _firstNameController,
-                                validator: (value) {
-                                  if (value!.isEmpty) {
-                                    return 'This field is required.';
-                                  }
-                                  return null;
-                                },
-                              ),
-                            ],
-                          ),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Last Name', // Your label text
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                              TextFormField(
-                                controller: _lastNameController,
-                                validator: (value) {
-                                  if (value!.isEmpty) {
-                                    return 'This field is required.';
-                                  }
-                                  return null;
-                                },
-                              ),
-                            ],
-                          ),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Username', // Your label text
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                              TextFormField(
-                                controller: _userNameController,
-                                validator: (value) {
-                                  if (value!.isEmpty) {
-                                    return 'This field is required.';
-                                  }
-                                  return null;
-                                },
-                              ),
-                            ],
-                          ),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Email', // Your label text
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                              TextFormField(
-                                controller: _emailController,
-                                validator: (value) {
-                                  if (value!.isEmpty) {
-                                    return 'This field is required.';
-                                  }
-                                  return null;
-                                },
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    )),
-                    Expanded(
-                        child: Column(
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Phone number',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                            ),
-                            TextFormField(
-                              controller: _phoneNumberController,
-                              validator: (value) {
-                                if (value!.isEmpty) {
-                                  return 'This field is required.';
-                                }
-                                return null;
-                              },
-                            ),
-                          ],
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.all(10.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              const Text(
-                                'Role',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                              Text(
-                                widget.user?.userRoles?.isNotEmpty == true
-                                    ? widget.user!.userRoles![0].role?.name ??
-                                        'No Role Selected'
-                                    : 'No Role Selected',
-                                style: const TextStyle(fontSize: 16),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Address', // Your label text
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                            ),
-                            TextFormField(
-                              controller: _addressController,
-                              validator: (value) {
-                                if (value!.isEmpty) {
-                                  return 'This field is required.';
-                                }
-                                return null;
-                              },
-                            ),
-                          ],
-                        ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Postal code', // Your label text
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                            ),
-                            TextFormField(
-                              controller: _postalCodeController,
-                              validator: (value) {
-                                if (value!.isEmpty) {
-                                  return 'This field is required.';
-                                }
-                                return null;
-                              },
-                            ),
-                          ],
-                        ),
-                      ],
-                    )),
-                    const SizedBox(
-                      width: 20,
-                    ),
-                    Expanded(
-                        child: Column(
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'JMBG', // Your label text
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                            ),
-                            TextFormField(
-                              controller: _jmbgController,
-                              validator: (value) {
-                                if (value!.isEmpty) {
-                                  return 'This field is required.';
-                                }
-                                return null;
-                              },
-                            ),
-                          ],
-                        ),
-                        DropdownButtonFormField<City?>(
-                          value: widget.user?.person
-                              ?.placeOfResidence, // Set the initial value (selectedCity is a City? variable)
-                          onChanged: (City? newValue) {
-                            setState(() {
-                              // Update the selected value when the user makes a selection
-                              widget.user?.person?.placeOfResidence = newValue;
-                              widget.user?.person?.placeOfResidence?.id =
-                                  newValue?.id;
-                              widget.user?.person?.placeOfResidenceId =
-                                  newValue?.id;
-                            });
-                          },
-                          items: (cityResult?.result ?? [])
-                              .map<DropdownMenuItem<City?>>(
-                            (City? city) {
-                              if (city != null && city.name != null) {
-                                return DropdownMenuItem<City?>(
-                                  value: city, // Ensure each value is unique
-                                  child: Text(city.name!),
-                                );
-                              } else {
-                                return const DropdownMenuItem<City?>(
-                                  value:
-                                      null, // Provide a default value or handle null differently
-                                  child: Text(
-                                    'Undefined', // Display something meaningful for null values
-                                  ),
-                                );
-                              }
-                            },
-                          ).toList(),
-                          decoration: const InputDecoration(
-                            labelText: 'City of residence',
-                          ),
-                        ),
-                        Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: <Widget>[
-                            const Text(
-                              'Date of Birth MM-dd-yyyy',
-                              style: TextStyle(fontSize: 20),
-                            ),
-                            const SizedBox(
-                              height: 5.0,
-                            ),
-                            Text(
-                              DateFormat('MM-dd-yyyy')
-                                  .format(selectedDate), // Format the date
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            ElevatedButton(
-                              onPressed: () async {
-                                DateTime? newDate =
-                                    await _selectDate(context, selectedDate);
-                                if (newDate != null) {
-                                  setState(() {
-                                    selectedDate = newDate;
-                                    widget.user?.person?.birthDate =
-                                        selectedDate;
-                                  });
-                                }
-                              },
-                              child: const Text('Select Date'),
-                            ),
-                          ],
-                        ),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Column(
-                              children: [
-                                const Text(
-                                  'Gender:',
-                                  style: TextStyle(fontSize: 20),
-                                ),
-                                const SizedBox(height: 5.0),
-                                DropdownButton<int>(
-                                  value: widget.user?.person?.gender,
-                                  onChanged: (int? newValue) {
-                                    if (newValue != null) {
-                                      _onGenderChanged(newValue);
-                                    }
-                                  },
-                                  items: const [
-                                    DropdownMenuItem<int>(
-                                      value: 0,
-                                      child: Text('Male'),
-                                    ),
-                                    DropdownMenuItem<int>(
-                                      value: 1,
-                                      child: Text('Female'),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ],
-                    ))
-                  ],
-                ),
-              ),
-              const Padding(
-                padding: EdgeInsets.all(10.0),
-                child: Divider(
-                  thickness: 2,
-                  color: Colors.grey,
-                ),
-              ),
-              buildUserRoleRow(widget.user!),
-              Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: SizedBox(
-                  height: 50,
-                  width: 90,
-                  child: ElevatedButton(
-                    onPressed: () async {
-                      await _updateEmployee();
-                    },
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.edit), // Edit icon
-                        SizedBox(width: 8),
-                        Text('Edit'),
-                      ],
-                    ),
+              const SizedBox(height: 16),
+
+              const SizedBox(height: 24),
+
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton.icon(
+                  onPressed: _updateEmployee,
+                  icon: const Icon(Icons.save),
+                  label: const Text('Sačuvaj izmjene'),
+                  style: ElevatedButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
                   ),
                 ),
               ),
             ],
-          ))),
+          ),
+        ),
+      ),
+    );
+  }
+
+  TextFormField _field(String label, TextEditingController ctrl,
+      {bool required = true, String? Function(String?)? validator}) {
+    return TextFormField(
+      controller: ctrl,
+      validator: validator ??
+          (required
+              ? (v) => (v == null || v.isEmpty) ? 'Obavezno polje' : null
+              : null),
+      decoration: InputDecoration(
+          labelText: label, border: const OutlineInputBorder()),
+    );
+  }
+
+  static String? _validateEmail(String? v) {
+    if (v == null || v.isEmpty) return 'Obavezno polje';
+    final emailRe = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+    if (!emailRe.hasMatch(v)) return 'Unesite ispravan email';
+    return null;
+  }
+
+  static String? _validateJmbg(String? v) {
+    if (v == null || v.isEmpty) return null; // optional
+    if (!RegExp(r'^\d{13}$').hasMatch(v)) return 'JMBG mora imati tačno 13 cifara';
+    return null;
+  }
+
+  static String? _validatePhone(String? v) {
+    if (v == null || v.isEmpty) return 'Obavezno polje';
+    if (!RegExp(r'^\+?[\d\s\-]{6,20}$').hasMatch(v)) return 'Unesite ispravan broj telefona';
+    return null;
+  }
+}
+
+class _SectionCard extends StatelessWidget {
+  final String title;
+  final Widget child;
+  const _SectionCard({required this.title, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.grey.shade200),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title,
+                style: const TextStyle(
+                    fontWeight: FontWeight.bold, fontSize: 14)),
+            const Divider(height: 20),
+            child,
+          ],
+        ),
+      ),
     );
   }
 }

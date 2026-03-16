@@ -51,12 +51,18 @@ Property _$PropertyFromJson(Map<String, dynamic> json) => Property(
       averageRating: (json['averageRating'] as num?)?.toDouble() ?? 0,
       isAvailable: json['isAvailable'] as bool? ?? true,
     )
+      ..availableFrom = json['availableFrom'] == null
+          ? null
+          : DateTime.parse(json['availableFrom'] as String)
       ..propertyType = json['propertyType'] == null
           ? null
           : PropertyType.fromJson(json['propertyType'] as Map<String, dynamic>)
       ..city = json['city'] == null
           ? null
-          : City.fromJson(json['city'] as Map<String, dynamic>);
+          : City.fromJson(json['city'] as Map<String, dynamic>)
+      ..photos = (json['photos'] as List<dynamic>?)
+          ?.map((e) => Photo.fromJson(e as Map<String, dynamic>))
+          .toList();
 
 Map<String, dynamic> _$PropertyToJson(Property instance) => <String, dynamic>{
       'id': instance.id,

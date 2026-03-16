@@ -3,18 +3,25 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/http.dart';
+import 'package:propertease_admin/config/app_config.dart';
 import 'package:propertease_admin/models/search_result.dart';
 import 'package:propertease_admin/utils/authorization.dart';
 
 abstract class BaseProvider<T> with ChangeNotifier {
-  static const String _baseUrl = String.fromEnvironment(
-    'baseUrl',
-    defaultValue: 'http://localhost:5028/api/',
-  );
+  static String get _baseUrl => AppConfig.apiBase;
   late String _endpoint;
 
   BaseProvider(String endpoint) {
     _endpoint = endpoint;
+  }
+
+  Future<T> getById(int id) async {
+    var url = "$_baseUrl$_endpoint/$id";
+    var response = await http.get(Uri.parse(url), headers: createHeaders());
+    if (isValidResponse(response)) {
+      return fromJson(jsonDecode(response.body));
+    }
+    throw Exception("Failed to get item by id");
   }
 
   Future<SearchResult<T>> get({dynamic filter}) async {
@@ -114,14 +121,15 @@ abstract class BaseProvider<T> with ChangeNotifier {
     var result = SearchResult<T>();
 
     if (isValidResponse(response)) {
-      List data = jsonDecode(response.body);
-      result.count = data.length;
+      final decoded = jsonDecode(response.body);
+      final List items = decoded['items'] as List;
+      result.totalCount = (decoded['totalCount'] as int?) ?? 0;
+      result.count = items.length;
 
-      for (var item in data) {
+      for (var item in items) {
         result.result.add(fromJson(item));
       }
 
-      print(url);
       return result;
     }
     throw Exception("Something is wrong");
@@ -142,7 +150,8 @@ abstract class BaseProvider<T> with ChangeNotifier {
     } else if (response.statusCode == 401) {
       throw Exception("Wrong credentials");
     } else {
-      throw Exception("Something else is wrong");
+      debugPrint("API Error ${response.statusCode}: ${response.body}");
+      throw Exception("HTTP ${response.statusCode}: ${response.body}");
     }
   }
 

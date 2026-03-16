@@ -5,16 +5,13 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../main.dart';
-import '../../models/application_role.dart';
 import '../../models/application_user.dart';
 import '../../models/city.dart';
 import '../../models/person.dart';
-import '../../models/search_result.dart';
 import '../../providers/application_user_provider.dart';
-import '../../providers/city_provider.dart';
+import '../../widgets/country_city_selector.dart';
+
 
 class ClientAddScreen extends StatefulWidget {
   const ClientAddScreen({super.key});
@@ -27,12 +24,7 @@ class ClientAddScreenState extends State<ClientAddScreen> {
   late ApplicationUser newUser = ApplicationUser();
   File? selectedImage;
   City? selectedCity;
-  SearchResult<City>? cityResult;
-  SearchResult<ApplicationRole>? roleResult;
   final _formKey = GlobalKey<FormState>();
-  final List<String> menuItems = ['Profile', 'Logout'];
-  String selectedMenuItem = 'Profile'; // Initial selection
-  late CityProvider _cityProvider;
   late UserProvider _userProvider;
   final TextEditingController _firstNameController = TextEditingController();
   final TextEditingController _lastNameController = TextEditingController();
@@ -46,9 +38,12 @@ class ClientAddScreenState extends State<ClientAddScreen> {
   final TextEditingController _confirmPasswordController =
       TextEditingController();
 
-  int selectedGender = 0; // 0 for Male, 1 for Female
-  final String _baseUrl = 'https://localhost:44340';
+  int selectedGender = 0;
+  DateTime selectedDate = DateTime.now();
+
   Future<void> addClient() async {
+    if (!_formKey.currentState!.validate()) return;
+
     newUser.id = 0;
     newUser.person = Person();
     newUser.person?.firstName = _firstNameController.text;
@@ -60,35 +55,21 @@ class ClientAddScreenState extends State<ClientAddScreen> {
     newUser.person?.postCode = _postalCodeController.text;
     newUser.person?.jmbg = _jmbgController.text;
     newUser.person?.gender = selectedGender;
-    newUser.person?.position = 0;
     newUser.person?.birthDate = selectedDate;
-    newUser.person?.placeOfResidenceId = selectedCity!.id;
-    if (_formKey.currentState!.validate()) {
-      await _userProvider.addClient(newUser, _passwordController.text);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-              'Client ${newUser.person?.firstName} ${newUser.person?.lastName} added successfully'),
-          backgroundColor: Colors.green,
-        ),
-      );
-      Navigator.of(context).pop();
-    }
+    newUser.person?.placeOfResidenceId = selectedCity?.id;
+
+    await _userProvider.addClient(newUser, _passwordController.text);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+            'Client ${newUser.person?.firstName} ${newUser.person?.lastName} added successfully'),
+        backgroundColor: Colors.green,
+      ),
+    );
+    Navigator.of(context).pop();
   }
 
-  String? firstName;
-  String? lastName;
-  String photoUrl = 'https://localhost:44340';
-  Future<void> getUserIdFromSharedPreferences() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    setState(() {
-      firstName = prefs.getString('firstName');
-      lastName = prefs.getString('lastName');
-      photoUrl = 'https://localhost:44340${prefs.getString('profilePhoto')}';
-    });
-  }
-
-  DateTime selectedDate = DateTime.now();
   Future<void> _pickImage() async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
@@ -103,64 +84,17 @@ class ClientAddScreenState extends State<ClientAddScreen> {
     }
   }
 
-  Future<void> _fetchCities() async {
-    await getUserIdFromSharedPreferences();
-    var cities = await _cityProvider.get();
-    setState(() {
-      cityResult = cities;
-      selectedCity = cities.result[0];
-    });
-  }
-
-  @override
-  void didChangeDependencies() {
-    // TODO: implement didChangeDependencies
-    super.didChangeDependencies();
-    _cityProvider = context.read<CityProvider>();
-    _userProvider = context.read<UserProvider>();
-    _fetchCities();
-  }
-
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
-    _cityProvider = context.read<CityProvider>();
     _userProvider = context.read<UserProvider>();
-    _fetchCities();
-  }
-
-  void _showPopupMenu(BuildContext context) async {
-    showMenu(
-      context: context,
-      position:
-          const RelativeRect.fromLTRB(0, 70, 0, 0), // Adjust position as needed
-      items: menuItems.map((String item) {
-        return PopupMenuItem<String>(
-          value: item,
-          child: Text(item),
-        );
-      }).toList(),
-    ).then((value) async {
-      if (value != null) {
-        // Handle the selection from the dropdown menu
-        if (value == 'Profile') {
-        } else if (value == 'Logout') {
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.remove('authToken');
-
-          Navigator.of(context)
-              .push(MaterialPageRoute(builder: (context) => LoginWidget()));
-        }
-      }
-    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Profile registration"),
+        title: const Text("Profile registration"),
       ),
       body: Form(
         key: _formKey,
@@ -171,13 +105,13 @@ class ClientAddScreenState extends State<ClientAddScreen> {
                 padding: const EdgeInsets.all(20.0),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
+                  children: const [
                     Icon(
                       Icons.person,
                       color: Colors.blue,
                       size: 34.0,
                     ),
-                    const SizedBox(width: 10),
+                    SizedBox(width: 10),
                     Text(
                       'New client',
                       style: TextStyle(
@@ -188,10 +122,7 @@ class ClientAddScreenState extends State<ClientAddScreen> {
                   ],
                 ),
               ),
-              const Divider(
-                thickness: 2,
-                color: Colors.grey,
-              ),
+              const Divider(thickness: 2, color: Colors.grey),
               Padding(
                 padding: const EdgeInsets.all(20.0),
                 child: Column(
@@ -236,15 +167,16 @@ class ClientAddScreenState extends State<ClientAddScreen> {
                             const Text(
                               'First Name',
                               style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
+                                  fontWeight: FontWeight.bold, fontSize: 16),
                             ),
                             TextFormField(
                               controller: _firstNameController,
                               validator: (value) {
-                                if (value!.isEmpty) {
+                                if (value == null || value.isEmpty) {
                                   return 'This field is required.';
+                                }
+                                if (value.length < 2) {
+                                  return 'At least 2 characters.';
                                 }
                                 return null;
                               },
@@ -260,15 +192,16 @@ class ClientAddScreenState extends State<ClientAddScreen> {
                           const Text(
                             'Last Name',
                             style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
+                                fontWeight: FontWeight.bold, fontSize: 16),
                           ),
                           TextFormField(
                             controller: _lastNameController,
                             validator: (value) {
-                              if (value!.isEmpty) {
+                              if (value == null || value.isEmpty) {
                                 return 'This field is required.';
+                              }
+                              if (value.length < 2) {
+                                return 'At least 2 characters.';
                               }
                               return null;
                             },
@@ -284,18 +217,20 @@ class ClientAddScreenState extends State<ClientAddScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Username',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
+                    const Text('Username',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 16)),
                     TextFormField(
                       controller: _userNameController,
                       validator: (value) {
-                        if (value!.isEmpty) {
+                        if (value == null || value.isEmpty) {
                           return 'This field is required.';
+                        }
+                        if (value.length < 3) {
+                          return 'At least 3 characters.';
+                        }
+                        if (!RegExp(r'^[a-zA-Z0-9_.\-]+$').hasMatch(value)) {
+                          return 'Only letters, numbers and _.-';
                         }
                         return null;
                       },
@@ -308,22 +243,27 @@ class ClientAddScreenState extends State<ClientAddScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Password',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
+                    const Text('Password',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 16)),
                     TextFormField(
                       controller: _passwordController,
+                      obscureText: true,
                       validator: (value) {
-                        if (value!.isEmpty) {
+                        if (value == null || value.isEmpty) {
                           return 'This field is required.';
+                        }
+                        if (value.length < 6) {
+                          return 'At least 6 characters.';
+                        }
+                        if (!RegExp(r'[A-Z]').hasMatch(value)) {
+                          return 'Must contain at least one uppercase letter.';
+                        }
+                        if (!RegExp(r'[0-9]').hasMatch(value)) {
+                          return 'Must contain at least one number.';
                         }
                         return null;
                       },
-                      obscureText: true,
                     ),
                   ],
                 ),
@@ -333,24 +273,21 @@ class ClientAddScreenState extends State<ClientAddScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Confirm Password',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
+                    const Text('Confirm Password',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 16)),
                     TextFormField(
                       controller: _confirmPasswordController,
+                      obscureText: true,
                       validator: (value) {
-                        if (value!.isEmpty) {
+                        if (value == null || value.isEmpty) {
                           return 'This field is required.';
-                        } else if (value != _passwordController.text) {
+                        }
+                        if (value != _passwordController.text) {
                           return 'Passwords do not match.';
                         }
                         return null;
                       },
-                      obscureText: true,
                     ),
                   ],
                 ),
@@ -360,18 +297,18 @@ class ClientAddScreenState extends State<ClientAddScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Email',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
+                    const Text('Email',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 16)),
                     TextFormField(
                       controller: _emailController,
+                      keyboardType: TextInputType.emailAddress,
                       validator: (value) {
-                        if (value!.isEmpty) {
+                        if (value == null || value.isEmpty) {
                           return 'This field is required.';
+                        }
+                        if (!RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(value)) {
+                          return 'Enter a valid email address.';
                         }
                         return null;
                       },
@@ -384,18 +321,18 @@ class ClientAddScreenState extends State<ClientAddScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Phone number',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
+                    const Text('Phone number',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 16)),
                     TextFormField(
                       controller: _phoneNumberController,
+                      keyboardType: TextInputType.phone,
                       validator: (value) {
-                        if (value!.isEmpty) {
+                        if (value == null || value.isEmpty) {
                           return 'This field is required.';
+                        }
+                        if (!RegExp(r'^\+?[0-9\s\-]{7,15}$').hasMatch(value)) {
+                          return 'Enter a valid phone number.';
                         }
                         return null;
                       },
@@ -408,17 +345,10 @@ class ClientAddScreenState extends State<ClientAddScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(
-                      'Role',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                    Text(
-                      'Client',
-                      style: TextStyle(fontSize: 16),
-                    ),
+                    Text('Role',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 16)),
+                    Text('Client', style: TextStyle(fontSize: 16)),
                   ],
                 ),
               ),
@@ -427,17 +357,13 @@ class ClientAddScreenState extends State<ClientAddScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Address',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
+                    const Text('Address',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 16)),
                     TextFormField(
                       controller: _addressController,
                       validator: (value) {
-                        if (value!.isEmpty) {
+                        if (value == null || value.isEmpty) {
                           return 'This field is required.';
                         }
                         return null;
@@ -451,17 +377,13 @@ class ClientAddScreenState extends State<ClientAddScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Postal code',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
+                    const Text('Postal code',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 16)),
                     TextFormField(
                       controller: _postalCodeController,
                       validator: (value) {
-                        if (value!.isEmpty) {
+                        if (value == null || value.isEmpty) {
                           return 'This field is required.';
                         }
                         return null;
@@ -475,18 +397,18 @@ class ClientAddScreenState extends State<ClientAddScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'JMBG',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
+                    const Text('JMBG',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 16)),
                     TextFormField(
                       controller: _jmbgController,
+                      keyboardType: TextInputType.number,
                       validator: (value) {
-                        if (value!.isEmpty) {
+                        if (value == null || value.isEmpty) {
                           return 'This field is required.';
+                        }
+                        if (!RegExp(r'^\d{13}$').hasMatch(value)) {
+                          return 'JMBG must be exactly 13 digits.';
                         }
                         return null;
                       },
@@ -496,33 +418,8 @@ class ClientAddScreenState extends State<ClientAddScreen> {
               ),
               Padding(
                 padding: const EdgeInsets.all(8.0),
-                child: DropdownButtonFormField<City?>(
-                  value: selectedCity,
-                  onChanged: (City? newValue) {
-                    setState(() {
-                      selectedCity = newValue!;
-                      selectedCity!.id = newValue.id;
-                    });
-                  },
-                  items: (cityResult?.result ?? [])
-                      .map<DropdownMenuItem<City?>>((City? city) {
-                    if (city != null && city.name != null) {
-                      return DropdownMenuItem<City?>(
-                        value: city,
-                        child: Text(city.name!),
-                      );
-                    } else {
-                      return const DropdownMenuItem<City?>(
-                        value: null,
-                        child: Text(
-                          'Undefined',
-                        ),
-                      );
-                    }
-                  }).toList(),
-                  decoration: const InputDecoration(
-                    labelText: 'City of residence',
-                  ),
+                child: CountryCitySelector(
+                  onCityChanged: (city) => setState(() => selectedCity = city),
                 ),
               ),
               Padding(
@@ -534,25 +431,19 @@ class ClientAddScreenState extends State<ClientAddScreen> {
                       'Date of Birth MM-dd-yyyy',
                       style: TextStyle(fontSize: 20),
                     ),
-                    const SizedBox(
-                      height: 5.0,
-                    ),
+                    const SizedBox(height: 5.0),
                     Text(
                       DateFormat('MM-dd-yyyy').format(selectedDate),
                       style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
+                          fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                     ElevatedButton(
                       onPressed: () async {
-                        DateTime? newDate =
-                            await _selectDate(context, selectedDate);
+                        final newDate = await _selectDate(context, selectedDate);
                         if (newDate != null) {
                           setState(() {
                             selectedDate = newDate;
                           });
-                          print(selectedDate);
                         }
                       },
                       child: const Text('Select Date'),
@@ -564,10 +455,7 @@ class ClientAddScreenState extends State<ClientAddScreen> {
                 padding: const EdgeInsets.all(8.0),
                 child: Column(
                   children: [
-                    const Text(
-                      'Gender:',
-                      style: TextStyle(fontSize: 20),
-                    ),
+                    const Text('Gender:', style: TextStyle(fontSize: 20)),
                     const SizedBox(height: 5.0),
                     DropdownButton<int>(
                       value: selectedGender,
@@ -577,14 +465,8 @@ class ClientAddScreenState extends State<ClientAddScreen> {
                         }
                       },
                       items: const [
-                        DropdownMenuItem<int>(
-                          value: 0,
-                          child: Text('Male'),
-                        ),
-                        DropdownMenuItem<int>(
-                          value: 1,
-                          child: Text('Female'),
-                        ),
+                        DropdownMenuItem<int>(value: 0, child: Text('Male')),
+                        DropdownMenuItem<int>(value: 1, child: Text('Female')),
                       ],
                     ),
                   ],
@@ -609,10 +491,7 @@ class ClientAddScreenState extends State<ClientAddScreen> {
                   ),
                 ),
               ),
-              const Divider(
-                thickness: 2,
-                color: Colors.grey,
-              ),
+              const Divider(thickness: 2, color: Colors.grey),
             ],
           ),
         ),

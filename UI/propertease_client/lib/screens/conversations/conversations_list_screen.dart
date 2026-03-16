@@ -4,15 +4,17 @@ import 'package:flutter/material.dart';
 import 'package:http/io_client.dart';
 import 'package:intl/intl.dart';
 import 'package:propertease_client/models/conversation.dart';
-import 'package:propertease_client/models/search_result.dart';
+import 'package:propertease_client/config/app_config.dart';
 import 'package:propertease_client/providers/conversation_provider.dart';
 import 'package:propertease_client/screens/conversations/messaging_screen.dart';
+import 'package:propertease_client/utils/authorization.dart';
+import 'package:propertease_client/widgets/master_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:signalr_core/signalr_core.dart' as signalr;
 
 class ConversationListScreen extends StatefulWidget {
-  int? clientId;
-  ConversationListScreen({super.key, this.clientId});
+  final int? clientId;
+  const ConversationListScreen({super.key, this.clientId});
 
   @override
   State<StatefulWidget> createState() => ConvesrationListScreenState();
@@ -20,47 +22,38 @@ class ConversationListScreen extends StatefulWidget {
 
 class ConvesrationListScreenState extends State<ConversationListScreen> {
   late ConversationProvider _conversationProvider;
-  late Future<SearchResult<Conversation>> conversationsFuture;
+  List<Conversation> _conversations = [];
+  bool _isLoading = true;
+  String? _error;
   late signalr.HubConnection signalR;
+
+  int get _totalUnread =>
+      _conversations.fold(0, (sum, c) => sum + (c.unreadCount ?? 0));
 
   void initSignalRConnection() async {
     try {
       signalR = signalr.HubConnectionBuilder()
           .withUrl(
-            'https://10.0.2.2:7137/hubs/messageHub',
+            '${AppConfig.serverBase}/hubs/messageHub',
             signalr.HttpConnectionOptions(
               client: IOClient(
                 HttpClient()..badCertificateCallback = (x, y, z) => true,
               ),
-              logging: (level, message) => print(message),
+              logging: (level, message) {},
             ),
           )
           .build();
 
-      signalR.on('newMessage', (message) {
-        // Handle the received message
-        print('Received new message: $message');
-        refreshConversations(); // Update UI or handle the new message as needed
-      });
+      signalR.on('newMessage', (_) => refreshConversations());
       await signalR.start();
     } catch (e) {
-      print('Error initializing SignalR: $e');
-      // Handle the error appropriately based on your application's requirements.
-    }
-  }
-
-  void _onNewMessage(List<dynamic>? parameters) async {
-    if (parameters != null && parameters.length >= 2) {
-      final methodName = parameters[0] as String;
-      final message = parameters[1] as String;
-      print("MethodName = $methodName, Message = $message");
-      refreshConversations();
+      debugPrint('SignalR error: $e');
     }
   }
 
   @override
   void dispose() {
-    signalR.off('newMessage'); // Unsubscribe from the event
+    signalR.off('newMessage');
     signalR.stop();
     super.dispose();
   }
@@ -69,99 +62,174 @@ class ConvesrationListScreenState extends State<ConversationListScreen> {
   void initState() {
     super.initState();
     _conversationProvider = context.read<ConversationProvider>();
-    conversationsFuture = fetchConversations();
+    _fetchConversations();
     initSignalRConnection();
   }
 
-  Future<SearchResult<Conversation>> fetchConversations() async {
+  Future<void> _fetchConversations() async {
+    if (!mounted) return;
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
     try {
-      var tempConversations =
+      final result =
           await _conversationProvider.getByClient(widget.clientId!);
-      return tempConversations;
+      if (mounted) {
+        setState(() {
+          _conversations = result.result;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
-      print(e.toString());
-      throw e;
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+          _isLoading = false;
+        });
+      }
     }
   }
 
   void refreshConversations() {
-    setState(() {
-      conversationsFuture = fetchConversations();
-    });
+    _fetchConversations();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text("Conversations"),
-      ),
-      body: FutureBuilder(
-        future: conversationsFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
-            return Center(child: Text("Error: ${snapshot.error}"));
-          } else if (!snapshot.hasData || snapshot.data!.result.isEmpty) {
-            return Center(child: Text("No conversations available."));
-          } else {
-            var conversations = snapshot.data!.result;
-            return ListView.builder(
-              itemCount: conversations.length,
-              itemBuilder: (context, index) {
-                return buildConversationItem(conversations[index]);
-              },
-            );
-          }
-        },
-      ),
+    Widget body;
+    if (_isLoading) {
+      body = const Center(child: CircularProgressIndicator());
+    } else if (_error != null) {
+      body = Center(child: Text('Greška: $_error'));
+    } else if (_conversations.isEmpty) {
+      body = const Center(child: Text('Nema razgovora.'));
+    } else {
+      body = RefreshIndicator(
+        onRefresh: _fetchConversations,
+        child: ListView.builder(
+          itemCount: _conversations.length,
+          itemBuilder: (context, index) =>
+              buildConversationItem(_conversations[index]),
+        ),
+      );
+    }
+
+    return MasterScreenWidget(
+      currentIndex: 3,
+      title: 'Inbox',
+      inboxUnreadCount: _totalUnread,
+      child: body,
     );
   }
 
+  Widget _buildRenterAvatar(String? photoBytes, {String? photoUrl}) {
+    if (photoBytes != null && photoBytes.isNotEmpty) {
+      try {
+        final bytes = base64Decode(photoBytes);
+        return ClipOval(
+          child: Image.memory(
+            bytes,
+            width: 60,
+            height: 60,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) =>
+                const CircleAvatar(radius: 30, child: Icon(Icons.person)),
+          ),
+        );
+      } catch (_) {}
+    }
+    if (photoUrl != null && photoUrl.isNotEmpty) {
+      return ClipOval(
+        child: Image.network(
+          photoUrl,
+          width: 60,
+          height: 60,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) =>
+              const CircleAvatar(radius: 30, child: Icon(Icons.person)),
+        ),
+      );
+    }
+    return const CircleAvatar(radius: 30, child: Icon(Icons.person));
+  }
+
   Widget buildConversationItem(Conversation conversation) {
-    Widget leadingWidget =
-        conversation.renter?.person?.profilePhotoBytes != null
-            ? Image.memory(
-                base64Decode(conversation.renter!.person!.profilePhotoBytes!),
-                width: 80,
-                height: 80,
-              )
-            : Image.asset(
-                'assets/images/user_placeholder.jpg',
-                width: 80,
-                height: 80,
-              );
+    final renterPhotoPath = conversation.renter?.person?.profilePhoto;
+    final renterPhotoUrl = (renterPhotoPath != null && renterPhotoPath.isNotEmpty)
+        ? '${AppConfig.serverBase}$renterPhotoPath'
+        : null;
+    final Widget avatarWidget = _buildRenterAvatar(
+        conversation.renter?.person?.profilePhotoBytes,
+        photoUrl: renterPhotoUrl);
+    final unread = conversation.unreadCount ?? 0;
+    final Widget leadingWidget = unread > 0
+        ? Badge(label: Text('$unread'), child: avatarWidget)
+        : avatarWidget;
 
     return ListTile(
       leading: leadingWidget,
-      title: Text(conversation.renter?.userName ?? ""),
+      title: Row(
+        children: [
+          Expanded(
+            child: Text(
+              conversation.renter?.userName ?? '',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+          if (conversation.property?.name != null)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade100,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                conversation.property!.name!,
+                style: TextStyle(fontSize: 12, color: Colors.blue.shade800),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+        ],
+      ),
       subtitle: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (conversation.property?.address != null)
+            Text(
+              conversation.property!.address!,
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
+              overflow: TextOverflow.ellipsis,
+            ),
           if (conversation.lastMessage != null)
             Text(
-              conversation.lastMessage!.length > 30
-                  ? '${conversation.lastMessage!.substring(0, 30)}...'
+              conversation.lastMessage!.length > 40
+                  ? '${conversation.lastMessage!.substring(0, 40)}...'
                   : conversation.lastMessage!,
             ),
-          SizedBox(height: 4),
           Text(
-            'Created: ${formattedLastSent(conversation.lastSent)}',
-            style: TextStyle(color: Colors.grey),
+            formattedLastSent(conversation.lastSent),
+            style: const TextStyle(color: Colors.grey, fontSize: 11),
           ),
         ],
       ),
       onTap: () {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (context) => MessageListScreen(
-              conversationId: conversation.id,
-              recipientId: conversation.renterId,
-              onConversationListUpdated: refreshConversations,
-            ),
-          ),
-        );
+        Navigator.of(context)
+            .push(
+              MaterialPageRoute(
+                builder: (context) => MessageListScreen(
+                  conversationId: conversation.id,
+                  recipientId: conversation.renterId,
+                  onConversationListUpdated: refreshConversations,
+                  chatTitle: conversation.property?.name ?? 'Chat',
+                  otherUserPhotoBytes: conversation.renter?.person?.profilePhotoBytes,
+                  otherUserPhotoUrl: renterPhotoUrl,
+                  myPhotoBytes: Authorization.profilePhotoBytes,
+                  renter: conversation.renter,
+                ),
+              ),
+            )
+            .then((_) => refreshConversations());
       },
     );
   }

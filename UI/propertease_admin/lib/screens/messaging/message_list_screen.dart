@@ -2,23 +2,32 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:propertease_admin/config/app_config.dart';
 import 'package:propertease_admin/models/message.dart';
 import 'package:propertease_admin/models/search_result.dart';
+import 'package:propertease_admin/providers/conversation_provider.dart';
 import 'package:propertease_admin/providers/message_provider.dart';
+import 'package:propertease_admin/screens/users/user_profile_screen.dart';
+import 'package:propertease_admin/utils/authorization.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:signalr_core/signalr_core.dart';
 import 'package:http/io_client.dart';
 
 class MessageListScreen extends StatefulWidget {
   final int? conversationId;
-  int? recipientId;
+  final int? recipientId;
+  final String? recipientName;
+  final String? recipientPhotoBytes;
+  final String? recipientPhotoUrl;
   final VoidCallback onConversationListUpdated;
 
-  MessageListScreen({
+  const MessageListScreen({
     Key? key,
     this.conversationId,
     this.recipientId,
+    this.recipientName,
+    this.recipientPhotoBytes,
+    this.recipientPhotoUrl,
     required this.onConversationListUpdated,
   }) : super(key: key);
 
@@ -29,11 +38,12 @@ class MessageListScreen extends StatefulWidget {
 class MessageListScreenState extends State<MessageListScreen> {
   late TextEditingController _messageController;
   late MessageProvider _messageProvider;
+  late ConversationProvider _conversationProvider;
+  final ScrollController _scrollController = ScrollController();
+
   Message message = Message();
   String? firstName;
   String? lastName;
-  String? photoUrl;
-  int? roleId;
   int? userId;
   SearchResult<Message>? messages;
   late HubConnection signalR;
@@ -42,51 +52,44 @@ class MessageListScreenState extends State<MessageListScreen> {
   void initState() {
     super.initState();
     _messageProvider = context.read<MessageProvider>();
+    _conversationProvider = context.read<ConversationProvider>();
     _messageController = TextEditingController();
-
-    initSignalRConnection();
-    getUserIdFromSharedPreferences();
-    fetchMessages();
+    _initSignalR();
+    _loadUser();
+    _fetchMessages();
+    _markAsReadSilent(); // mark existing unread on open
   }
 
-  void initSignalRConnection() async {
+  void _initSignalR() async {
     try {
       signalR = HubConnectionBuilder()
           .withUrl(
-            'https://localhost:7137/hubs/messageHub',
+            '${AppConfig.serverBase}/hubs/messageHub',
             HttpConnectionOptions(
               client: IOClient(
                   HttpClient()..badCertificateCallback = (x, y, z) => true),
-              logging: (level, message) => print(message),
+              logging: (level, message) {},
             ),
           )
           .build();
 
-      signalR.on('newMessage', (message) {
-        // Handle the received message
-        print('Received new message: $message');
-        fetchMessages(); // Update UI or handle the new message as needed
+      // Incoming message: sync list silently + mark as read — no blocking spinner
+      signalR.on('newMessage', (_) {
+        _syncMessages();
+        _markAsReadSilent();
       });
       await signalR.start();
     } catch (e) {
-      print('Error initializing SignalR: $e');
-      // Handle the error appropriately based on your application's requirements.
-    }
-  }
-
-  void _onNewMessage(List<dynamic>? parameters) async {
-    if (parameters != null && parameters.length >= 2) {
-      final methodName = parameters[0] as String;
-      final message = parameters[1] as String;
-      print("MethodName = $methodName, Message = $message");
-      await fetchMessages();
+      debugPrint('SignalR init error: $e');
     }
   }
 
   @override
   void dispose() {
-    signalR.off('newMessage'); // Unsubscribe from the event
+    signalR.off('newMessage');
     signalR.stop();
+    _messageController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -94,177 +97,346 @@ class MessageListScreenState extends State<MessageListScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     _messageProvider = context.read<MessageProvider>();
-    getUserIdFromSharedPreferences();
-    fetchMessages();
   }
 
-  Future<void> fetchMessages() async {
+  void _loadUser() {
+    userId = Authorization.userId;
+    firstName = Authorization.firstName;
+    lastName = Authorization.lastName;
+  }
+
+  /// Initial load — awaited so the list appears before the screen is interactive.
+  Future<void> _fetchMessages() async {
     try {
-      var tempMessages =
+      final result =
           await _messageProvider.getByConversationId(widget.conversationId!);
-      setState(() {
-        messages = tempMessages;
-      });
+      if (mounted) setState(() => messages = result);
     } catch (e) {
-      print(e.toString());
+      debugPrint('Fetch messages error: $e');
     }
   }
 
-  Future<void> getUserIdFromSharedPreferences() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    setState(() {
-      userId = int.tryParse(prefs.getString('userId')!)!;
-      firstName = prefs.getString('firstName');
-      lastName = prefs.getString('lastName');
-      photoUrl = prefs.getString('profilePhoto');
-      roleId = prefs.getInt('roleId');
+  /// Background sync — used after send and on SignalR events.
+  /// Updates the list without any loading indicator.
+  void _syncMessages() {
+    _messageProvider
+        .getByConversationId(widget.conversationId!)
+        .then((result) {
+      if (mounted) setState(() => messages = result);
+    }).catchError((Object e) {
+      debugPrint('Sync error: $e');
     });
+  }
+
+  /// Marks messages as read in the background and notifies the conversation list.
+  void _markAsReadSilent() {
+    if (userId == null) return;
+    _conversationProvider
+        .markAsRead(widget.conversationId!, userId!)
+        .then((_) => widget.onConversationListUpdated())
+        .catchError((Object _) {});
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.jumpTo(0);
+      }
+    });
+  }
+
+  Future<void> _sendMessage() async {
+    final text = _messageController.text.trim();
+    if (text.isEmpty) return;
+
+    // ── Optimistic insert ──────────────────────────────────────────────────
+    final optimistic = Message()
+      ..content = text
+      ..senderId = userId
+      ..recipientId = widget.recipientId
+      ..conversationId = widget.conversationId
+      ..createdAt = DateTime.now()
+      ..modifiedAt = DateTime.now();
+
+    _messageController.clear();
+    setState(() {
+      messages ??= SearchResult<Message>();
+      messages!.result.insert(0, optimistic); // list is reverse-sorted
+    });
+    _scrollToBottom();
+
+    try {
+      await _messageProvider.addMessage(optimistic);
+      _syncMessages(); // replace optimistic entry with server response
+      widget.onConversationListUpdated();
+    } catch (e) {
+      debugPrint('Send message error: $e');
+      if (mounted) {
+        setState(() => messages?.result.remove(optimistic));
+        _messageController.text = text;
+      }
+    }
+  }
+
+  String get _headerTitle {
+    if (widget.recipientName != null && widget.recipientName!.isNotEmpty) {
+      return widget.recipientName!;
+    }
+    return 'Razgovor';
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.recipientId.toString())),
+      appBar: AppBar(
+        title: GestureDetector(
+          onTap: widget.recipientId != null
+              ? () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) =>
+                          UserProfileScreen(userId: widget.recipientId)))
+              : null,
+          child: Row(
+            children: [
+              _buildAvatar(widget.recipientPhotoBytes, photoUrl: widget.recipientPhotoUrl),
+              const SizedBox(width: 10),
+              Text(
+                _headerTitle,
+                style:
+                    const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
+              ),
+              if (widget.recipientId != null)
+                const Padding(
+                  padding: EdgeInsets.only(left: 4),
+                  child: Icon(Icons.chevron_right, size: 16),
+                ),
+            ],
+          ),
+        ),
+      ),
       body: Column(
         children: [
-          Expanded(
-            child: messages != null
-                ? ListView.builder(
-                    itemCount: messages!.result.length,
-                    reverse: true,
-                    itemBuilder: (context, index) {
-                      return buildMessageItem(messages!.result[index]);
-                    },
-                  )
-                : Center(
-                    child: CircularProgressIndicator(),
-                  ),
-          ),
-          buildInputArea(),
+          Expanded(child: _buildMessageList()),
+          _buildInputArea(),
         ],
       ),
     );
   }
 
-  Widget buildInputArea() {
+  Widget _buildMessageList() {
+    if (messages == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (messages!.result.isEmpty) {
+      return const Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.chat_bubble_outline, size: 48, color: Colors.black26),
+            SizedBox(height: 12),
+            Text('Nema poruka', style: TextStyle(color: Colors.black38)),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      controller: _scrollController,
+      reverse: true,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      itemCount: messages!.result.length,
+      itemBuilder: (_, i) => _buildMessageBubble(messages!.result[i]),
+    );
+  }
+
+  Widget _buildMessageBubble(Message msg) {
+    final isMine = msg.senderId == userId;
+    final time = msg.createdAt != null
+        ? DateFormat.Hm().format(msg.createdAt!)
+        : '';
+    final senderName =
+        '${msg.sender?.person?.firstName ?? ''} ${msg.sender?.person?.lastName ?? ''}'.trim();
+
     return Padding(
-      padding: const EdgeInsets.all(8.0),
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment:
+            isMine ? MainAxisAlignment.end : MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          if (!isMine) ...[
+            _buildAvatar(widget.recipientPhotoBytes, photoUrl: widget.recipientPhotoUrl),
+            const SizedBox(width: 8),
+          ],
+          Flexible(
+            child: Column(
+              crossAxisAlignment:
+                  isMine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+              children: [
+                if (!isMine && senderName.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 2, left: 4),
+                    child: Text(
+                      senderName,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colors.black54,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                Container(
+                  constraints: BoxConstraints(
+                    maxWidth: MediaQuery.of(context).size.width * 0.65,
+                  ),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: isMine
+                        ? Colors.blue
+                        : Colors.grey.shade200,
+                    borderRadius: BorderRadius.only(
+                      topLeft: const Radius.circular(16),
+                      topRight: const Radius.circular(16),
+                      bottomLeft: Radius.circular(isMine ? 16 : 4),
+                      bottomRight: Radius.circular(isMine ? 4 : 16),
+                    ),
+                  ),
+                  child: Text(
+                    msg.content ?? '',
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: isMine ? Colors.white : Colors.black87,
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(top: 2, left: 4, right: 4),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(time,
+                          style: const TextStyle(
+                              fontSize: 11, color: Colors.black38)),
+                      if (isMine) ...[
+                        const SizedBox(width: 4),
+                        Icon(
+                          msg.isRead == true
+                              ? Icons.done_all
+                              : Icons.done,
+                          size: 14,
+                          color: msg.isRead == true
+                              ? Colors.blue
+                              : Colors.black38,
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (isMine) ...[
+            const SizedBox(width: 8),
+            _buildMyAvatar(),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAvatar(String? profilePhotoBytes, {String? photoUrl}) {
+    if (profilePhotoBytes != null && profilePhotoBytes.isNotEmpty) {
+      try {
+        return CircleAvatar(
+          radius: 16,
+          backgroundImage: MemoryImage(base64Decode(profilePhotoBytes)),
+        );
+      } catch (_) {}
+    }
+    if (photoUrl != null && photoUrl.isNotEmpty) {
+      return CircleAvatar(
+        radius: 16,
+        backgroundImage: NetworkImage('${AppConfig.serverBase}$photoUrl'),
+      );
+    }
+    return const CircleAvatar(
+      radius: 16,
+      child: Icon(Icons.person, size: 16),
+    );
+  }
+
+  Widget _buildMyAvatar() {
+    // Prefer in-memory bytes; fall back to network URL if bytes not loaded.
+    if (Authorization.profilePhotoBytes != null &&
+        Authorization.profilePhotoBytes!.isNotEmpty) {
+      return _buildAvatar(Authorization.profilePhotoBytes);
+    }
+    final photoPath = Authorization.profilePhoto;
+    if (photoPath != null && photoPath.isNotEmpty) {
+      return CircleAvatar(
+        radius: 16,
+        backgroundImage: NetworkImage('${AppConfig.serverBase}$photoPath'),
+      );
+    }
+    return const CircleAvatar(
+      radius: 16,
+      child: Icon(Icons.person, size: 16),
+    );
+  }
+
+  Widget _buildInputArea() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        border: Border(top: BorderSide(color: Colors.grey.shade200)),
+      ),
       child: Row(
         children: [
           Expanded(
             child: TextField(
               controller: _messageController,
+              minLines: 1,
+              maxLines: 4,
               decoration: InputDecoration(
-                hintText: 'Type your message...',
+                hintText: 'Napišite poruku...',
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(24),
+                  borderSide: BorderSide(color: Colors.grey.shade300),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(24),
+                  borderSide: BorderSide(color: Colors.grey.shade300),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(24),
+                  borderSide: const BorderSide(color: Colors.blue),
+                ),
+                filled: true,
+                fillColor: Colors.grey.shade50,
               ),
+              onSubmitted: (_) => _sendMessage(),
             ),
           ),
-          SizedBox(width: 8),
-          ElevatedButton(
-            style: ButtonStyle(
-                backgroundColor: MaterialStateProperty.all(Colors.blue)),
-            onPressed: () async {
-              await sendMessage();
-            },
-            child: Icon(
-              Icons.send,
-              color: Colors.white,
+          const SizedBox(width: 8),
+          Material(
+            color: Colors.blue,
+            borderRadius: BorderRadius.circular(24),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(24),
+              onTap: _sendMessage,
+              child: const Padding(
+                padding: EdgeInsets.all(12),
+                child: Icon(Icons.send, color: Colors.white, size: 20),
+              ),
             ),
           ),
         ],
       ),
-    );
-  }
-
-  Future<void> sendMessage() async {
-    try {
-      message.content = _messageController.text;
-      message.senderId = userId;
-      message.recipientId = widget.recipientId;
-      message.conversationId = widget.conversationId;
-      message.createdAt = DateTime.now();
-      message.modifiedAt = DateTime.now();
-
-      await _messageProvider.addMessage(message);
-      await fetchMessages();
-      _messageController.text = "";
-
-      final jsonString = jsonEncode(message.toJson());
-
-      // Pass the JSON-encoded string in the list of arguments
-      await signalR.invoke('SendMessage', args: ['newMessage', jsonString]);
-    } catch (e) {
-      print(e.toString());
-    } finally {
-      widget.onConversationListUpdated();
-    }
-  }
-
-  Widget buildMessageItem(Message message) {
-    final isCurrentUserRecipient = message.recipientId == userId;
-
-    return ListTile(
-      title: Row(
-        mainAxisAlignment: isCurrentUserRecipient
-            ? MainAxisAlignment.end
-            : MainAxisAlignment.start,
-        children: [
-          if (!isCurrentUserRecipient)
-            _buildSenderAvatar(message.sender?.person?.profilePhotoBytes),
-          SizedBox(width: 8),
-          Column(
-            crossAxisAlignment: isCurrentUserRecipient
-                ? CrossAxisAlignment.end
-                : CrossAxisAlignment.start,
-            children: [
-              Text(
-                "${message.sender?.person?.firstName ?? ''} ${message.sender?.person?.lastName ?? ''}",
-              ),
-              Text(
-                DateFormat.Hm().format(message.createdAt!),
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey,
-                ),
-              ),
-            ],
-          ),
-          if (isCurrentUserRecipient)
-            _buildSenderAvatar(message.sender?.person?.profilePhotoBytes),
-        ],
-      ),
-      subtitle: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(10.0),
-          child: Container(
-            color: isCurrentUserRecipient
-                ? Color.fromARGB(255, 212, 211, 211)
-                : Colors.blue,
-            child: Padding(
-              padding: const EdgeInsets.all(10.0),
-              child: Text(
-                message.content!,
-                style: TextStyle(
-                  fontSize: 20,
-                  color: isCurrentUserRecipient ? Colors.black : Colors.white,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSenderAvatar(String? profilePhotoBytes) {
-    final imageProvider = profilePhotoBytes != null
-        ? MemoryImage(base64Decode(profilePhotoBytes))
-        : AssetImage("assets/images/user_placeholder.jpg")
-            as ImageProvider<Object>;
-
-    return CircleAvatar(
-      backgroundImage: imageProvider,
     );
   }
 }

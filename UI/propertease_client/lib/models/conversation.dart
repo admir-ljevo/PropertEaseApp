@@ -19,6 +19,7 @@ class Conversation {
   String? lastMessage;
   DateTime? lastSent;
   int? renterId;
+  int? unreadCount;
 
   // Constructor
   Conversation({
@@ -35,12 +36,11 @@ class Conversation {
     this.renterId,
     this.lastMessage,
     this.lastSent,
+    this.unreadCount,
   });
 
-  // Factory constructor to create an instance from a JSON object
   factory Conversation.fromJson(Map<String, dynamic> json) =>
       _$ConversationFromJson(json);
 
-  // Convert the instance to a JSON object
   Map<String, dynamic> toJson() => _$ConversationToJson(this);
 }

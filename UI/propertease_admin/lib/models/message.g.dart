@@ -29,6 +29,7 @@ Message _$MessageFromJson(Map<String, dynamic> json) => Message(
           : Conversation.fromJson(json['conversation'] as Map<String, dynamic>),
       conversationId: json['conversationId'] as int?,
       content: json['content'] as String?,
+      isRead: json['isRead'] as bool? ?? false,
     );
 
 Map<String, dynamic> _$MessageToJson(Message instance) => <String, dynamic>{
@@ -44,4 +45,5 @@ Map<String, dynamic> _$MessageToJson(Message instance) => <String, dynamic>{
       'conversation': instance.conversation,
       'conversationId': instance.conversationId,
       'content': instance.content,
+      'isRead': instance.isRead,
     };

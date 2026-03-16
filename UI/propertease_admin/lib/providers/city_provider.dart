@@ -8,4 +8,11 @@ class CityProvider extends BaseProvider<City> {
   City fromJson(data) {
     return City.fromJson(data);
   }
+
+  @override
+  Map<String, dynamic> toJson(City data) => {
+    'id': data.id ?? 0,
+    'name': data.name,
+    'countryId': data.countryId ?? 0,
+  };
 }

@@ -1,18 +1,24 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:propertease_client/config/app_config.dart';
 import 'package:propertease_client/providers/conversation_provider.dart';
-import 'package:propertease_client/providers/image_provider.dart';
+import 'package:propertease_client/providers/property_provider.dart';
 import 'package:propertease_client/screens/conversations/messaging_screen.dart';
 import 'package:propertease_client/screens/property/reviews/review_list.dart';
 import 'package:propertease_client/screens/reservations/reservation_add_screen.dart';
+import 'package:propertease_client/utils/authorization.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../models/conversation.dart';
 import '../../models/photo.dart';
 import '../../models/property.dart';
+import '../users/renter_profile_screen.dart';
+import 'property_compare_screen.dart';
 
+const _kPrimary = Color(0xFF115892);
+
+// ignore: must_be_immutable
 class PropertyDetailsScreen extends StatefulWidget {
   Property? property;
 
@@ -20,1329 +26,975 @@ class PropertyDetailsScreen extends StatefulWidget {
 
   @override
   State<StatefulWidget> createState() => PropertyDetailsScreenState();
-  // TODO: implement createState
 }
 
 class PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
-  late PhotoProvider _photoProvider;
   late ConversationProvider _conversationProvider;
-  int currentImageIndex = 0;
-  int maxImagesToShow = 5;
-  int startIndex = 5;
-  String? displayedImageBytes;
+  late PropertyProvider _propertyProvider;
+
+  final PageController _pageController = PageController();
+  int _currentPage = 0;
+
   Conversation conversation = Conversation();
   Conversation? newConversation;
-  TextEditingController _descriptionController = TextEditingController();
+  final TextEditingController _descriptionController = TextEditingController();
 
-  int? userId;
-  GlobalKey<FormState> formKey = GlobalKey<FormState>();
-  Future<void> getUserIdFromSharedPreferences() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    setState(() {
-      userId = int.tryParse(prefs.getString('userId')!)!;
-    });
-  }
+  int? get userId => Authorization.userId;
 
+  bool _loading = true;
+  bool _chatLoading = false;
+  Property? _property;
   List<Photo> images = [];
+  List<Property> recommendedProperties = [];
 
-  Future<void> addConversation() async {
-    try {
-      conversation.renterId = widget.property?.applicationUserId;
-      conversation.createdAt = DateTime.now();
-      conversation.propertyId = widget.property?.id;
-      conversation.clientId = userId;
-      await _conversationProvider.addAsync(conversation);
-      newConversation = await _conversationProvider.getLastByClient(userId!);
-    } catch (e) {
-      print(e.toString());
-    }
-  }
-
-  @override
-  void didChangeDependencies() {
-    // TODO: implement didChangeDependencies
-    super.didChangeDependencies();
-    _photoProvider = context.read<PhotoProvider>();
-    _conversationProvider = context.read<ConversationProvider>();
-    _descriptionController.text = widget.property?.description ?? '';
-    fetchImages();
-  }
-
-  Future initForm() async {
-    fetchImages();
-  }
+  // ── lifecycle ────────────────────────────────────────────────────────────
 
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
-    _photoProvider = context.read<PhotoProvider>();
     _conversationProvider = context.read<ConversationProvider>();
-    _descriptionController.text = widget.property?.description ?? '';
-    getUserIdFromSharedPreferences();
-    fetchImages();
+    _propertyProvider = context.read<PropertyProvider>();
+    _loadFullProperty();
+    _fetchRecommendations();
   }
 
-  void refreshConversations() {}
-
-  void fetchImages() async {
-    // Get the photo provider from the context
-    final photoProvider = context.read<PhotoProvider>();
-
-    final propertyId =
-        widget.property?.id; // Replace with the actual property ID
-    final fetchedImages = await photoProvider.getImagesByProperty(propertyId);
-
-    setState(() {
-      images = fetchedImages;
-      if (images.isNotEmpty) displayedImageBytes = images[0].imageBytes;
-    });
+  @override
+  void dispose() {
+    _pageController.dispose();
+    _descriptionController.dispose();
+    super.dispose();
   }
 
-  void goToPreviousImage() {
-    if (currentImageIndex > 0) {
-      setState(() {
-        currentImageIndex--;
-        displayedImageBytes = images[currentImageIndex].imageBytes;
-      });
+  // ── data loading ──────────────────────────────────────────────────────────
+
+  Future<void> _loadFullProperty() async {
+    final id = widget.property?.id;
+    if (id == null) {
+      if (mounted) setState(() => _loading = false);
+      return;
+    }
+    try {
+      final full = await _propertyProvider.getById(id);
+      final validImages = (full.photos ?? [])
+          .where((p) => p.url != null && p.url!.isNotEmpty && p.url != 'a')
+          .toList();
+      if (mounted) {
+        setState(() {
+          _property = full;
+          images = validImages;
+          _currentPage = 0;
+          _descriptionController.text = full.description ?? '';
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('loadFullProperty error: $e');
+      if (mounted) setState(() => _loading = false);
     }
   }
 
-  void goToNextImage() {
-    if (currentImageIndex < images.length - 1) {
-      setState(() {
-        currentImageIndex++;
-        displayedImageBytes = images[currentImageIndex].imageBytes;
-      });
+  void _fetchRecommendations() async {
+    final id = widget.property?.id;
+    if (id == null) return;
+    try {
+      final result = await _propertyProvider.getRecommendations(id);
+      if (mounted) setState(() => recommendedProperties = result);
+    } catch (e) {
+      debugPrint('Recommendations error: $e');
     }
   }
 
-  Widget buildImageRow(
-      int currentImageIndex, String displayedImageUrl, List<Photo> images) {
-    return Container(
-      height: 120, // Set the desired height for the image row
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: images.length,
-        itemBuilder: (context, index) {
-          final image = images[index];
-          return Padding(
-            padding: const EdgeInsets.all(4.0),
-            child: Opacity(
-              opacity: image.imageBytes == displayedImageUrl ? 0.3 : 1.0,
-              child: Image.memory(
-                base64Decode(image.imageBytes!),
-                width: 100,
-                height: 100,
-                fit: BoxFit.cover,
-              ),
-            ),
-          );
-        },
+  Future<void> addConversation() async {
+    try {
+      final existing = await _conversationProvider.getByPropertyAndRenter(
+        _property!.id!,
+        _property!.applicationUserId!,
+      );
+      final mine = existing.where((c) => c.clientId == userId).firstOrNull;
+      if (mine != null) {
+        newConversation = mine;
+        return;
+      }
+
+      final conv = Conversation()
+        ..renterId = _property?.applicationUserId
+        ..createdAt = DateTime.now()
+        ..propertyId = _property?.id
+        ..clientId = userId;
+
+      try {
+        newConversation = await _conversationProvider.addAsync(conv);
+      } catch (_) {}
+
+      if (newConversation == null || (newConversation!.id ?? 0) == 0) {
+        final afterCreate = await _conversationProvider.getByPropertyAndRenter(
+          _property!.id!,
+          _property!.applicationUserId!,
+        );
+        newConversation =
+            afterCreate.where((c) => c.clientId == userId).firstOrNull;
+      }
+    } catch (e) {
+      debugPrint(e.toString());
+    }
+  }
+
+  // ── build ─────────────────────────────────────────────────────────────────
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return Scaffold(
+        backgroundColor: Colors.grey.shade100,
+        appBar: AppBar(
+          backgroundColor: _kPrimary,
+          foregroundColor: Colors.white,
+          title: const Text('Detalji nekretnine',
+              style: TextStyle(fontWeight: FontWeight.bold)),
+        ),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final p = _property;
+    if (p == null) {
+      return Scaffold(
+        appBar: AppBar(
+          backgroundColor: _kPrimary,
+          foregroundColor: Colors.white,
+          title: const Text('Detalji nekretnine'),
+        ),
+        body: const Center(child: Text('Nekretnina nije pronađena.')),
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: Colors.grey.shade100,
+      appBar: AppBar(
+        backgroundColor: _kPrimary,
+        foregroundColor: Colors.white,
+        title: Text(
+          p.name ?? '',
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+          overflow: TextOverflow.ellipsis,
+        ),
+        elevation: 0,
+      ),
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (images.isNotEmpty) _buildPhotoCarousel(),
+            _buildHeaderCard(p),
+            _buildStatsCard(p),
+            _buildAmenitiesCard(p),
+            if ((p.latitude ?? 0) != 0 && (p.longitude ?? 0) != 0)
+              _buildMapSection(p),
+            _buildDescriptionCard(),
+            _buildActions(p),
+            if (recommendedProperties.isNotEmpty) _buildRecommended(),
+            const SizedBox(height: 24),
+          ],
+        ),
       ),
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-        appBar: AppBar(title: const Text("Property details")),
-        body: SingleChildScrollView(
-          child: Column(
+  // ── Photo carousel ────────────────────────────────────────────────────────
+
+  Widget _buildPhotoCarousel() {
+    return Column(
+      children: [
+        SizedBox(
+          height: 260,
+          child: PageView.builder(
+            controller: _pageController,
+            itemCount: images.length,
+            onPageChanged: (i) => setState(() => _currentPage = i),
+            itemBuilder: (_, i) => Image.network(
+              '${AppConfig.serverBase}${images[i].url ?? ''}',
+              fit: BoxFit.cover,
+              loadingBuilder: (_, child, progress) =>
+                  progress == null ? child : _photoPlaceholder(),
+              errorBuilder: (_, __, ___) => _photoPlaceholder(),
+            ),
+          ),
+        ),
+        // Dots + counter row
+        Container(
+          color: Colors.black87,
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Center(
-                child: Text(
-                  widget.property?.name ?? '',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
+              if (images.length > 1) ...[
+                ...List.generate(
+                  images.length,
+                  (i) => AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    margin: const EdgeInsets.symmetric(horizontal: 3),
+                    width: _currentPage == i ? 16 : 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: _currentPage == i
+                          ? Colors.white
+                          : Colors.white38,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
                   ),
                 ),
+                const SizedBox(width: 12),
+              ],
+              Text(
+                '${_currentPage + 1} / ${images.length}',
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500),
               ),
-              Stack(
-                alignment: Alignment.center,
-                children: [
-                  if (images.isNotEmpty)
-                    Container(
-                      constraints: const BoxConstraints(
-                        maxWidth: 700,
-                        maxHeight: 300,
-                      ),
-                      child: Stack(
-                        children: [
-                          Center(
-                            child: Container(
-                              constraints: const BoxConstraints(
-                                maxWidth: 700,
-                                maxHeight: 300,
-                              ),
-                              child: Image.memory(
-                                base64Decode(
-                                    images[currentImageIndex].imageBytes!),
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                          ),
-                          Center(
-                            child: Row(
-                              children: [
-                                Positioned(
-                                  child: Container(
-                                    width: 40,
-                                    height: 40,
-                                    decoration: BoxDecoration(
-                                      color: Colors.blue,
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
-                                    child: IconButton(
-                                      icon: const Icon(
-                                        Icons.arrow_back,
-                                        color: Colors.white,
-                                        size: 24,
-                                      ),
-                                      onPressed: goToPreviousImage,
-                                      color: Colors.blue,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Center(
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                Positioned(
-                                  child: Container(
-                                    width: 40,
-                                    height: 40,
-                                    decoration: BoxDecoration(
-                                      color: Colors.blue,
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
-                                    child: IconButton(
-                                      icon: const Icon(
-                                        Icons.arrow_forward,
-                                        color: Colors.white,
-                                        size: 24,
-                                      ),
-                                      onPressed: goToNextImage,
-                                      color: Colors.blue,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                  else
-                    Image.asset(
-                      "assets/images/house_placeholder.jpg",
-                      height: 300,
-                      width: 300,
-                      fit: BoxFit.cover,
-                    ),
-                ],
-              ),
-              const Divider(
-                color: Colors.blue,
-                thickness: 2,
-              ),
-              if (images.isNotEmpty)
-                SingleChildScrollView(
-                  child: buildImageRow(
-                      currentImageIndex, displayedImageBytes!, images),
-                ),
-              const Divider(
-                color: Colors.blue,
-                thickness: 2,
-              ),
-              Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: Colors.blue,
-                                borderRadius: BorderRadius.circular(
-                                    10), // Adjust the radius as needed
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                      "Renter: ${widget.property?.applicationUser?.userName}",
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 20,
-                                      ),
-                                    ),
-                                    const Icon(
-                                      Icons.person,
-                                      size: 40,
-                                      color: Colors.white,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        )
-                      ],
-                    ),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: Colors.blue,
-                                borderRadius: BorderRadius.circular(
-                                    10), // Adjust the radius as needed
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                      "Property type: ${widget.property?.propertyType?.name ?? ''}",
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 20,
-                                      ),
-                                    ),
-                                    const Icon(
-                                      Icons.house,
-                                      size: 40,
-                                      color: Colors.white,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        )
-                      ],
-                    ),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: Colors.blue,
-                                borderRadius: BorderRadius.circular(
-                                    10), // Adjust the radius as needed
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                      "City: ${widget.property?.city?.name ?? ''}",
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 20,
-                                      ),
-                                    ),
-                                    const Icon(
-                                      Icons.location_city,
-                                      size: 40,
-                                      color: Colors.white,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        )
-                      ],
-                    ),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: Colors.blue,
-                                borderRadius: BorderRadius.circular(
-                                    10), // Adjust the radius as needed
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                      "Address: ${widget.property?.address ?? ''}",
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 20,
-                                      ),
-                                    ),
-                                    const Icon(
-                                      Icons.location_pin,
-                                      size: 40,
-                                      color: Colors.white,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        )
-                      ],
-                    ),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: Colors.blue,
-                                borderRadius: BorderRadius.circular(
-                                    10), // Adjust the radius as needed
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    if (widget.property!.isMonthly!)
-                                      Text(
-                                        "Price: ${widget.property?.monthlyPrice!}BAM/Month",
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 20,
-                                        ),
-                                      ),
-                                    if (widget.property!.isDaily!)
-                                      Text(
-                                        "Price: ${widget.property?.monthlyPrice!}BAM/Day",
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 20,
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        )
-                      ],
-                    )
-                  ]),
-              const Divider(
-                color: Colors.blue,
-                thickness: 2,
-              ),
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    Column(
-                      children: [
-                        const Text(
-                          "Rooms:",
-                          style: TextStyle(fontSize: 20),
-                        ),
-                        Row(
-                          children: [
-                            Text(
-                              "${widget.property?.numberOfRooms ?? ''}",
-                              style: const TextStyle(fontSize: 20),
-                            ),
-                            const Icon(
-                              Icons.bed,
-                            )
-                          ],
-                        )
-                      ],
-                    ),
-                    Column(
-                      children: [
-                        const Text(
-                          "Bathrooms:",
-                          style: TextStyle(fontSize: 20),
-                        ),
-                        Row(
-                          children: [
-                            Text(
-                              "${widget.property?.numberOfBathrooms ?? ''}",
-                              style: const TextStyle(fontSize: 20),
-                            ),
-                            const Icon(
-                              Icons.bathtub,
-                            )
-                          ],
-                        )
-                      ],
-                    ),
-                    Column(
-                      children: [
-                        const Text(
-                          "Garages:",
-                          style: TextStyle(fontSize: 20),
-                        ),
-                        Row(
-                          children: [
-                            Text(
-                              "${widget.property?.numberOfGarages ?? ''}",
-                              style: const TextStyle(fontSize: 20),
-                            ),
-                            const Icon(
-                              Icons.garage,
-                            )
-                          ],
-                        )
-                      ],
-                    )
-                  ],
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    Column(
-                      children: [
-                        const Text(
-                          "Parking size:",
-                          style: TextStyle(fontSize: 20),
-                        ),
-                        Row(
-                          children: [
-                            Text(
-                              "${widget.property?.parkingSize ?? ''}",
-                              style: const TextStyle(fontSize: 20),
-                            ),
-                            const Icon(
-                              Icons.local_parking,
-                            )
-                          ],
-                        )
-                      ],
-                    ),
-                    Column(
-                      children: [
-                        const Text(
-                          "Square meters:",
-                          style: TextStyle(fontSize: 20),
-                        ),
-                        Row(
-                          children: [
-                            Text(
-                              "${widget.property?.squareMeters ?? ''} m2",
-                              style: const TextStyle(fontSize: 20),
-                            ),
-                            const Icon(
-                              Icons.aspect_ratio,
-                            )
-                          ],
-                        )
-                      ],
-                    ),
-                    Column(
-                      children: [
-                        const Text(
-                          "Max guests:",
-                          style: TextStyle(fontSize: 20),
-                        ),
-                        Row(
-                          children: [
-                            Text(
-                              "${widget.property?.capacity ?? ''}",
-                              style: const TextStyle(fontSize: 20),
-                            ),
-                            const Icon(
-                              Icons.man,
-                            )
-                          ],
-                        )
-                      ],
-                    )
-                  ],
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    Column(
-                      children: [
-                        const Text(
-                          "Garden size:",
-                          style: TextStyle(fontSize: 20),
-                        ),
-                        Row(
-                          children: [
-                            Text(
-                              "${widget.property?.gardenSize ?? ''}m2",
-                              style: const TextStyle(fontSize: 20),
-                            ),
-                            const Icon(
-                              Icons.aspect_ratio,
-                            )
-                          ],
-                        )
-                      ],
-                    ),
-                    Column(
-                      children: [
-                        const Text(
-                          "Available:",
-                          style: TextStyle(fontSize: 20),
-                        ),
-                        Row(
-                          children: [
-                            if (widget.property!.isAvailable!)
-                              const Icon(
-                                Icons.check,
-                                color: Colors.green,
-                                size: 30,
-                              ),
-                            if (widget.property!.isAvailable! == false)
-                              const Icon(
-                                Icons.close,
-                                color: Colors.red,
-                                size: 30,
-                              )
-                          ],
-                        )
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const Divider(
-                thickness: 2,
-                color: Colors.blue,
-              ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: Colors.blue,
-                            width: 2,
-                          ),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Row(children: [
-                            const Text(
-                              "Furnished:",
-                              style: TextStyle(fontSize: 18),
-                            ),
-                            if (widget.property!.isFurnished!)
-                              const Icon(
-                                Icons.check,
-                                color: Colors.green,
-                                size: 30,
-                              ),
-                            if (widget.property!.isFurnished! == false)
-                              const Icon(
-                                Icons.close,
-                                color: Colors.red,
-                                size: 30,
-                              )
-                          ]),
-                        ),
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: Colors.blue,
-                            width: 2,
-                          ),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Row(children: [
-                            const Text(
-                              "Air condition:",
-                              style: TextStyle(fontSize: 18),
-                            ),
-                            if (widget.property!.hasAirCondition!)
-                              const Icon(
-                                Icons.check,
-                                color: Colors.green,
-                                size: 30,
-                              ),
-                            if (widget.property!.hasAirCondition! == false)
-                              const Icon(
-                                Icons.close,
-                                color: Colors.red,
-                                size: 30,
-                              )
-                          ]),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: Colors.blue,
-                            width: 2,
-                          ),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Row(children: [
-                            const Text(
-                              "Alarm:",
-                              style: TextStyle(fontSize: 18),
-                            ),
-                            if (widget.property!.hasAlarm!)
-                              const Icon(
-                                Icons.check,
-                                color: Colors.green,
-                                size: 30,
-                              ),
-                            if (widget.property!.hasAlarm! == false)
-                              const Icon(
-                                Icons.close,
-                                color: Colors.red,
-                                size: 30,
-                              )
-                          ]),
-                        ),
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: Colors.blue,
-                            width: 2,
-                          ),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Row(children: [
-                            const Text(
-                              "Surveilance:",
-                              style: TextStyle(fontSize: 18),
-                            ),
-                            if (widget.property!.hasSurveilance!)
-                              const Icon(
-                                Icons.check,
-                                color: Colors.green,
-                                size: 30,
-                              ),
-                            if (widget.property!.hasSurveilance! == false)
-                              const Icon(
-                                Icons.close,
-                                color: Colors.red,
-                                size: 30,
-                              )
-                          ]),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: Colors.blue,
-                            width: 2,
-                          ),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Row(children: [
-                            const Text(
-                              "Heating: ",
-                              style: TextStyle(fontSize: 18),
-                            ),
-                            if (widget.property!.hasOwnHeatingSystem!)
-                              const Icon(
-                                Icons.check,
-                                color: Colors.green,
-                                size: 30,
-                              ),
-                            if (widget.property!.hasOwnHeatingSystem! == false)
-                              const Icon(
-                                Icons.close,
-                                color: Colors.red,
-                                size: 30,
-                              )
-                          ]),
-                        ),
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: Colors.blue,
-                            width: 2,
-                          ),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Row(children: [
-                            const Text(
-                              "Wi-fi:",
-                              style: TextStyle(fontSize: 18),
-                            ),
-                            if (widget.property!.hasWiFi!)
-                              const Icon(
-                                Icons.check,
-                                color: Colors.green,
-                                size: 30,
-                              ),
-                            if (widget.property!.hasWiFi! == false)
-                              const Icon(
-                                Icons.close,
-                                color: Colors.red,
-                                size: 30,
-                              )
-                          ]),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: Colors.blue,
-                            width: 2,
-                          ),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Row(children: [
-                            const Text(
-                              "TV:",
-                              style: TextStyle(fontSize: 18),
-                            ),
-                            if (widget.property!.hasTV!)
-                              const Icon(
-                                Icons.check,
-                                color: Colors.green,
-                                size: 30,
-                              ),
-                            if (widget.property!.hasTV! == false)
-                              const Icon(
-                                Icons.close,
-                                color: Colors.red,
-                                size: 30,
-                              )
-                          ]),
-                        ),
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: Colors.blue,
-                            width: 2,
-                          ),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Row(children: [
-                            const Text(
-                              "Cable TV:",
-                              style: TextStyle(fontSize: 18),
-                            ),
-                            if (widget.property!.hasCableTV!)
-                              const Icon(
-                                Icons.check,
-                                color: Colors.green,
-                                size: 30,
-                              ),
-                            if (widget.property!.hasCableTV! == false)
-                              const Icon(
-                                Icons.close,
-                                color: Colors.red,
-                                size: 30,
-                              )
-                          ]),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: Colors.blue,
-                            width: 2,
-                          ),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Row(children: [
-                            const Text(
-                              "Parking:",
-                              style: TextStyle(fontSize: 18),
-                            ),
-                            if (widget.property!.hasParking!)
-                              const Icon(
-                                Icons.check,
-                                color: Colors.green,
-                                size: 30,
-                              ),
-                            if (widget.property!.hasParking! == false)
-                              const Icon(
-                                Icons.close,
-                                color: Colors.red,
-                                size: 30,
-                              )
-                          ]),
-                        ),
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: Colors.blue,
-                            width: 2,
-                          ),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Row(children: [
-                            const Text(
-                              "Pool:",
-                              style: TextStyle(fontSize: 18),
-                            ),
-                            if (widget.property!.hasPool!)
-                              const Icon(
-                                Icons.check,
-                                color: Colors.green,
-                                size: 30,
-                              ),
-                            if (widget.property!.hasPool! == false)
-                              const Icon(
-                                Icons.close,
-                                color: Colors.red,
-                                size: 30,
-                              )
-                          ]),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: Colors.blue,
-                            width: 2,
-                          ),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Row(children: [
-                            const Text(
-                              "Balcony:",
-                              style: TextStyle(fontSize: 18),
-                            ),
-                            if (widget.property!.hasBalcony!)
-                              const Icon(
-                                Icons.check,
-                                color: Colors.green,
-                                size: 30,
-                              ),
-                            if (widget.property!.hasBalcony! == false)
-                              const Icon(
-                                Icons.close,
-                                color: Colors.red,
-                                size: 30,
-                              )
-                          ]),
-                        ),
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: Colors.blue,
-                            width: 2,
-                          ),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Row(children: [
-                            const Text(
-                              "Garage:",
-                              style: TextStyle(fontSize: 18),
-                            ),
-                            if (widget.property!.hasGarage!)
-                              const Icon(
-                                Icons.check,
-                                color: Colors.green,
-                                size: 30,
-                              ),
-                            if (widget.property!.hasGarage! == false)
-                              const Icon(
-                                Icons.close,
-                                color: Colors.red,
-                                size: 30,
-                              )
-                          ]),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const Divider(thickness: 2, color: Colors.blue),
-              Column(
-                children: [
-                  const Padding(
-                    padding: EdgeInsets.all(8.0),
-                    child: Row(
-                      children: [
-                        Text(
-                          "Detailed information",
-                          style: TextStyle(
-                              fontSize: 20, fontWeight: FontWeight.bold),
-                        ),
-                        Icon(
-                          Icons.info,
-                          color: Colors.blue,
-                        ),
-                      ],
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: TextField(
-                      minLines: 5,
-                      maxLines:
-                          12, // Set the minimum and maximum number of lines
-                      controller: _descriptionController,
-                      readOnly: true,
-                      decoration: const InputDecoration(
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                  )
-                ],
-              ),
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Expanded(
-                          child: Container(
-                        decoration: BoxDecoration(
-                          border: Border.all(
-                            color: Colors.blue, // Set the border color
-                            width: 2.0, // Set the border width
-                          ),
-                          borderRadius: BorderRadius.circular(
-                              20.0), // Set the border radius
-                        ),
-                        child: ElevatedButton(
-                          onPressed: () {},
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor:
-                                Colors.white, // Set the button background color
-                          ),
-                          child: const Column(
-                            children: [
-                              Text(
-                                "Compare",
-                                style:
-                                    TextStyle(color: Colors.blue, fontSize: 20),
-                              ), // Set text color
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.house,
-                                    color: Colors.blue,
-                                    size: 40,
-                                  ),
-                                  Icon(
-                                    Icons.swap_horiz,
-                                    color: Colors.blue,
-                                    size: 40,
-                                  ),
-                                  Icon(
-                                    Icons.house,
-                                    color: Colors.black,
-                                    size: 40,
-                                  ),
-                                ],
-                              )
-                            ],
-                          ),
-                        ),
-                      )),
-                    ),
-                    Expanded(
-                        child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(20.0),
-                        gradient: const LinearGradient(
-                          colors: [
-                            Colors.black,
-                            Colors.blue
-                          ], // Define gradient colors
-                          begin: Alignment.centerLeft,
-                          end: Alignment.centerRight,
-                        ),
-                      ),
-                      child: ElevatedButton(
-                        onPressed: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) => ReviewListScreen(
-                                id: widget.property?.id!,
-                              ),
-                            ),
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          primary: Colors
-                              .transparent, // Make the button background transparent
-                          elevation: 0, // Remove button elevation (shadow)
-                        ),
-                        child: const Column(
-                          children: [
-                            Text(
-                              "Reviews",
-                              style:
-                                  TextStyle(color: Colors.white, fontSize: 20),
-                            ),
-                            Icon(
-                              Icons.star,
-                              color: Colors.white,
-                              size: 40,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ))
-                  ],
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                        child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(20.0),
-                        gradient: const LinearGradient(
-                          colors: [
-                            Colors.black,
-                            Colors.blue
-                          ], // Define gradient colors
-                          begin: Alignment.centerLeft,
-                          end: Alignment.centerRight,
-                        ),
-                      ),
-                      child: ElevatedButton(
-                        onPressed: () async {
-                          await addConversation();
-                          await Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) => MessageListScreen(
-                                conversationId: newConversation?.id,
-                                recipientId: widget.property!.applicationUserId,
-                              ),
-                            ),
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          primary: Colors
-                              .transparent, // Make the button background transparent
-                          elevation: 0, // Remove button elevation (shadow)
-                        ),
-                        child: const Column(
-                          children: [
-                            Text(
-                              "Ask a question",
-                              style:
-                                  TextStyle(color: Colors.white, fontSize: 20),
-                            ),
-                            Icon(
-                              Icons.message,
-                              color: Colors.white,
-                              size: 40,
-                            ),
-                          ],
-                        ),
-                      ),
-                    )),
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Expanded(
-                          child: Container(
-                        decoration: BoxDecoration(
-                          border: Border.all(
-                            color: Colors.blue, // Set the border color
-                            width: 2.0, // Set the border width
-                          ),
-                          borderRadius: BorderRadius.circular(
-                              20.0), // Set the border radius
-                        ),
-                        child: ElevatedButton(
-                          onPressed: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (context) => ReservationAddScreen(
-                                  property: widget.property,
-                                ),
-                              ),
-                            );
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor:
-                                Colors.white, // Set the button background color
-                          ),
-                          child: const Column(
-                            children: [
-                              Text(
-                                "Reservation",
-                                style:
-                                    TextStyle(color: Colors.blue, fontSize: 20),
-                              ), // Set text color
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.house,
-                                    color: Colors.black,
-                                    size: 40,
-                                  ),
-                                ],
-                              )
-                            ],
-                          ),
-                        ),
-                      )),
-                    ),
-                  ],
-                ),
-              )
             ],
           ),
-        ));
+        ),
+      ],
+    );
+  }
+
+  Widget _photoPlaceholder() => Container(
+        color: Colors.grey.shade300,
+        child: const Icon(Icons.home_work,
+            size: 72, color: Colors.grey),
+      );
+
+  // ── Header card ───────────────────────────────────────────────────────────
+
+  Widget _buildHeaderCard(Property p) {
+    return _DetailCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Name + availability
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  p.name ?? '',
+                  style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87),
+                ),
+              ),
+              const SizedBox(width: 8),
+              _AvailabilityBadge(available: p.isAvailable ?? false, availableFrom: p.availableFrom),
+            ],
+          ),
+          const SizedBox(height: 10),
+          // Location row
+          _InfoRow(
+              icon: Icons.location_city,
+              text:
+                  '${p.city?.name ?? ''}  •  ${p.propertyType?.name ?? ''}'),
+          if ((p.address ?? '').isNotEmpty)
+            _InfoRow(icon: Icons.place_outlined, text: p.address!),
+          if (p.applicationUser != null)
+            GestureDetector(
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) =>
+                        RenterProfileScreen(renter: p.applicationUser, renterId: p.applicationUserId)),
+              ),
+              child: _InfoRow(
+                  icon: Icons.person_outline,
+                  text:
+                      'Izdavač: ${p.applicationUser!.userName ?? ''}  ›'),
+            ),
+          const SizedBox(height: 12),
+          // Price chips
+          Wrap(
+            spacing: 8,
+            children: [
+              if (p.isMonthly == true)
+                _PriceChip(
+                    '${p.monthlyPrice?.toStringAsFixed(0) ?? '—'} BAM/mj.'),
+              if (p.isDaily == true)
+                _PriceChip(
+                    '${p.dailyPrice?.toStringAsFixed(0) ?? '—'} BAM/dan'),
+              if ((p.averageRating ?? 0) > 0)
+                _RatingChip(p.averageRating!),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Stats card ────────────────────────────────────────────────────────────
+
+  Widget _buildStatsCard(Property p) {
+    final stats = <_StatItem>[
+      _StatItem(Icons.bed_outlined, '${p.numberOfRooms ?? 0}', 'Sobe'),
+      _StatItem(Icons.bathtub_outlined, '${p.numberOfBathrooms ?? 0}',
+          'Kupaonice'),
+      _StatItem(Icons.aspect_ratio, '${p.squareMeters ?? 0} m²', 'Površina'),
+      _StatItem(Icons.people_outline, '${p.capacity ?? 0}', 'Gosti'),
+      if ((p.gardenSize ?? 0) > 0)
+        _StatItem(Icons.park_outlined, '${p.gardenSize} m²', 'Vrt'),
+      if ((p.numberOfGarages ?? 0) > 0)
+        _StatItem(Icons.garage_outlined, '${p.numberOfGarages}', 'Garaže'),
+      if ((p.parkingSize ?? 0) > 0)
+        _StatItem(Icons.local_parking, '${p.parkingSize}', 'Parking'),
+    ];
+
+    return _DetailCard(
+      title: 'Karakteristike',
+      titleIcon: Icons.info_outline,
+      child: GridView.count(
+        crossAxisCount: 3,
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        childAspectRatio: 2.2,
+        children: stats
+            .map((s) => _StatCell(icon: s.icon, value: s.value, label: s.label))
+            .toList(),
+      ),
+    );
+  }
+
+  // ── Amenities card ────────────────────────────────────────────────────────
+
+  Widget _buildAmenitiesCard(Property p) {
+    final amenities = <_AmenityItem>[
+      _AmenityItem(Icons.wifi, 'Wi-Fi', p.hasWiFi == true),
+      _AmenityItem(Icons.chair_outlined, 'Namješteno', p.isFurnished == true),
+      _AmenityItem(Icons.balcony_outlined, 'Balkon', p.hasBalcony == true),
+      _AmenityItem(Icons.pool, 'Bazen', p.hasPool == true),
+      _AmenityItem(Icons.ac_unit, 'Klima', p.hasAirCondition == true),
+      _AmenityItem(Icons.security, 'Alarm', p.hasAlarm == true),
+      _AmenityItem(Icons.tv, 'TV', p.hasTV == true),
+      _AmenityItem(Icons.cable, 'Kabelska TV', p.hasCableTV == true),
+      _AmenityItem(
+          Icons.videocam_outlined, 'Nadzor', p.hasSurveilance == true),
+      _AmenityItem(Icons.local_parking, 'Parking', p.hasParking == true),
+      _AmenityItem(Icons.garage_outlined, 'Garaža', p.hasGarage == true),
+      _AmenityItem(
+          Icons.heat_pump_outlined, 'Grijanje', p.hasOwnHeatingSystem == true),
+    ];
+
+    return _DetailCard(
+      title: 'Sadržaji',
+      titleIcon: Icons.checklist_outlined,
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: amenities.map((a) => _AmenityChip(a)).toList(),
+      ),
+    );
+  }
+
+  // ── Map section ───────────────────────────────────────────────────────────
+
+  Widget _buildMapSection(Property p) {
+    final point = LatLng(p.latitude!, p.longitude!);
+    return _DetailCard(
+      title: 'Lokacija',
+      titleIcon: Icons.map_outlined,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: SizedBox(
+          height: 220,
+          child: FlutterMap(
+            options: MapOptions(
+              center: point,
+              zoom: 14.0,
+              interactiveFlags:
+                  InteractiveFlag.pinchZoom | InteractiveFlag.drag,
+            ),
+            children: [
+              TileLayer(
+                urlTemplate:
+                    'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                userAgentPackageName: 'com.propertease.client',
+              ),
+              MarkerLayer(
+                markers: [
+                  Marker(
+                    point: point,
+                    width: 40,
+                    height: 40,
+                    builder: (_) => const Icon(Icons.location_pin,
+                        color: Colors.red, size: 40),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Description card ──────────────────────────────────────────────────────
+
+  Widget _buildDescriptionCard() {
+    if (_descriptionController.text.isEmpty) return const SizedBox.shrink();
+    return _DetailCard(
+      title: 'Opis',
+      titleIcon: Icons.notes_outlined,
+      child: TextField(
+        controller: _descriptionController,
+        minLines: 3,
+        maxLines: 12,
+        readOnly: true,
+        style: const TextStyle(fontSize: 14, height: 1.6),
+        decoration: InputDecoration(
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide(color: Colors.grey.shade200),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide(color: Colors.grey.shade200),
+          ),
+          filled: true,
+          fillColor: Colors.grey.shade50,
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        ),
+      ),
+    );
+  }
+
+  // ── Action buttons ────────────────────────────────────────────────────────
+
+  Widget _buildActions(Property p) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 0),
+      child: Column(
+        children: [
+          // Top row: Reserve + Chat
+          Row(
+            children: [
+              Expanded(
+                child: _ActionButton(
+                  icon: Icons.calendar_month,
+                  label: 'Rezerviši',
+                  color: _kPrimary,
+                  textColor: Colors.white,
+                  onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => ReservationAddScreen(property: p),
+                  )),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _ActionButton(
+                  icon: Icons.message_outlined,
+                  label: 'Pitanje',
+                  color: Colors.white,
+                  textColor: _kPrimary,
+                  borderColor: _kPrimary,
+                  isLoading: _chatLoading,
+                  onTap: _chatLoading
+                      ? null
+                      : () async {
+                          setState(() => _chatLoading = true);
+                          await addConversation();
+                          setState(() => _chatLoading = false);
+                          if (newConversation == null ||
+                              newConversation!.id == null ||
+                              newConversation!.id == 0) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                      'Nije moguće otvoriti chat. Pokušajte ponovo.'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                            return;
+                          }
+                          if (!context.mounted) return;
+                          await Navigator.of(context).push(MaterialPageRoute(
+                            builder: (_) => MessageListScreen(
+                              conversationId: newConversation?.id,
+                              recipientId: p.applicationUserId,
+                              chatTitle: p.name ?? 'Chat',
+                              otherUserPhotoBytes:
+                                  p.applicationUser?.person?.profilePhotoBytes,
+                              myPhotoBytes: Authorization.profilePhotoBytes,
+                            ),
+                          ));
+                        },
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          // Bottom row: Compare + Reviews
+          Row(
+            children: [
+              Expanded(
+                child: _ActionButton(
+                  icon: Icons.compare_arrows,
+                  label: 'Usporedi',
+                  color: Colors.white,
+                  textColor: _kPrimary,
+                  borderColor: _kPrimary,
+                  onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => PropertyCompareScreen(propertyA: p),
+                  )),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _ActionButton(
+                  icon: Icons.star_outline,
+                  label: 'Recenzije',
+                  color: Colors.white,
+                  textColor: _kPrimary,
+                  borderColor: _kPrimary,
+                  onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => ReviewListScreen(id: p.id),
+                  )),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+        ],
+      ),
+    );
+  }
+
+  // ── Recommended ───────────────────────────────────────────────────────────
+
+  Widget _buildRecommended() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
+          child: Row(
+            children: [
+              const Icon(Icons.recommend, color: _kPrimary, size: 20),
+              const SizedBox(width: 8),
+              const Text('Možda vas zanima',
+                  style: TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.bold)),
+            ],
+          ),
+        ),
+        SizedBox(
+          height: 170,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            itemCount: recommendedProperties.length,
+            itemBuilder: (_, i) {
+              final rec = recommendedProperties[i];
+              final rawUrl = (rec.firstPhotoUrl != null &&
+                      rec.firstPhotoUrl!.isNotEmpty)
+                  ? rec.firstPhotoUrl
+                  : (rec.photos != null && rec.photos!.isNotEmpty
+                      ? rec.photos!.first.url
+                      : null);
+              final photoUrl = (rawUrl != null && rawUrl.isNotEmpty)
+                  ? '${AppConfig.serverBase}$rawUrl'
+                  : null;
+              return GestureDetector(
+                onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => PropertyDetailsScreen(property: rec),
+                )),
+                child: Container(
+                  width: 165,
+                  margin: const EdgeInsets.only(right: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: Colors.grey.shade200),
+                    boxShadow: [
+                      BoxShadow(
+                          color: Colors.black12,
+                          blurRadius: 6,
+                          offset: const Offset(0, 2)),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ClipRRect(
+                        borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(14)),
+                        child: SizedBox(
+                          height: 90,
+                          width: 165,
+                          child: photoUrl != null
+                              ? Image.network(photoUrl,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => Container(
+                                      color: Colors.blue.shade50,
+                                      child: const Icon(Icons.house,
+                                          size: 40,
+                                          color: _kPrimary)))
+                              : Container(
+                                  color: Colors.blue.shade50,
+                                  child: const Icon(Icons.house,
+                                      size: 40, color: _kPrimary)),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(rec.name ?? '',
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis),
+                            Text(rec.city?.name ?? '',
+                                style: const TextStyle(
+                                    fontSize: 11, color: Colors.grey),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis),
+                            Text(
+                              rec.isMonthly == true
+                                  ? '${rec.monthlyPrice?.toStringAsFixed(0) ?? ''} BAM/mj.'
+                                  : '${rec.dailyPrice?.toStringAsFixed(0) ?? ''} BAM/dan',
+                              style: const TextStyle(
+                                  fontSize: 11,
+                                  color: _kPrimary,
+                                  fontWeight: FontWeight.w600),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 4),
+      ],
+    );
+  }
+}
+
+// ── Small data classes ─────────────────────────────────────────────────────────
+
+class _StatItem {
+  final IconData icon;
+  final String value;
+  final String label;
+  const _StatItem(this.icon, this.value, this.label);
+}
+
+class _AmenityItem {
+  final IconData icon;
+  final String label;
+  final bool available;
+  const _AmenityItem(this.icon, this.label, this.available);
+}
+
+// ── Reusable widgets ───────────────────────────────────────────────────────────
+
+class _DetailCard extends StatelessWidget {
+  final String? title;
+  final IconData? titleIcon;
+  final Widget child;
+
+  const _DetailCard({this.title, this.titleIcon, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: Colors.grey.shade200),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (title != null) ...[
+              Row(
+                children: [
+                  if (titleIcon != null) ...[
+                    Icon(titleIcon, size: 18, color: _kPrimary),
+                    const SizedBox(width: 8),
+                  ],
+                  Text(
+                    title!,
+                    style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: _kPrimary,
+                        letterSpacing: 0.3),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+            ],
+            child,
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  const _InfoRow({required this.icon, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Row(
+        children: [
+          Icon(icon, size: 15, color: Colors.grey.shade500),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(text,
+                style: TextStyle(
+                    fontSize: 13.5, color: Colors.grey.shade700),
+                overflow: TextOverflow.ellipsis),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatCell extends StatelessWidget {
+  final IconData icon;
+  final String value;
+  final String label;
+  const _StatCell(
+      {required this.icon, required this.value, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16, color: _kPrimary),
+            const SizedBox(width: 4),
+            Text(value,
+                style: const TextStyle(
+                    fontSize: 14, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        Text(label,
+            style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+      ],
+    );
+  }
+}
+
+class _AmenityChip extends StatelessWidget {
+  final _AmenityItem item;
+  const _AmenityChip(this.item);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: item.available
+            ? Colors.green.shade50
+            : Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color:
+              item.available ? Colors.green.shade200 : Colors.grey.shade300,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            item.available ? Icons.check_circle : Icons.cancel_outlined,
+            size: 14,
+            color: item.available ? Colors.green : Colors.grey.shade400,
+          ),
+          const SizedBox(width: 5),
+          Text(
+            item.label,
+            style: TextStyle(
+                fontSize: 12,
+                color: item.available
+                    ? Colors.green.shade800
+                    : Colors.grey.shade500,
+                fontWeight: FontWeight.w500),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AvailabilityBadge extends StatelessWidget {
+  final bool available;
+  final DateTime? availableFrom;
+  const _AvailabilityBadge({required this.available, this.availableFrom});
+
+  @override
+  Widget build(BuildContext context) {
+    final Color color;
+    final String label;
+
+    if (available) {
+      color = Colors.green;
+      label = 'Dostupno';
+    } else if (availableFrom != null) {
+      color = Colors.orange;
+      final d = availableFrom!;
+      label = 'Dostupno od: ${d.day.toString().padLeft(2, '0')}.${d.month.toString().padLeft(2, '0')}.${d.year}';
+    } else {
+      color = Colors.red;
+      label = 'Zauzeto';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+            color: Colors.white,
+            fontSize: 12,
+            fontWeight: FontWeight.w600),
+      ),
+    );
+  }
+}
+
+class _PriceChip extends StatelessWidget {
+  final String text;
+  const _PriceChip(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+      decoration: BoxDecoration(
+        color: _kPrimary,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(text,
+          style: const TextStyle(
+              color: Colors.white,
+              fontSize: 13,
+              fontWeight: FontWeight.w700)),
+    );
+  }
+}
+
+class _RatingChip extends StatelessWidget {
+  final double rating;
+  const _RatingChip(this.rating);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: Colors.amber.shade50,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.amber.shade300),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.star, size: 14, color: Colors.amber),
+          const SizedBox(width: 4),
+          Text(rating.toStringAsFixed(1),
+              style: const TextStyle(
+                  fontSize: 13, fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActionButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final Color textColor;
+  final Color? borderColor;
+  final VoidCallback? onTap;
+  final bool isLoading;
+
+  const _ActionButton({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.textColor,
+    required this.onTap,
+    this.borderColor,
+    this.isLoading = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: color,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: borderColor != null
+                ? Border.all(color: borderColor!, width: 1.5)
+                : null,
+          ),
+          child: isLoading
+              ? Center(
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(textColor),
+                    ),
+                  ),
+                )
+              : Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(icon, color: textColor, size: 22),
+                    const SizedBox(height: 4),
+                    Text(label,
+                        style: TextStyle(
+                            color: textColor,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600)),
+                  ],
+                ),
+        ),
+      ),
+    );
   }
 }

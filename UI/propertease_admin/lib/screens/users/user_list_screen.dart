@@ -4,12 +4,11 @@ import 'package:propertease_admin/models/city.dart';
 import 'package:propertease_admin/models/search_result.dart';
 import 'package:propertease_admin/providers/application_user_provider.dart';
 import 'package:propertease_admin/screens/users/client_add_screen.dart';
-import 'package:propertease_admin/screens/users/renter_add_screen.dart';
 import 'package:propertease_admin/screens/users/user_detail_screen.dart';
 import 'package:propertease_admin/screens/users/user_edit_screen.dart';
+import 'package:propertease_admin/utils/authorization.dart';
 import 'package:propertease_admin/widgets/master_screen.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../providers/city_provider.dart';
 
@@ -23,27 +22,21 @@ class UserListWidget extends StatefulWidget {
 class UserListWidgetState extends State<UserListWidget> {
   late UserProvider _userProvider;
   late CityProvider _cityProvider;
-  late List<ApplicationUser> users = [];
-  late List<ApplicationUser> fetchedUsers = [];
-  late List<City> cities = [];
-  late SearchResult<City> fetchedCities;
+  List<ApplicationUser> users = [];
+  List<City> cities = [];
+  SearchResult<City>? fetchedCities;
   TextEditingController _searchController = TextEditingController();
-  String searchQuery = '';
   City? selectedCity;
   String? selectedRole;
   int? cityId;
-  String? userId;
-  Future<void> getUserIdFromSharedPreferences() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    setState(() {
-      userId = prefs.getString('userId');
-    });
-  }
+  int _currentPage = 1;
+  int _totalCount = 0;
+  final int _pageSize = 10;
 
   @override
   Widget build(BuildContext context) {
     return MasterScreenWidget(
-        title_widget: Text("Users list $userId"),
+        titleWidget: const Text("Korisnici"),
         child: SingleChildScrollView(
           child: Column(
             children: [
@@ -60,7 +53,6 @@ class UserListWidgetState extends State<UserListWidget> {
     super.initState();
     _userProvider = context.read<UserProvider>();
     _cityProvider = context.read<CityProvider>();
-    getUserIdFromSharedPreferences();
     fetchData();
   }
 
@@ -110,52 +102,25 @@ class UserListWidgetState extends State<UserListWidget> {
                   color: Color(0xFF115892)),
             ),
             const Spacer(),
-            Row(
-              children: [
-                Container(
-                  height: 50,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => const RenterAddScreen(),
-                        ),
-                      );
-                    },
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.add), // Add your desired icon
-                        SizedBox(width: 8), // Adjust the width as needed
-                        Text("Add new renter"), // Text for the button
-                      ],
+            Container(
+              height: 50,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const UserAddScreen(),
                     ),
-                  ),
+                  ).then((_) => fetchUsers());
+                },
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.add),
+                    SizedBox(width: 8),
+                    Text("Dodaj korisnika"),
+                  ],
                 ),
-                const SizedBox(
-                  width: 15,
-                ),
-                Container(
-                  height: 50,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => const ClientAddScreen(),
-                        ),
-                      );
-                    },
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.add), // Add your desired icon
-                        SizedBox(width: 8), // Adjust the width as needed
-                        Text("Add new client"), // Text for the button
-                      ],
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
             const SizedBox(
               width: 100,
@@ -181,6 +146,7 @@ class UserListWidgetState extends State<UserListWidget> {
           TextField(
             controller: _searchController,
             onChanged: (value) async {
+              setState(() => _currentPage = 1);
               await fetchUsers();
             },
             decoration: const InputDecoration(
@@ -196,7 +162,7 @@ class UserListWidgetState extends State<UserListWidget> {
                 child: DropdownButtonFormField<String>(
                   value: selectedRole,
                   onChanged: (value) {
-                    selectedRole = value;
+                    setState(() { selectedRole = value; _currentPage = 1; });
                     fetchUsers();
                   },
                   items: <String>['Client', 'Employee'].map((String value) {
@@ -219,8 +185,9 @@ class UserListWidgetState extends State<UserListWidget> {
                     setState(() {
                       selectedCity = newValue;
                       cityId = newValue?.id;
-                      fetchUsers();
+                      _currentPage = 1;
                     });
+                    await fetchUsers();
                   },
                   items:
                       (cities ?? []).map<DropdownMenuItem<City?>>((City? city) {
@@ -244,10 +211,13 @@ class UserListWidgetState extends State<UserListWidget> {
               const SizedBox(width: 16),
               ElevatedButton(
                 onPressed: () {
-                  _searchController.text = '';
-                  selectedCity = null;
-                  cityId = null;
-                  selectedRole = null;
+                  setState(() {
+                    _searchController.text = '';
+                    selectedCity = null;
+                    cityId = null;
+                    selectedRole = null;
+                    _currentPage = 1;
+                  });
                   fetchUsers();
                 },
                 child: const Row(
@@ -266,10 +236,12 @@ class UserListWidgetState extends State<UserListWidget> {
   }
 
   Widget _buildDataListView() {
+    final totalPages = (_totalCount / _pageSize).ceil();
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
           child: DataTable(
             columns: const [
               DataColumn(
@@ -330,17 +302,6 @@ class UserListWidgetState extends State<UserListWidget> {
               ),
             ],
             rows: users
-                    .where((user) {
-                      final username = user.userName ?? '';
-                      final email = user.email ?? '';
-                      final role =
-                          user.userRoles != null && user.userRoles!.isNotEmpty
-                              ? user.userRoles![0].role?.name ?? ''
-                              : '';
-                      return username.contains(searchQuery) ||
-                          email.contains(searchQuery) ||
-                          (selectedRole!.isNotEmpty && role == selectedRole);
-                    })
                     .map((ApplicationUser e) => DataRow(cells: [
                           DataCell(Text(e.userName ?? '')),
                           DataCell(
@@ -351,12 +312,8 @@ class UserListWidgetState extends State<UserListWidget> {
                           DataCell(Text(e.email ?? '')),
                           DataCell(
                               Text(e.person?.placeOfResidence?.name ?? '')),
-                          DataCell(
-                            Text(e.phoneNumber ?? '225-883'),
-                          ),
-                          DataCell(
-                            Text(e.person?.address ?? ''),
-                          ),
+                          DataCell(Text(e.phoneNumber ?? '')),
+                          DataCell(Text(e.person?.address ?? '')),
                           DataCell(
                             Row(
                               mainAxisAlignment: MainAxisAlignment.center,
@@ -369,7 +326,7 @@ class UserListWidgetState extends State<UserListWidget> {
                                           user: e,
                                         ),
                                       ),
-                                    );
+                                    ).then((_) => fetchUsers());
                                   },
                                   child: const Icon(Icons.info),
                                 ),
@@ -382,16 +339,25 @@ class UserListWidgetState extends State<UserListWidget> {
                                           user: e,
                                         ),
                                       ),
-                                    );
+                                    ).then((_) => fetchUsers());
                                   },
                                   child: const Icon(Icons.edit),
+                                ),
+                                const SizedBox(width: 16),
+                                InkWell(
+                                  onTap: () => _showResetPasswordDialog(e),
+                                  child: const Tooltip(
+                                    message: 'Reset password',
+                                    child: Icon(Icons.lock_reset,
+                                        color: Colors.orange),
+                                  ),
                                 ),
                                 const SizedBox(width: 16),
                                 GestureDetector(
                                   onTap: () {
                                     showDialog(
                                       context: context,
-                                      builder: (BuildContext context) {
+                                      builder: (BuildContext ctx) {
                                         return AlertDialog(
                                           title: const Text("Confirm Delete"),
                                           content: const Text(
@@ -399,9 +365,8 @@ class UserListWidgetState extends State<UserListWidget> {
                                           actions: <Widget>[
                                             TextButton(
                                               child: const Text("Cancel"),
-                                              onPressed: () {
-                                                Navigator.of(context).pop();
-                                              },
+                                              onPressed: () =>
+                                                  Navigator.of(ctx).pop(),
                                             ),
                                             TextButton(
                                               child: const Text("Delete"),
@@ -420,8 +385,34 @@ class UserListWidgetState extends State<UserListWidget> {
                             ),
                           )
                         ]))
-                    .toList() ??
-                [],
+                    .toList(),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.chevron_left),
+                onPressed: _currentPage > 1
+                    ? () {
+                        setState(() => _currentPage--);
+                        fetchUsers();
+                      }
+                    : null,
+              ),
+              Text('$_currentPage / ${totalPages > 0 ? totalPages : 1}'),
+              IconButton(
+                icon: const Icon(Icons.chevron_right),
+                onPressed: _currentPage < totalPages
+                    ? () {
+                        setState(() => _currentPage++);
+                        fetchUsers();
+                      }
+                    : null,
+              ),
+            ],
           ),
         ),
       ],
@@ -438,17 +429,20 @@ class UserListWidgetState extends State<UserListWidget> {
 
   Future<void> fetchUsers() async {
     try {
-      fetchedUsers = await _userProvider.get(filter: {
+      final result = await _userProvider.get(filter: {
         'SearchField': _searchController.text,
         'CityId': cityId,
-        'Role': selectedRole
+        'Role': selectedRole,
+        'Page': _currentPage,
+        'PageSize': _pageSize,
+      });
+      setState(() {
+        users = result.result;
+        _totalCount = result.totalCount;
       });
     } catch (error) {
       print("Error fetching data: $error");
     }
-    setState(() {
-      users = fetchedUsers;
-    });
   }
 
   Future<void> _handleDeleteUser(int? userId) async {
@@ -468,6 +462,68 @@ class UserListWidgetState extends State<UserListWidget> {
     }
   }
 
+  Future<void> _showResetPasswordDialog(ApplicationUser user) async {
+    final controller = TextEditingController();
+    bool obscure = true;
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDlgState) => AlertDialog(
+          title: Text('Reset password – ${user.userName ?? ''}'),
+          content: TextField(
+            controller: controller,
+            obscureText: obscure,
+            decoration: InputDecoration(
+              labelText: 'New password',
+              border: const OutlineInputBorder(),
+              suffixIcon: IconButton(
+                icon: Icon(obscure ? Icons.visibility : Icons.visibility_off),
+                onPressed: () => setDlgState(() => obscure = !obscure),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final newPwd = controller.text.trim();
+                if (newPwd.isEmpty) return;
+                Navigator.pop(ctx);
+                try {
+                  await _userProvider.adminResetPassword(user.id!, newPwd);
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Password reset successfully'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Error: $e'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
+              },
+              child: const Text('Reset'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    controller.dispose();
+  }
+
   Future<void> fetchData() async {
     try {
       await fetchUsers();
@@ -476,7 +532,7 @@ class UserListWidgetState extends State<UserListWidget> {
       print("Error fetching data: $error");
     }
     setState(() {
-      cities = fetchedCities.result ?? [];
+      cities = fetchedCities?.result ?? [];
     });
   }
 }

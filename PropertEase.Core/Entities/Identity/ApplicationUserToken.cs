@@ -1,0 +1,18 @@
+﻿using Microsoft.AspNetCore.Identity;
+using PropertEase.Core.Entities.Base;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace PropertEase.Core.Entities.Identity
+{
+    public class ApplicationUserToken: IdentityUserToken<int>, IBaseEntity
+    {
+        public int Id { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public DateTime? ModifiedAt { get; set; }
+        public bool IsDeleted { get; set; }
+    }
+}

@@ -11,6 +11,7 @@ IHost host = Host.CreateDefaultBuilder(args)
     .ConfigureServices((context, services) =>
     {
         services.AddScoped<IEmailService, EmailService>();
+        services.AddSingleton<INotificationWriter, SqlNotificationWriter>();
         services.AddHostedService<ReservationWorker>();
     })
     .Build();

@@ -10,4 +10,6 @@ public class ReservationConfirmedMessage : BaseMessage
     public DateTime CheckIn { get; set; }
     public DateTime CheckOut { get; set; }
     public decimal TotalPrice { get; set; }
+    public string RenterEmail { get; set; } = string.Empty;
+    public string RenterFullName { get; set; } = string.Empty;
 }

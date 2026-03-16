@@ -1,1132 +1,881 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_form_builder/flutter_form_builder.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:propertease_admin/config/app_config.dart';
 import 'package:propertease_admin/models/property_type.dart';
 import 'package:propertease_admin/models/search_result.dart';
 import 'package:propertease_admin/providers/property_type_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:propertease_admin/providers/image_provider.dart';
-import '../../models/city.dart';
 import '../../models/photo.dart';
 import '../../models/property.dart';
-import '../../providers/city_provider.dart';
 import '../../providers/property_provider.dart';
+import '../../widgets/country_city_selector.dart';
 import 'package:image_picker/image_picker.dart';
 
 class PropertyEditScreen extends StatefulWidget {
-  Property? property;
-
-  PropertyEditScreen({super.key, this.property});
+  final Property? property;
+  const PropertyEditScreen({super.key, this.property});
 
   @override
   State<PropertyEditScreen> createState() => _PropertyEditScreenState();
 }
 
 class _PropertyEditScreenState extends State<PropertyEditScreen> {
-  final TextEditingController _propertyNameController = TextEditingController();
-  final TextEditingController _propertyAdressController =
-      TextEditingController();
-  final TextEditingController _priceController = TextEditingController();
-  final TextEditingController _gardenSizeController = TextEditingController();
-  final TextEditingController _squareMetersController = TextEditingController();
-  final TextEditingController _capacityController = TextEditingController();
-  final TextEditingController _descriptionController = TextEditingController();
-  late Photo insertPhoto;
   final _formKey = GlobalKey<FormState>();
-  final _form2Key = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
+  final _addressController = TextEditingController();
+  final _priceController = TextEditingController();
+  final _squareMetersController = TextEditingController();
+  final _gardenSizeController = TextEditingController();
+  final _descriptionController = TextEditingController();
 
-  SearchResult<PropertyType>? propertyTypeResult;
-  SearchResult<City>? cityResult;
-  int currentImageIndex = 0;
-  int maxImagesToShow = 5;
-  int startIndex = 5;
-  Property? editedProperty;
-  int? parsedCapacity;
-  double? parsedPrice;
-  List<Photo> images = [];
-  String? displayedImageUrl;
-  int? parsedGardenSize;
-  int? parsedSquareMeters;
-  bool _isFormValid = true;
-  List<TextEditingController> _textControllers = [];
-  final ImagePicker _picker = ImagePicker();
+  LatLng? _pickedLocation;
 
-  // Create a method to fetch images
-  void fetchImages() async {
-    // Get the photo provider from the context
-    final photoProvider = context.read<PhotoProvider>();
+  SearchResult<PropertyType>? _propertyTypeResult;
+  List<Photo> _images = [];
+  int _currentPage = 0;
+  bool _initialized = false;
+  bool _loadingRefData = true;
+  Property? _property;
+  late PropertyTypeProvider _propertyTypeProvider;
+  late PropertyProvider _propertyProvider;
+  late PhotoProvider _photoProvider;
 
-    final propertyId =
-        widget.property?.id; // Replace with the actual property ID
-    final fetchedImages = await photoProvider.getImagesByProperty(propertyId);
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_initialized) return;
+    _initialized = true;
+    _propertyTypeProvider = context.read<PropertyTypeProvider>();
+    _propertyProvider = context.read<PropertyProvider>();
+    _photoProvider = context.read<PhotoProvider>();
+    _initForm();
+  }
+
+  Future<void> _initForm() async {
+    // Fire all three requests in parallel.
+    final ptFuture = _propertyTypeProvider.get();
+    final propFuture = widget.property?.id != null
+        ? _propertyProvider.getById(widget.property!.id!)
+        : Future<Property?>.value(widget.property);
+
+    final ptResult = await ptFuture;
+    final full = await propFuture;
+
+    if (!mounted) return;
+
+    // Populate controllers from the full (getById) property data.
+    _nameController.text = full?.name ?? '';
+    _addressController.text = full?.address ?? '';
+    _squareMetersController.text = full?.squareMeters?.toString() ?? '';
+    _gardenSizeController.text = full?.gardenSize?.toString() ?? '';
+    _descriptionController.text = full?.description ?? '';
+    if (full?.isDaily == true) {
+      _priceController.text = full?.dailyPrice?.toString() ?? '';
+    } else if (full?.isMonthly == true) {
+      _priceController.text = full?.monthlyPrice?.toString() ?? '';
+    }
+    if ((full?.latitude ?? 0) != 0 && (full?.longitude ?? 0) != 0) {
+      _pickedLocation = LatLng(full!.latitude!, full.longitude!);
+    }
+    final validImages = (full?.photos ?? [])
+        .where((ph) => ph.url != null && ph.url!.isNotEmpty && ph.url != 'a')
+        .toList();
 
     setState(() {
-      images = fetchedImages;
-      if (images.isNotEmpty) displayedImageUrl = images[0].url;
+      _property = full ?? widget.property;
+      _images = validImages;
+      _propertyTypeResult = ptResult as SearchResult<PropertyType>;
+      _loadingRefData = false;
     });
   }
 
-  void _updateFormValidation(formKey) {
-    final form = formKey.currentState;
-    if (form != null) {
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile == null) return;
+
+    final file = File(pickedFile.path);
+    final photo = Photo(0, 'a', _property?.id, file);
+    photo.file = file;
+    await _photoProvider.addPhoto(photo);
+
+    final refreshed = await _photoProvider.getImagesByProperty(_property?.id);
+    final valid = refreshed
+        .where((p) => p.url != null && p.url!.isNotEmpty && p.url != 'a')
+        .toList();
+    if (mounted) {
       setState(() {
-        _isFormValid = form.validate();
+        _images = valid;
+        _currentPage = valid.isNotEmpty ? valid.length - 1 : 0;
       });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Slika dodana'), backgroundColor: Colors.green),
+      );
+    }
+  }
+
+  Future<void> _saveProperty() async {
+    if (!_formKey.currentState!.validate()) return;
+    final p = _property;
+    if (p == null) return;
+
+    final parsedPrice = double.tryParse(_priceController.text);
+    p.name = _nameController.text;
+    p.address = _addressController.text;
+    p.description = _descriptionController.text;
+    p.squareMeters = int.tryParse(_squareMetersController.text) ?? p.squareMeters;
+    p.gardenSize = int.tryParse(_gardenSizeController.text) ?? 0;
+    if ((p.capacity ?? 0) == 0) p.capacity = 1;
+    if (p.isDaily == true) {
+      p.dailyPrice = parsedPrice;
+      p.monthlyPrice = 0;
+    } else if (p.isMonthly == true) {
+      p.monthlyPrice = parsedPrice;
+      p.dailyPrice = 0;
+    }
+
+    await _propertyProvider.updateAsync(p.id, p);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Nekretnina ažurirana'), backgroundColor: Colors.green),
+      );
     }
   }
 
   @override
   void dispose() {
-    // Dispose of the TextEditingController when the widget is disposed
-    _propertyNameController.dispose();
-    _propertyAdressController.dispose();
+    _nameController.dispose();
+    _addressController.dispose();
     _priceController.dispose();
-    _gardenSizeController.dispose();
     _squareMetersController.dispose();
-    _capacityController.dispose();
+    _gardenSizeController.dispose();
     _descriptionController.dispose();
     super.dispose();
   }
 
-  Map<String, dynamic> _initialValue = {};
-  late PropertyTypeProvider _propertyTypeProvider;
-  late CityProvider _cityProvider;
-  late PropertyProvider _propertyProvider;
-  late PhotoProvider _photoProvider;
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _propertyTypeProvider = context.read<PropertyTypeProvider>();
-    _cityProvider = context.read<CityProvider>();
-    _propertyProvider = context.read<PropertyProvider>();
-    _photoProvider = context.read<PhotoProvider>();
+  Widget build(BuildContext context) {
+    if (_loadingRefData) {
+      return Scaffold(
+        appBar: AppBar(title: Text(widget.property?.name ?? 'Uredi nekretninu')),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
 
-    initForm();
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(widget.property?.name ?? 'Uredi nekretninu'),
+        actions: [
+          TextButton.icon(
+            onPressed: _saveProperty,
+            icon: const Icon(Icons.save, color: Colors.white),
+            label: const Text('Spremi', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+      body: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: _buildImageSection()),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildSectionTitle('Lokacija'),
+                        const SizedBox(height: 12),
+                        _buildMapPicker(),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              _buildSectionTitle('Osnovne informacije'),
+              const SizedBox(height: 12),
+              _buildBasicFields(),
+              const SizedBox(height: 24),
+              _buildSectionTitle('Veličina i kapacitet'),
+              const SizedBox(height: 12),
+              _buildSizeFields(),
+              const SizedBox(height: 24),
+              _buildSectionTitle('Cijena i tip najma'),
+              const SizedBox(height: 12),
+              _buildPricingFields(),
+              const SizedBox(height: 24),
+              _buildSectionTitle('Sadržaj'),
+              const SizedBox(height: 12),
+              _buildAmenitiesGrid(),
+              const SizedBox(height: 24),
+              _buildSectionTitle('Opis'),
+              const SizedBox(height: 12),
+              _buildDescriptionField(),
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton.icon(
+                  onPressed: _saveProperty,
+                  icon: const Icon(Icons.save),
+                  label: const Text('Spremi izmjene'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+            ],
+          ),
+        ),
+      ),
+    );
   }
+
+  Widget _buildImageSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle('Slike'),
+        const SizedBox(height: 12),
+        AspectRatio(
+          aspectRatio: 16 / 9,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                MouseRegion(
+                  cursor: _images.isNotEmpty
+                      ? SystemMouseCursors.click
+                      : MouseCursor.defer,
+                  child: GestureDetector(
+                    onTap: _images.isNotEmpty
+                        ? () => _openFullscreen(_currentPage)
+                        : null,
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 250),
+                      child: SizedBox.expand(
+                        key: ValueKey(_images.isEmpty ? -1 : _currentPage),
+                        child: _images.isEmpty
+                            ? Image.asset(
+                                'assets/images/house_placeholder.jpg',
+                                fit: BoxFit.cover,
+                              )
+                            : Image.network(
+                                '${AppConfig.serverBase}${_images[_currentPage].url}',
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => Image.asset(
+                                  'assets/images/house_placeholder.jpg',
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                      ),
+                    ),
+                  ),
+                ),
+                if (_images.length > 1) ...[
+                  Positioned(
+                    left: 6,
+                    top: 0,
+                    bottom: 0,
+                    child: Center(
+                      child: _navButton(
+                        icon: Icons.chevron_left,
+                        onPressed: _currentPage > 0
+                            ? () => setState(() => _currentPage--)
+                            : null,
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    right: 6,
+                    top: 0,
+                    bottom: 0,
+                    child: Center(
+                      child: _navButton(
+                        icon: Icons.chevron_right,
+                        onPressed: _currentPage < _images.length - 1
+                            ? () => setState(() => _currentPage++)
+                            : null,
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 8,
+                    left: 0,
+                    right: 0,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(
+                        _images.length,
+                        (i) => GestureDetector(
+                          onTap: () => setState(() => _currentPage = i),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 250),
+                            margin:
+                                const EdgeInsets.symmetric(horizontal: 3),
+                            width: i == _currentPage ? 18 : 7,
+                            height: 7,
+                            decoration: BoxDecoration(
+                              color: i == _currentPage
+                                  ? Colors.white
+                                  : Colors.white.withOpacity(0.5),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    top: 8,
+                    right: 80,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.black54,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        '${_currentPage + 1} / ${_images.length}',
+                        style: const TextStyle(
+                            color: Colors.white, fontSize: 12),
+                      ),
+                    ),
+                  ),
+                ],
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: _addImageButton(),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _openFullscreen(int startIndex) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black87,
+      builder: (_) =>
+          _NetworkFullscreenViewer(images: _images, initialIndex: startIndex),
+    );
+  }
+
+  Widget _navButton({required IconData icon, VoidCallback? onPressed}) {
+    return Material(
+      color: Colors.black38,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: onPressed,
+        child: Padding(
+          padding: const EdgeInsets.all(6),
+          child: Icon(icon, color: Colors.white, size: 24),
+        ),
+      ),
+    );
+  }
+
+  Widget _addImageButton() {
+    return ElevatedButton.icon(
+      onPressed: _pickImage,
+      icon: const Icon(Icons.add_photo_alternate, size: 18),
+      label: const Text('Dodaj sliku'),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.blue,
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+    );
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Text(
+      title,
+      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+    );
+  }
+
+  Widget _buildBasicFields() {
+    final p = _property;
+    final propertyTypes = _propertyTypeResult?.result ?? [];
+    final targetPtId = p?.propertyTypeId ?? p?.propertyType?.id;
+    final selectedPt = propertyTypes.cast<PropertyType?>().firstWhere(
+      (pt) => pt?.id == targetPtId,
+      orElse: () => null,
+    );
+
+    return Column(
+      children: [
+        TextFormField(
+          controller: _nameController,
+          decoration: const InputDecoration(
+            labelText: 'Naziv nekretnine',
+            prefixIcon: Icon(Icons.home),
+            border: OutlineInputBorder(),
+          ),
+          validator: (v) => (v == null || v.isEmpty) ? 'Obavezno polje' : null,
+        ),
+        const SizedBox(height: 12),
+        CountryCitySelector(
+          initialCity: p?.city,
+          onCityChanged: (c) => setState(() {
+            _property?.city = c;
+            _property?.cityId = c?.id;
+          }),
+        ),
+        const SizedBox(height: 12),
+        TextFormField(
+          controller: _addressController,
+          decoration: const InputDecoration(
+            labelText: 'Adresa',
+            prefixIcon: Icon(Icons.place),
+            border: OutlineInputBorder(),
+          ),
+          validator: (v) => (v == null || v.isEmpty) ? 'Obavezno polje' : null,
+        ),
+        const SizedBox(height: 12),
+        DropdownButtonFormField<PropertyType?>(
+          value: selectedPt,
+          decoration: const InputDecoration(
+            labelText: 'Tip nekretnine',
+            prefixIcon: Icon(Icons.category),
+            border: OutlineInputBorder(),
+          ),
+          items: propertyTypes.map((pt) {
+            return DropdownMenuItem<PropertyType?>(
+              value: pt,
+              child: Text(pt.name ?? 'Nedefinirano'),
+            );
+          }).toList(),
+          onChanged: (val) => setState(() {
+            p?.propertyType = val;
+            p?.propertyTypeId = val?.id;
+          }),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSizeFields() {
+    final p = _property;
+    return Row(
+      children: [
+        Expanded(
+          child: TextFormField(
+            controller: _squareMetersController,
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            decoration: const InputDecoration(
+              labelText: 'Površina (m²)',
+              prefixIcon: Icon(Icons.square_foot),
+              border: OutlineInputBorder(),
+            ),
+            validator: (v) => (v == null || v.isEmpty) ? 'Obavezno polje' : null,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: TextFormField(
+            controller: _gardenSizeController,
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            decoration: const InputDecoration(
+              labelText: 'Dvorište (m²)',
+              prefixIcon: Icon(Icons.grass),
+              border: OutlineInputBorder(),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: DropdownButtonFormField<int>(
+            value: (p?.numberOfRooms ?? 0) > 0 ? p!.numberOfRooms : 1,
+            decoration: const InputDecoration(
+              labelText: 'Sobe',
+              prefixIcon: Icon(Icons.bed),
+              border: OutlineInputBorder(),
+            ),
+            items: List.generate(20, (i) => i + 1).map((v) {
+              return DropdownMenuItem(value: v, child: Text('$v'));
+            }).toList(),
+            onChanged: (val) => setState(() => p?.numberOfRooms = val),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: DropdownButtonFormField<int>(
+            value: (p?.numberOfBathrooms ?? 0) > 0 ? p!.numberOfBathrooms : 1,
+            decoration: const InputDecoration(
+              labelText: 'Kupatila',
+              prefixIcon: Icon(Icons.bathtub),
+              border: OutlineInputBorder(),
+            ),
+            items: List.generate(20, (i) => i + 1).map((v) {
+              return DropdownMenuItem(value: v, child: Text('$v'));
+            }).toList(),
+            onChanged: (val) => setState(() => p?.numberOfBathrooms = val),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPricingFields() {
+    final p = _property;
+    return Row(
+      children: [
+        Expanded(
+          child: DropdownButtonFormField<String>(
+            value: p?.isMonthly == true
+                ? 'Monthly'
+                : p?.isDaily == true
+                    ? 'Daily'
+                    : null,
+            decoration: const InputDecoration(
+              labelText: 'Tip najma',
+              prefixIcon: Icon(Icons.schedule),
+              border: OutlineInputBorder(),
+            ),
+            items: const [
+              DropdownMenuItem(value: 'Monthly', child: Text('Mjesečno')),
+              DropdownMenuItem(value: 'Daily', child: Text('Dnevno')),
+            ],
+            onChanged: (val) => setState(() {
+              p?.isMonthly = val == 'Monthly';
+              p?.isDaily = val == 'Daily';
+              _priceController.clear();
+            }),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: TextFormField(
+            controller: _priceController,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: InputDecoration(
+              labelText: p?.isMonthly == true
+                  ? 'Cijena (KM/mj.)'
+                  : p?.isDaily == true
+                      ? 'Cijena (KM/dan)'
+                      : 'Cijena (KM)',
+              prefixIcon: const Icon(Icons.attach_money),
+              border: const OutlineInputBorder(),
+            ),
+            validator: (v) => (v == null || v.isEmpty) ? 'Obavezno polje' : null,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: DropdownButtonFormField<int>(
+            value: (p?.capacity ?? 0) > 0 ? p!.capacity : 1,
+            decoration: const InputDecoration(
+              labelText: 'Max osoba',
+              prefixIcon: Icon(Icons.people),
+              border: OutlineInputBorder(),
+            ),
+            items: List.generate(20, (i) => i + 1).map((v) {
+              return DropdownMenuItem(value: v, child: Text('$v'));
+            }).toList(),
+            onChanged: (val) => setState(() => p?.capacity = val),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: DropdownButtonFormField<int>(
+            value: p?.parkingSize ?? 0,
+            decoration: const InputDecoration(
+              labelText: 'Parking mjesta',
+              prefixIcon: Icon(Icons.local_parking),
+              border: OutlineInputBorder(),
+            ),
+            items: List.generate(10, (i) => i).map((v) {
+              return DropdownMenuItem(value: v, child: Text('$v'));
+            }).toList(),
+            onChanged: (val) => setState(() => p?.parkingSize = val),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAmenitiesGrid() {
+    final amenities = [
+      _AmenityToggle('Namješteno', Icons.chair, _property?.isFurnished, (v) => setState(() => _property?.isFurnished = v)),
+      _AmenityToggle('Klima uređaj', Icons.ac_unit, _property?.hasAirCondition, (v) => setState(() => _property?.hasAirCondition = v)),
+      _AmenityToggle('Wi-Fi', Icons.wifi, _property?.hasWiFi, (v) => setState(() => _property?.hasWiFi = v)),
+      _AmenityToggle('Centralno grijanje', Icons.thermostat, _property?.hasOwnHeatingSystem, (v) => setState(() => _property?.hasOwnHeatingSystem = v)),
+      _AmenityToggle('Bazen', Icons.pool, _property?.hasPool, (v) => setState(() => _property?.hasPool = v)),
+      _AmenityToggle('Balkon', Icons.balcony, _property?.hasBalcony, (v) => setState(() => _property?.hasBalcony = v)),
+      _AmenityToggle('Alarm', Icons.alarm, _property?.hasAlarm, (v) => setState(() => _property?.hasAlarm = v)),
+      _AmenityToggle('Video nadzor', Icons.videocam, _property?.hasSurveilance, (v) => setState(() => _property?.hasSurveilance = v)),
+      _AmenityToggle('TV', Icons.tv, _property?.hasTV, (v) => setState(() => _property?.hasTV = v)),
+      _AmenityToggle('Kablovska', Icons.cable, _property?.hasCableTV, (v) => setState(() => _property?.hasCableTV = v)),
+      _AmenityToggle('Parking', Icons.local_parking, _property?.hasParking, (v) => setState(() => _property?.hasParking = v)),
+      _AmenityToggle('Garaža', Icons.garage, _property?.hasGarage, (v) => setState(() => _property?.hasGarage = v)),
+      _AmenityToggle('Dostupno', Icons.check_circle_outline, _property?.isAvailable, (v) => setState(() => _property?.isAvailable = v)),
+    ];
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 4,
+      children: amenities.map((a) => SizedBox(
+        width: 200,
+        child: CheckboxListTile(
+          dense: true,
+          contentPadding: EdgeInsets.zero,
+          title: Row(
+            children: [
+              Icon(a.icon, size: 16, color: Colors.blue),
+              const SizedBox(width: 6),
+              Text(a.label, style: const TextStyle(fontSize: 14)),
+            ],
+          ),
+          value: a.value ?? false,
+          onChanged: (v) => a.onChanged(v ?? false),
+          controlAffinity: ListTileControlAffinity.leading,
+        ),
+      )).toList(),
+    );
+  }
+
+  Widget _buildMapPicker() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          height: 300,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: FlutterMap(
+              options: MapOptions(
+                center: _pickedLocation ?? LatLng(44.0, 17.5),
+                zoom: _pickedLocation != null ? 13.0 : 7.0,
+                onTap: (tapPosition, point) {
+                  setState(() {
+                    _pickedLocation = point;
+                    _property?.latitude = point.latitude;
+                    _property?.longitude = point.longitude;
+                  });
+                },
+              ),
+              children: [
+                TileLayer(
+                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  userAgentPackageName: 'com.propertease.admin',
+                ),
+                if (_pickedLocation != null)
+                  MarkerLayer(
+                    markers: [
+                      Marker(
+                        point: _pickedLocation!,
+                        width: 40,
+                        height: 40,
+                        builder: (ctx) => const Icon(
+                          Icons.location_pin,
+                          color: Colors.red,
+                          size: 40,
+                        ),
+                      ),
+                    ],
+                  ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          _pickedLocation != null
+              ? 'Lat: ${_pickedLocation!.latitude.toStringAsFixed(5)}, Lng: ${_pickedLocation!.longitude.toStringAsFixed(5)}'
+              : 'Tapnite na mapu da odaberete lokaciju',
+          style: TextStyle(
+            fontSize: 12,
+            color: _pickedLocation != null ? Colors.black54 : Colors.grey,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDescriptionField() {
+    return TextFormField(
+      controller: _descriptionController,
+      maxLines: 5,
+      decoration: const InputDecoration(
+        hintText: 'Unesite opis nekretnine...',
+        border: OutlineInputBorder(),
+        alignLabelWithHint: true,
+      ),
+    );
+  }
+}
+
+class _AmenityToggle {
+  final String label;
+  final IconData icon;
+  final bool? value;
+  final void Function(bool) onChanged;
+  _AmenityToggle(this.label, this.icon, this.value, this.onChanged);
+}
+
+// ─── Fullscreen image viewer (network photos) ─────────────────────────────────
+
+class _NetworkFullscreenViewer extends StatefulWidget {
+  final List<Photo> images;
+  final int initialIndex;
+  const _NetworkFullscreenViewer(
+      {required this.images, required this.initialIndex});
+
+  @override
+  State<_NetworkFullscreenViewer> createState() =>
+      _NetworkFullscreenViewerState();
+}
+
+class _NetworkFullscreenViewerState extends State<_NetworkFullscreenViewer> {
+  late int _idx;
 
   @override
   void initState() {
     super.initState();
-    _propertyNameController.text = widget.property?.name ?? '';
-    _propertyAdressController.text = widget.property?.address ?? '';
-    _gardenSizeController.text = widget.property!.gardenSize.toString();
-    _squareMetersController.text = widget.property!.squareMeters.toString();
-    _descriptionController.text = widget.property?.description ?? '';
-    if (widget.property?.isDaily == true) {
-      _priceController.text = widget.property!.dailyPrice.toString();
-    }
-    if (widget.property?.isMonthly == true) {
-      _priceController.text = widget.property!.monthlyPrice.toString();
-    }
-  }
-
-  Future initForm() async {
-    propertyTypeResult = await _propertyTypeProvider.get();
-    cityResult = await _cityProvider.get();
-    print(propertyTypeResult?.result);
-    fetchImages();
-  }
-
-  void goToPreviousImage() {
-    if (currentImageIndex > 0) {
-      setState(() {
-        currentImageIndex--;
-        displayedImageUrl = images[currentImageIndex].url;
-      });
-    }
-  }
-
-  void goToNextImage() {
-    if (currentImageIndex < images.length - 1) {
-      setState(() {
-        currentImageIndex++;
-        displayedImageUrl = images[currentImageIndex].url;
-      });
-    }
-  }
-
-  File? _imageFile;
-
-  Future<void> pickImage() async {
-    final picker = ImagePicker();
-    XFile? pickedFile = await picker.pickImage(source: ImageSource.gallery);
-
-    if (pickedFile != null) {
-      setState(() {
-        _imageFile = File(pickedFile.path);
-        insertPhoto = Photo(0, 'a', widget.property?.id, _imageFile);
-        print(insertPhoto.createdAt);
-        insertPhoto.file = _imageFile;
-        _photoProvider.addPhoto(insertPhoto);
-      });
-    }
-  }
-
-  Widget buildImageRow(
-      int currentImageIndex, String displayedImageUrl, List<Photo> images) {
-    List<Widget> imageWidgets = [];
-    int rangeFrom = 2, rangeTo = 2;
-    if (currentImageIndex == 0) {
-      rangeFrom = 0;
-      rangeTo = 4;
-    }
-
-    if (currentImageIndex == 1) {
-      rangeFrom = 1;
-      rangeTo = 3;
-    }
-    if (currentImageIndex >= 2 && currentImageIndex >= images.length - 3) {
-      rangeFrom = 2;
-      rangeTo = 2;
-    }
-    if (currentImageIndex > 2 && currentImageIndex == images.length - 2) {
-      rangeFrom = 3;
-      rangeTo = 1;
-    }
-    if (currentImageIndex > 2 && currentImageIndex == images.length - 1) {
-      rangeFrom = 4;
-      rangeTo = 0;
-    }
-    for (int i = currentImageIndex - rangeFrom;
-        i <= currentImageIndex + rangeTo;
-        i++) {
-      if (i >= 0 && i < images.length) {
-        imageWidgets.add(
-          Padding(
-            padding: const EdgeInsets.all(4.0),
-            child: Opacity(
-              opacity: images[i].url == displayedImageUrl ? 0.3 : 1.0,
-              child: Image.network(
-                "https://localhost:7137/${images[i].url}",
-                width: 100,
-                height: 100,
-                fit: BoxFit.cover,
-              ),
-            ),
-          ),
-        );
-      }
-    }
-
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: imageWidgets,
-    );
-  }
-
-  void showSuccessMessageImage() {
-    const snackBar = SnackBar(
-      content: Text('Image uploaded successfully!'),
-      duration: Duration(seconds: 3),
-      backgroundColor: Colors.green, // Adjust duration as needed
-    );
-
-    ScaffoldMessenger.of(context).showSnackBar(snackBar);
-  }
-
-  void showSuccessMessageEdit(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors
-            .green, // Set the background color to green (or your desired color)
-      ),
-    );
-  }
-
-  void showErrorMessageEdit(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors
-            .red, // Set the background color to green (or your desired color)
-      ),
-    );
-  }
-
-  Future updateProperty() async {
-    if (_isFormValid == true) {
-      parsedPrice = double.tryParse(_priceController.text);
-      parsedGardenSize = int.tryParse(_gardenSizeController.text);
-      parsedSquareMeters = int.tryParse(_squareMetersController.text);
-      if (widget.property?.isDaily == true) {
-        widget.property?.dailyPrice = parsedPrice;
-        widget.property?.monthlyPrice = 0;
-      }
-
-      if (widget.property?.isMonthly == true) {
-        widget.property?.monthlyPrice = parsedPrice;
-        widget.property?.dailyPrice = 0;
-      }
-      widget.property?.gardenSize = parsedGardenSize;
-      widget.property?.squareMeters = parsedSquareMeters;
-      widget.property?.name = _propertyNameController.text;
-      widget.property?.address = _propertyAdressController.text;
-      widget.property?.description = _descriptionController.text;
-      editedProperty = widget.property;
-      await _propertyProvider.updateAsync(editedProperty?.id, editedProperty!);
-      showSuccessMessageEdit(context, 'Item updated successfully');
-    } else
-      showErrorMessageEdit(context, 'Validation error');
+    _idx = widget.initialIndex;
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Property Edit Screen'),
-      ),
-      body: SingleChildScrollView(
-        child: Column(
+    final size = MediaQuery.of(context).size;
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: EdgeInsets.zero,
+      child: SizedBox(
+        width: size.width,
+        height: size.height,
+        child: Stack(
           children: [
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const SizedBox(
-                  height: 20.0,
-                ), // Add spacing between the icon and text
-                const Text(
-                  'Edit Property',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.blue,
+            GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: Container(
+                  color: Colors.transparent,
+                  width: size.width,
+                  height: size.height),
+            ),
+            Center(
+              child: InteractiveViewer(
+                child: Image.network(
+                  '${AppConfig.serverBase}${widget.images[_idx].url}',
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => Image.asset(
+                    'assets/images/house_placeholder.jpg',
+                    fit: BoxFit.contain,
                   ),
                 ),
-                const SizedBox(
-                  height: 15,
-                ),
-                // New Row with the Stack widget and two columns of input fields
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    // Existing Stack widget (image display with arrows)
-                    Stack(
-                      children: [
-                        if (images.isNotEmpty)
-                          Column(
-                            children: [
-                              Row(
-                                children: [
-                                  Container(
-                                    constraints: const BoxConstraints(
-                                      maxWidth:
-                                          700, // Set the maximum width here
-                                      maxHeight:
-                                          300, // Set the maximum height here
-                                    ),
-                                    child: Stack(
-                                      children: [
-                                        // Container for Left Arrow
-                                        Positioned(
-                                          left: 20,
-                                          top: 0,
-                                          bottom: 0,
-                                          child: IconButton(
-                                            icon: const Icon(Icons.arrow_back),
-                                            onPressed: goToPreviousImage,
-                                            color: Colors.blue,
-                                            iconSize:
-                                                32, // Adjust the icon size here
-                                          ),
-                                        ),
-                                        // Container for Image
-                                        Center(
-                                          child: Container(
-                                            constraints: const BoxConstraints(
-                                              maxWidth:
-                                                  600, // Set the maximum width for the image
-                                              maxHeight:
-                                                  300, // Set the maximum height for the image
-                                            ),
-                                            child: Image.network(
-                                              "https://localhost:7137/${images[currentImageIndex].url}",
-                                              fit: BoxFit.cover,
-                                            ),
-                                          ),
-                                        ),
-                                        // Container for Right Arrow
-                                        Positioned(
-                                          right: 20,
-                                          top: 0,
-                                          bottom: 0,
-                                          child: IconButton(
-                                            icon:
-                                                const Icon(Icons.arrow_forward),
-                                            color: Colors.blue,
-                                            onPressed: goToNextImage,
-                                            iconSize:
-                                                32, // Adjust the icon size here
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(
-                                height: 20,
-                              ),
-                              SizedBox(
-                                height: 50,
-                                width: 140,
-                                child: ElevatedButton(
-                                  onPressed: () async => {
-                                    await pickImage(),
-                                    setState(() {
-                                      initForm();
-                                    }),
-                                    showSuccessMessageImage(),
-                                  },
-                                  child: const Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(Icons.photo), // Edit icon
-                                      SizedBox(
-                                          width:
-                                              8), // Add some spacing between icon and label
-                                      Text('Add image'), // Edit label
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ],
-                          )
-                        else
-                          Image.asset(
-                            "assets/images/house_placeholder.jpg",
-                            height: 300,
-                            width: 300,
-                            fit: BoxFit.cover,
-                          ),
-                      ],
-                    ),
-
-                    // New Row with two columns of input fields
-                    SizedBox(
-                      width: 250,
-                      child: Form(
-                        autovalidateMode:
-                            AutovalidateMode.always, // Enable auto-validation
-                        key: _formKey,
-                        child: Column(
-                          children: [
-                            // Input Field 1
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Property name',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                TextFormField(
-                                  controller: _propertyNameController,
-                                  decoration: const InputDecoration(
-                                    hintText: 'Property name',
-                                  ),
-                                  onChanged: (_) {
-                                    _updateFormValidation(
-                                        _formKey); // Call this function whenever the text changes
-                                  },
-                                  validator: (value) {
-                                    if (value!.isEmpty) {
-                                      return 'Please enter a property name';
-                                    }
-
-                                    return null; // Return null if the input is valid
-                                  },
-                                ),
-                              ],
-                            ),
-
-                            // Input Field 2
-                            DropdownButtonFormField<PropertyType>(
-                              value: widget.property
-                                  ?.propertyType, // Set the initial value
-                              onChanged: (PropertyType? newValue) {
-                                setState(() {
-                                  // Update the selected value when the user makes a selection
-                                  widget.property?.propertyType = newValue;
-                                  widget.property?.propertyTypeId =
-                                      newValue?.id;
-                                });
-                              },
-                              items: (propertyTypeResult?.result ?? [])
-                                  .map<DropdownMenuItem<PropertyType>>(
-                                (PropertyType? propertyType) {
-                                  if (propertyType != null &&
-                                      propertyType.name != null) {
-                                    return DropdownMenuItem<PropertyType>(
-                                      value: propertyType,
-                                      child: Text(propertyType.name!),
-                                    );
-                                  } else {
-                                    return const DropdownMenuItem<PropertyType>(
-                                      value:
-                                          null, // Provide a default value or handle null differently
-                                      child: Text(
-                                        'Undefined', // Display something meaningful for null values
-                                      ),
-                                    );
-                                  }
-                                },
-                              ).toList(),
-                              decoration: const InputDecoration(
-                                labelText: 'Property types',
-                              ),
-                            ),
-
-                            // Input Field 3
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Address',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                TextFormField(
-                                  // Set the initial value
-                                  controller:
-                                      _propertyAdressController, // Set the controller
-
-                                  decoration: const InputDecoration(
-                                    hintText: 'Address',
-                                    // You can customize the appearance of the input field decoration here.
-                                  ),
-                                  onChanged: (_) {
-                                    _updateFormValidation(
-                                        _formKey); // Call this function whenever the text changes
-                                  },
-                                  validator: (value) {
-                                    if (value!.isEmpty) {
-                                      return 'Please enter an address';
-                                    }
-                                    return null; // Return null if the input is valid
-                                  },
-                                  // Other properties for the TextFormField...
-                                ),
-                              ],
-                            ),
-                            // Input Field 4
-                            DropdownButtonFormField<String>(
-                              value: widget.property?.isMonthly == true
-                                  ? 'Monthly'
-                                  : widget.property?.isDaily == true
-                                      ? 'Daily'
-                                      : null, // Set the initial value based on the property values
-                              onChanged: (String? newValue) {
-                                setState(() {
-                                  // Set widget.property?.isMonthly and widget.property?.isDaily based on the selection
-                                  if (newValue == 'Monthly') {
-                                    widget.property?.isMonthly = true;
-                                    widget.property?.isDaily = false;
-                                  } else if (newValue == 'Daily') {
-                                    widget.property?.isMonthly = false;
-                                    widget.property?.isDaily = true;
-                                  }
-                                });
-                              },
-                              items: ['Monthly', 'Daily'].map((String value) {
-                                return DropdownMenuItem<String>(
-                                  value: value,
-                                  child: Text(value),
-                                );
-                              }).toList(),
-                              decoration: const InputDecoration(
-                                labelText: 'Rent type',
-                              ),
-                            ),
-                            TextFormField(
-                              controller: _priceController,
-
-                              keyboardType:
-                                  const TextInputType.numberWithOptions(
-                                      decimal: true),
-                              decoration: const InputDecoration(
-                                labelText: 'Price (BAM)',
-                              ),
-                              onChanged: (_) {
-                                _updateFormValidation(
-                                    _formKey); // Call this function whenever the text changes
-                              },
-                              validator: (value) {
-                                if (value!.isEmpty) {
-                                  return 'This field is required';
-                                }
-                                // Use a regex to check if the input consists of only digits
-
-                                return null; // Return null if the input is valid
-                              },
-                              // Other properties for the TextFormField...
-                            ),
-                            DropdownButtonFormField<int>(
-                              value: widget.property?.capacity ??
-                                  0, // Set the initial value
-                              onChanged: (int? newValue) {
-                                setState(() {
-                                  // Update the selected value when the user makes a selection
-                                  widget.property?.capacity = newValue;
-                                });
-                              },
-                              items: [
-                                1,
-                                2,
-                                3,
-                                4,
-                                5,
-                                6,
-                                7,
-                                8,
-                                9
-                              ] // List of integer options
-                                  .map((int value) {
-                                return DropdownMenuItem<int>(
-                                  value: value,
-                                  child: Text(value
-                                      .toString()), // Display integer as a string
-                                );
-                              }).toList(),
-                              decoration: const InputDecoration(
-                                labelText: 'Max people',
-                              ),
-                            ),
-                            DropdownButtonFormField<int>(
-                              value: widget.property?.parkingSize ??
-                                  0, // Set the initial value
-                              onChanged: (int? newValue) {
-                                setState(() {
-                                  // Update the selected value when the user makes a selection
-                                  widget.property?.parkingSize = newValue;
-                                });
-                              },
-                              items: [
-                                0,
-                                1,
-                                2,
-                                3,
-                                4,
-                                5,
-                                6,
-                                7,
-                                8,
-                                9
-                              ] // List of integer options
-                                  .map((int value) {
-                                return DropdownMenuItem<int>(
-                                  value: value,
-                                  child: Text(value
-                                      .toString()), // Display integer as a string
-                                );
-                              }).toList(),
-                              decoration: const InputDecoration(
-                                labelText: 'Parking size',
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                    // Second Column with 5 input fields
-                    SizedBox(
-                      width: 250,
-                      child: Form(
-                        autovalidateMode:
-                            AutovalidateMode.always, // Enable auto-validation
-                        key: _form2Key,
-                        child: Column(
-                          children: [
-                            // Input Field 6
-                            DropdownButtonFormField<City?>(
-                              value: widget.property
-                                  ?.city, // Set the initial value (selectedCity is a City? variable)
-                              onChanged: (City? newValue) {
-                                setState(() {
-                                  // Update the selected value when the user makes a selection
-                                  widget.property?.city = newValue;
-                                  widget.property?.cityId = newValue?.id;
-                                });
-                              },
-                              items: (cityResult?.result ?? [])
-                                  .map<DropdownMenuItem<City?>>(
-                                (City? city) {
-                                  if (city != null && city.name != null) {
-                                    return DropdownMenuItem<City?>(
-                                      value:
-                                          city, // Ensure each value is unique
-                                      child: Text(city.name!),
-                                    );
-                                  } else {
-                                    return const DropdownMenuItem<City?>(
-                                      value:
-                                          null, // Provide a default value or handle null differently
-                                      child: Text(
-                                        'Undefined', // Display something meaningful for null values
-                                      ),
-                                    );
-                                  }
-                                },
-                              ).toList(),
-                              decoration: const InputDecoration(
-                                labelText: 'City',
-                              ),
-                            ),
-                            // Input Field 7
-                            DropdownButtonFormField<int>(
-                              value: widget.property?.numberOfRooms ??
-                                  0, // Set the initial value
-                              onChanged: (int? newValue) {
-                                setState(() {
-                                  // Update the selected value when the user makes a selection
-                                  widget.property?.numberOfRooms = newValue;
-                                });
-                              },
-                              items: [
-                                1,
-                                2,
-                                3,
-                                4,
-                                5,
-                                6,
-                                7,
-                                8,
-                                9
-                              ] // List of integer options
-                                  .map((int value) {
-                                return DropdownMenuItem<int>(
-                                  value: value,
-                                  child: Text(value
-                                      .toString()), // Display integer as a string
-                                );
-                              }).toList(),
-                              decoration: const InputDecoration(
-                                labelText: 'Number of Rooms',
-                              ),
-                            ),
-                            // Input Field 8
-                            DropdownButtonFormField<int>(
-                              value: widget.property?.numberOfBathrooms ??
-                                  0, // Set the initial value
-                              onChanged: (int? newValue) {
-                                setState(() {
-                                  // Update the selected value when the user makes a selection
-                                  widget.property?.numberOfBathrooms = newValue;
-                                });
-                              },
-                              items: [
-                                1,
-                                2,
-                                3,
-                                4,
-                                5,
-                                6,
-                                7,
-                                8,
-                                9
-                              ] // List of integer options
-                                  .map((int value) {
-                                return DropdownMenuItem<int>(
-                                  value: value,
-                                  child: Text(value
-                                      .toString()), // Display integer as a string
-                                );
-                              }).toList(),
-                              decoration: const InputDecoration(
-                                labelText: 'Number of Bahtrooms',
-                              ),
-                            ),
-                            // Input Field 9
-                            DropdownButtonFormField<int>(
-                              value: widget.property?.garageSize ??
-                                  0, // Set the initial value
-                              onChanged: (int? newValue) {
-                                setState(() {
-                                  // Update the selected value when the user makes a selection
-                                  widget.property?.garageSize = newValue;
-                                });
-                              },
-                              items: [
-                                1,
-                                2,
-                                3,
-                                4,
-                                5,
-                                6,
-                                7,
-                                8,
-                                9
-                              ] // List of integer options
-                                  .map((int value) {
-                                return DropdownMenuItem<int>(
-                                  value: value,
-                                  child: Text(value
-                                      .toString()), // Display integer as a string
-                                );
-                              }).toList(),
-                              decoration: const InputDecoration(
-                                labelText: 'Garage capacity',
-                              ),
-                            ),
-                            // Input Field 10
-
-                            TextFormField(
-                              controller: _squareMetersController,
-                              keyboardType: TextInputType.numberWithOptions(),
-                              inputFormatters: <TextInputFormatter>[
-                                FilteringTextInputFormatter
-                                    .digitsOnly, // Allow only digits
-                              ],
-                              decoration: const InputDecoration(
-                                labelText: 'Square meters',
-                              ),
-                              onChanged: (_) {
-                                _updateFormValidation(
-                                    _form2Key); // Call this function whenever the text changes
-                              },
-                              validator: (value) {
-                                if (value!.isEmpty) {
-                                  return 'This field is required';
-                                }
-                                // Use a regex to check if the input consists of only digits
-                                final isDigitsOnly = int.tryParse(value);
-                                if (isDigitsOnly == null) {
-                                  return 'Please enter a valid number';
-                                }
-                                return null; // Return null if the input is valid
-                              },
-                              // Other properties for the TextFormField...
-                            ),
-                            TextFormField(
-                              controller: _gardenSizeController,
-                              keyboardType:
-                                  const TextInputType.numberWithOptions(),
-                              inputFormatters: <TextInputFormatter>[
-                                FilteringTextInputFormatter
-                                    .digitsOnly, // Allow only digits
-                              ],
-                              decoration: const InputDecoration(
-                                labelText: 'Garden size (Square meters)',
-                              ),
-                              onChanged: (_) {
-                                _updateFormValidation(
-                                    _form2Key); // Call this function whenever the text changes
-                              },
-                              validator: (value) {
-                                if (value!.isEmpty) {
-                                  return 'This field is required';
-                                }
-                                // Use a regex to check if the input consists of only digits
-                                final isDigitsOnly = int.tryParse(value);
-                                if (isDigitsOnly == null) {
-                                  return 'Please enter a valid number';
-                                }
-                                return null; // Return null if the input is valid
-                              },
-                              // Other properties for the TextFormField...
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const Divider(
-                  color: Colors.blue,
-                  thickness: 1.0,
-                  height: 20.0,
-                ),
-                const SizedBox(
-                  width: 50,
-                ),
-                Row(
-                  children: [
-                    const SizedBox(
-                      width: 130,
-                    ),
-                    Container(
-                      color: const Color.fromARGB(255, 246, 246, 246),
-                      child: Row(
-                        children: [
-                          if (displayedImageUrl != null)
-                            buildImageRow(
-                                currentImageIndex, displayedImageUrl!, images),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const Divider(
-                  color: Colors.blue,
-                  thickness: 1.0,
-                  height: 20.0,
-                ),
-                const SizedBox(
-                  height: 30,
-                ),
-                Column(
-                  children: [
-                    Center(
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment
-                            .spaceEvenly, // Center content horizontally with spacing
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Checkbox(
-                                    value: widget.property?.isFurnished,
-                                    onChanged: (bool? newValue) {
-                                      setState(() {
-                                        widget.property?.isFurnished =
-                                            newValue ?? false;
-                                      });
-                                    },
-                                  ),
-                                  const Text('Furnished'),
-                                ],
-                              ),
-                              Row(
-                                children: [
-                                  Checkbox(
-                                    value: widget.property?.hasOwnHeatingSystem,
-                                    onChanged: (bool? newValue) {
-                                      setState(() {
-                                        widget.property?.hasOwnHeatingSystem =
-                                            newValue ?? false;
-                                      });
-                                    },
-                                  ),
-                                  const Text('Heating system'),
-                                ],
-                              ),
-                              Row(
-                                children: [
-                                  Checkbox(
-                                    value: widget.property?.hasParking,
-                                    onChanged: (bool? newValue) {
-                                      setState(() {
-                                        widget.property?.hasParking =
-                                            newValue ?? false;
-                                      });
-                                    },
-                                  ),
-                                  const Text('Parking'),
-                                ],
-                              ),
-                              Row(
-                                children: [
-                                  Checkbox(
-                                    value: widget.property?.hasAirCondition,
-                                    onChanged: (bool? newValue) {
-                                      setState(() {
-                                        widget.property?.hasAirCondition =
-                                            newValue ?? false;
-                                      });
-                                    },
-                                  ),
-                                  const Text('Air conditioning'),
-                                ],
-                              ),
-                            ],
-                          ),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Checkbox(
-                                    value: widget.property?.hasWiFi,
-                                    onChanged: (bool? newValue) {
-                                      setState(() {
-                                        widget.property?.hasWiFi =
-                                            newValue ?? false;
-                                      });
-                                    },
-                                  ),
-                                  const Text('Wi-Fi'),
-                                ],
-                              ),
-                              Row(
-                                children: [
-                                  Checkbox(
-                                    value: widget.property?.hasGarage,
-                                    onChanged: (bool? newValue) {
-                                      setState(() {
-                                        widget.property?.hasGarage =
-                                            newValue ?? false;
-                                      });
-                                    },
-                                  ),
-                                  const Text('Garage'),
-                                ],
-                              ),
-                              Row(
-                                children: [
-                                  Checkbox(
-                                    value: widget.property?.hasAlarm,
-                                    onChanged: (bool? newValue) {
-                                      setState(() {
-                                        widget.property?.hasAlarm =
-                                            newValue ?? false;
-                                      });
-                                    },
-                                  ),
-                                  const Text('Alarm'),
-                                ],
-                              ),
-                              Row(
-                                children: [
-                                  Checkbox(
-                                    value: widget.property?.hasTV,
-                                    onChanged: (bool? newValue) {
-                                      setState(() {
-                                        widget.property?.hasTV =
-                                            newValue ?? false;
-                                      });
-                                    },
-                                  ),
-                                  const Text('TV'),
-                                ],
-                              ),
-                            ],
-                          ),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Checkbox(
-                                    value: widget.property?.hasPool,
-                                    onChanged: (bool? newValue) {
-                                      setState(() {
-                                        widget.property?.hasPool =
-                                            newValue ?? false;
-                                      });
-                                    },
-                                  ),
-                                  const Text('Pool'),
-                                ],
-                              ),
-                              Row(
-                                children: [
-                                  Checkbox(
-                                    value: widget.property?.hasSurveilance,
-                                    onChanged: (bool? newValue) {
-                                      setState(() {
-                                        widget.property?.hasSurveilance =
-                                            newValue ?? false;
-                                      });
-                                    },
-                                  ),
-                                  const Text('Surveilance'),
-                                ],
-                              ),
-                              Row(
-                                children: [
-                                  Checkbox(
-                                    value: widget.property?.hasCableTV,
-                                    onChanged: (bool? newValue) {
-                                      setState(() {
-                                        widget.property?.hasCableTV =
-                                            newValue ?? false;
-                                      });
-                                    },
-                                  ),
-                                  const Text('Cable TV'),
-                                ],
-                              ),
-                              Row(
-                                children: [
-                                  Checkbox(
-                                    value: widget.property?.hasBalcony,
-                                    onChanged: (bool? newValue) {
-                                      setState(() {
-                                        widget.property?.hasBalcony =
-                                            newValue ?? false;
-                                      });
-                                    },
-                                  ),
-                                  const Text('Balcony'),
-                                ],
-                              ),
-                            ],
-                          ),
-                          // Add more columns as needed
-                        ],
-                      ),
-                    ),
-                    SizedBox(
-                      width: 1300,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Text(
-                            'Description',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          TextFormField(
-                            // Set the initial value
-                            controller:
-                                _descriptionController, // Set the controller
-
-                            decoration: const InputDecoration(
-                              hintText: 'Description',
-                              // Add a border to the input field
-                              border: OutlineInputBorder(
-                                borderSide: BorderSide(
-                                  color: Colors
-                                      .blue, // You can specify the border color here
-                                ),
-                              ),
-                            ),
-                            maxLines:
-                                null, // Set maxLines to null for multiple lines
-                            // Other properties for the TextFormField...
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(
-                      height: 20,
-                    ),
-                    SizedBox(
-                      height: 50,
-                      width: 90,
-                      child: ElevatedButton(
-                        onPressed: () async => updateProperty(),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.edit), // Edit icon
-                            SizedBox(
-                                width:
-                                    8), // Add some spacing between icon and label
-                            Text('Edit'), // Edit label
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(
-                      height: 20,
-                    ),
-                  ],
-                ),
-              ],
+              ),
             ),
+            Positioned(
+              top: 12,
+              right: 12,
+              child: Material(
+                color: Colors.black54,
+                borderRadius: BorderRadius.circular(24),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(24),
+                  onTap: () => Navigator.pop(context),
+                  child: const Padding(
+                    padding: EdgeInsets.all(8),
+                    child: Icon(Icons.close, color: Colors.white, size: 26),
+                  ),
+                ),
+              ),
+            ),
+            if (widget.images.length > 1) ...[
+              Positioned(
+                left: 12,
+                top: 0,
+                bottom: 0,
+                child: Center(
+                  child: _navBtn(
+                    icon: Icons.chevron_left,
+                    onPressed:
+                        _idx > 0 ? () => setState(() => _idx--) : null,
+                  ),
+                ),
+              ),
+              Positioned(
+                right: 12,
+                top: 0,
+                bottom: 0,
+                child: Center(
+                  child: _navBtn(
+                    icon: Icons.chevron_right,
+                    onPressed: _idx < widget.images.length - 1
+                        ? () => setState(() => _idx++)
+                        : null,
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: 20,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.black54,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      '${_idx + 1} / ${widget.images.length}',
+                      style: const TextStyle(
+                          color: Colors.white, fontSize: 14),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _navBtn({required IconData icon, VoidCallback? onPressed}) {
+    return Material(
+      color: onPressed != null ? Colors.black54 : Colors.black26,
+      borderRadius: BorderRadius.circular(24),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(24),
+        onTap: onPressed,
+        child: Padding(
+          padding: const EdgeInsets.all(10),
+          child: Icon(icon, color: Colors.white, size: 32),
         ),
       ),
     );

@@ -4,22 +4,23 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/http.dart';
 import 'package:http_parser/http_parser.dart' as http_parser;
+import 'package:propertease_admin/config/app_config.dart';
 import 'package:propertease_admin/models/new.dart';
+import 'package:propertease_admin/models/search_result.dart';
+import 'package:propertease_admin/utils/authorization.dart';
 
 class NotificationProvider with ChangeNotifier {
-  static String? _baseUrl;
+  static String get _baseUrl => AppConfig.apiBase;
   String _endpoint = 'Notification';
 
-  NotificationProvider() {
-    _baseUrl = const String.fromEnvironment("baseUrl",
-        defaultValue: "https://localhost:7137/api/");
-  }
+  NotificationProvider();
 
   Map<String, String> createHeaders() {
-    var headers = {
-      'Content-Type': 'application/json; charset=utf-8',
-      // "Authorization": basicAuth,
-    };
+    final headers = <String, String>{'Content-Type': 'application/json'};
+    final token = Authorization.token;
+    if (token != null && token.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $token';
+    }
     return headers;
   }
 
@@ -36,29 +37,28 @@ class NotificationProvider with ChangeNotifier {
       final url = Uri.parse('$_baseUrl$_endpoint/Edit/$id');
       final request = http.MultipartRequest('PUT', url);
 
+      final token = Authorization.token;
+      if (token != null && token.isNotEmpty) {
+        request.headers['Authorization'] = 'Bearer $token';
+      }
+
       request.fields['Id'] = notification.id.toString();
-      request.fields['CreatedAt'] = notification.createdAt!.toIso8601String();
-      request.fields['IsDeleted'] = notification.isDeleted.toString();
       request.fields['UserId'] = notification.userId.toString();
-      request.fields['TotalRecordsCount'] =
-          notification.totalRecordsCount.toString();
       request.fields['Text'] = notification.text ?? '';
       request.fields['Image'] = notification.image ?? '';
       request.fields['Name'] = notification.name ?? '';
+
       if (notification.file != null) {
         request.files.add(
-          await http.MultipartFile.fromPath('file', notification.file!.path,
-              contentType: http_parser.MediaType(
-                  'image', 'jpeg')), // Set content type as needed
+          await http.MultipartFile.fromPath('File', notification.file!.path,
+              contentType: http_parser.MediaType('image', 'jpeg')),
         );
       }
 
       final response = await request.send();
-      if (response.statusCode == 200) {
-        // Photo uploaded successfully, you can handle the response here
-        // You may also want to parse the response as needed
-      } else {
-        print('Error: ${response.statusCode}');
+      if (response.statusCode != 200) {
+        final body = await response.stream.bytesToString();
+        print('updateNotification error ${response.statusCode}: $body');
       }
     } catch (e) {
       print('Err: ${e.toString()}');
@@ -70,30 +70,26 @@ class NotificationProvider with ChangeNotifier {
       final url = Uri.parse('$_baseUrl$_endpoint/Add');
       final request = http.MultipartRequest('POST', url);
 
-      request.fields['Id'] = notification.id.toString();
-      request.fields['CreatedAt'] = notification.createdAt!.toIso8601String();
-      request.fields['IsDeleted'] = notification.isDeleted.toString();
+      final token = Authorization.token;
+      if (token != null && token.isNotEmpty) {
+        request.headers['Authorization'] = 'Bearer $token';
+      }
+
       request.fields['UserId'] = notification.userId.toString();
-      request.fields['TotalRecordsCount'] =
-          notification.totalRecordsCount.toString();
       request.fields['Text'] = notification.text ?? '';
-      request.fields['Image'] = notification.image ?? '';
       request.fields['Name'] = notification.name ?? '';
 
       if (notification.file != null) {
         request.files.add(
-          await http.MultipartFile.fromPath('file', notification.file!.path,
-              contentType: http_parser.MediaType(
-                  'image', 'jpeg')), // Set content type as needed
+          await http.MultipartFile.fromPath('File', notification.file!.path,
+              contentType: http_parser.MediaType('image', 'jpeg')),
         );
       }
+
       final response = await request.send();
-      if (response.statusCode == 200) {
-        // Photo uploaded successfully, you can handle the response here
-        // You may also want to parse the response as needed
-      } else {
-        // Handle errors here
-        print('Error: ${response.statusCode}');
+      if (response.statusCode != 200) {
+        final body = await response.stream.bytesToString();
+        print('addNotification error ${response.statusCode}: $body');
       }
     } catch (error) {
       print('Error: $error');
@@ -124,7 +120,7 @@ class NotificationProvider with ChangeNotifier {
     }
   }
 
-  Future<List<New>> get({dynamic filter}) async {
+  Future<SearchResult<New>> get({dynamic filter}) async {
     var url = "$_baseUrl$_endpoint/GetFilteredData";
 
     if (filter != null) {
@@ -135,15 +131,18 @@ class NotificationProvider with ChangeNotifier {
     var uri = Uri.parse(url);
     var headers = createHeaders();
     var response = await http.get(uri, headers: headers);
-    print(url);
 
     try {
       if (isValidResponse(response)) {
-        return (jsonDecode(response.body) as List)
-            .map((item) => New.fromJson(item))
-            .toList();
+        final decoded = jsonDecode(response.body);
+        final List items = decoded['items'] as List;
+        final result = SearchResult<New>();
+        result.totalCount = (decoded['totalCount'] as int?) ?? 0;
+        result.count = items.length;
+        result.result = items.map((item) => New.fromJson(item)).toList();
+        return result;
       } else {
-        throw Exception("Not valid response: ");
+        throw Exception("Not valid response");
       }
     } catch (e) {
       throw Exception(response.statusCode);

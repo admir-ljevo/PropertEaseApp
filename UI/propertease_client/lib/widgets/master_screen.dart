@@ -2,195 +2,246 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:propertease_client/screens/conversations/conversations_list_screen.dart';
+import 'package:propertease_client/screens/notifications/notification_list.dart';
+import 'package:propertease_client/screens/notifications/reservation_notification_list_screen.dart';
+import 'package:propertease_client/screens/property/property_list.dart';
 import 'package:propertease_client/screens/reservations/reservation_list_screen.dart';
 import 'package:propertease_client/screens/users/client_edit_screen.dart';
+import 'package:propertease_client/utils/authorization.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../main.dart';
 import '../models/application_user.dart';
 import '../providers/application_user_provider.dart';
-import '../screens/notifications/notification_list.dart';
-import '../screens/property/property_list.dart';
+import '../providers/conversation_provider.dart';
+import '../providers/reservation_notification_provider.dart';
 
 class MasterScreenWidget extends StatefulWidget {
-  Widget? child;
-  String? title;
-  Widget? title_widget;
+  final Widget? child;
+  final String? title;
+  final Widget? titleWidget;
+  final int currentIndex;
+  final int? inboxUnreadCount;
 
-  MasterScreenWidget({this.child, this.title, this.title_widget, super.key});
+  const MasterScreenWidget({
+    this.child,
+    this.title,
+    this.titleWidget,
+    this.currentIndex = 0,
+    this.inboxUnreadCount,
+    super.key,
+  });
 
   @override
-  State<StatefulWidget> createState() => MasterScreenWidgetState();
+  State<MasterScreenWidget> createState() => _MasterScreenWidgetState();
 }
 
-class MasterScreenWidgetState extends State<MasterScreenWidget> {
-  late UserProvider _userProvider;
-  late ApplicationUser user;
+class _MasterScreenWidgetState extends State<MasterScreenWidget> {
+  ApplicationUser? _user;
+  int _unreadCount = 0;
+  int _unseenNotifCount = 0;
 
-  String? firstName;
-  String? lastName;
-  String? photoUrl;
-  int? roleId;
-  int? userId;
-  Future<void> getUserIdFromSharedPreferences() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    setState(() {
-      userId = int.tryParse(prefs.getString('userId')!)!;
-      firstName = prefs.getString('firstName');
-      lastName = prefs.getString('lastName');
+  static const _kPrimary = Color(0xFF115892);
 
-      photoUrl = prefs.getString('profilePhoto');
-      roleId = prefs.getInt('roleId');
-      getUserById(userId!);
-    });
+  @override
+  void initState() {
+    super.initState();
+    _loadUser();
+    _fetchUnreadCount();
+    _fetchUnseenNotifCount();
   }
 
-  Future<void> getUserById(int id) async {
+  Future<void> _fetchUnreadCount() async {
+    final userId = Authorization.userId;
+    if (userId == null) return;
     try {
-      var fetchedUser = await _userProvider.getClientById(id);
-      setState(() {
-        user = fetchedUser;
-      });
-    } catch (e) {
-      throw (e.toString());
+      final provider = context.read<ConversationProvider>();
+      final count = await provider.getUnreadCount(userId);
+      if (mounted) setState(() => _unreadCount = count);
+    } catch (_) {}
+  }
+
+  Future<void> _fetchUnseenNotifCount() async {
+    final userId = Authorization.userId;
+    if (userId == null) return;
+    try {
+      final provider = context.read<ReservationNotificationProvider>();
+      final count = await provider.getUnseenCount(userId);
+      if (mounted) setState(() => _unseenNotifCount = count);
+    } catch (_) {}
+  }
+
+  Future<void> _loadUser() async {
+    if (Authorization.userId == null) return;
+    try {
+      final provider = context.read<UserProvider>();
+      final u = await provider.getClientById(Authorization.userId!);
+      if (mounted) setState(() => _user = u);
+    } catch (_) {}
+  }
+
+  void _openProfile() {
+    if (_user == null) return;
+    Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => UserEditScreen(user: _user!)))
+        .then((_) => _loadUser());
+  }
+
+  void _logout() {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Odjava'),
+        content: const Text('Da li ste sigurni da se želite odjaviti?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Odustani'),
+          ),
+          TextButton(
+            onPressed: () {
+              Authorization.clear();
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => const LoginWidget()),
+                (_) => false,
+              );
+            },
+            child: const Text('Odjavi se', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _onTabTapped(int index) {
+    if (index == widget.currentIndex) return;
+    switch (index) {
+      case 0:
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const PropertyListWidget()),
+          (_) => false,
+        );
+        break;
+      case 1:
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const ReservationListScreen()),
+          (_) => false,
+        );
+        break;
+      case 2:
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const NewsListWidget()),
+          (_) => false,
+        );
+        break;
+      case 3:
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(
+            builder: (_) => ConversationListScreen(
+              clientId: Authorization.userId,
+            ),
+          ),
+          (_) => false,
+        );
+        break;
     }
   }
 
   @override
-  void didChangeDependencies() {
-    // TODO: implement didChangeDependencies
-    super.didChangeDependencies();
-    _userProvider = context.read<UserProvider>();
-    getUserIdFromSharedPreferences();
-  }
-
-  @override
-  void initState() {
-    // TODO: implement initState
-    super.initState();
-    _userProvider = context.read<UserProvider>();
-    getUserIdFromSharedPreferences();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    // TODO: implement build
+    final photoBytes = Authorization.profilePhotoBytes;
+    final hasPhoto = photoBytes != null && photoBytes.isNotEmpty;
+
     return Scaffold(
       appBar: AppBar(
-        title: widget.title_widget ?? Text(widget.title ?? ""),
-      ),
-      drawer: Drawer(
-        child: ListView(
-          children: [
-            SizedBox(
-              height: 80,
-              child: PopupMenuButton<String>(
-                onSelected: (String choice) async {
-                  if (choice == 'Profile') {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => UserEditScreen(
-                          user: user,
-                        ),
-                      ),
-                    );
-                  } else if (choice == 'Logout') {
-                    final prefs = await SharedPreferences.getInstance();
-                    await prefs.remove('authToken');
-                    Navigator.of(context).push(
-                        MaterialPageRoute(builder: (context) => LoginWidget()));
-                  }
-                },
-                itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-                  const PopupMenuItem<String>(
-                    value: 'Profile',
-                    child: ListTile(
-                      leading: Icon(Icons.person),
-                      title: Text('Profile'),
-                    ),
-                  ),
-                  const PopupMenuItem<String>(
-                    value: 'Logout',
-                    child: ListTile(
-                      leading: Icon(Icons.exit_to_app),
-                      title: Text('Logout'),
-                    ),
-                  ),
-                ],
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    ListTile(
-                      leading: Container(
-                        height: 60,
-                        width: 50,
-                        child: ClipOval(
-                          child: (photoUrl!.isNotEmpty)
-                              ? Image.memory(
-                                  base64Decode(photoUrl!),
-                                  fit: BoxFit.cover,
-                                )
-                              : Image.asset(
-                                  "assets/images/user_placeholder.jpg",
-                                  fit: BoxFit.cover),
-                        ),
-                      ),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text("Profile",
-                              style: TextStyle(
-                                  color: Colors
-                                      .blue)), // Label above the user's name
-                          const SizedBox(height: 4),
-                          Row(
-                            children: [
-                              Text("$firstName $lastName"),
-                              const Icon(Icons.arrow_drop_down),
-                            ],
-                          ), // Indicator icon
-                        ],
-                      ),
-                    ),
-                  ],
+        title: widget.titleWidget ?? Text(widget.title ?? ''),
+        backgroundColor: _kPrimary,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        automaticallyImplyLeading: false,
+        actions: [
+          // Notification bell
+          IconButton(
+            tooltip: 'Obavijesti',
+            icon: Badge(
+              isLabelVisible: _unseenNotifCount > 0,
+              label: Text('$_unseenNotifCount'),
+              child: const Icon(Icons.notifications_outlined),
+            ),
+            onPressed: () {
+              Navigator.of(context)
+                  .push(MaterialPageRoute(
+                      builder: (_) =>
+                          const ReservationNotificationListScreen()))
+                  .then((_) => _fetchUnseenNotifCount());
+            },
+          ),
+          // Profile avatar button
+          Padding(
+            padding: const EdgeInsets.only(right: 4),
+            child: InkWell(
+              onTap: _openProfile,
+              borderRadius: BorderRadius.circular(20),
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: CircleAvatar(
+                  radius: 16,
+                  backgroundColor: Colors.white24,
+                  backgroundImage:
+                      hasPhoto ? MemoryImage(base64Decode(photoBytes)) : null,
+                  child: !hasPhoto
+                      ? const Icon(Icons.person, size: 18, color: Colors.white)
+                      : null,
                 ),
               ),
             ),
-            ListTile(
-              title: Text("Properties"),
-              onTap: () {
-                Navigator.of(context).push(MaterialPageRoute(
-                    builder: (context) => const PropertyListWidget()));
-              },
-            ),
-            ListTile(
-              title: const Text("News"),
-              onTap: () {
-                Navigator.of(context).push(MaterialPageRoute(
-                    builder: (context) => const NewsListWidget()));
-              },
-            ),
-            ListTile(
-              title: const Text("Reservations"),
-              onTap: () {
-                Navigator.of(context).push(MaterialPageRoute(
-                    builder: (context) => const ReservationListScreen()));
-              },
-            ),
-            ListTile(
-              title: const Text("Conversations"),
-              onTap: () {
-                Navigator.of(context).push(MaterialPageRoute(
-                    builder: (context) => ConversationListScreen(
-                          clientId: userId,
-                        )));
-              },
-            ),
-          ],
-        ),
+          ),
+          // Logout
+          IconButton(
+            icon: const Icon(Icons.logout),
+            tooltip: 'Odjava',
+            onPressed: _logout,
+          ),
+        ],
       ),
-      body: widget.child!,
+      body: widget.child ?? const SizedBox.shrink(),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: widget.currentIndex,
+        onTap: _onTabTapped,
+        selectedItemColor: _kPrimary,
+        unselectedItemColor: Colors.grey,
+        type: BottomNavigationBarType.fixed,
+        items: [
+          const BottomNavigationBarItem(
+            icon: Icon(Icons.home_outlined),
+            activeIcon: Icon(Icons.home),
+            label: 'Nekretnine',
+          ),
+          const BottomNavigationBarItem(
+            icon: Icon(Icons.calendar_month_outlined),
+            activeIcon: Icon(Icons.calendar_month),
+            label: 'Rezervacije',
+          ),
+          const BottomNavigationBarItem(
+            icon: Icon(Icons.newspaper_outlined),
+            activeIcon: Icon(Icons.newspaper),
+            label: 'Vijesti',
+          ),
+          BottomNavigationBarItem(
+            icon: Badge(
+              isLabelVisible: (widget.inboxUnreadCount ?? _unreadCount) > 0,
+              label: Text('${widget.inboxUnreadCount ?? _unreadCount}'),
+              child: const Icon(Icons.inbox_outlined),
+            ),
+            activeIcon: Badge(
+              isLabelVisible: (widget.inboxUnreadCount ?? _unreadCount) > 0,
+              label: Text('${widget.inboxUnreadCount ?? _unreadCount}'),
+              child: const Icon(Icons.inbox),
+            ),
+            label: 'Inbox',
+          ),
+        ],
+      ),
     );
   }
 }

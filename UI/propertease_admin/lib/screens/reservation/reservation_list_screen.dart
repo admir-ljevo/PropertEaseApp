@@ -4,10 +4,10 @@ import 'package:propertease_admin/models/property_reservation.dart';
 import 'package:propertease_admin/models/search_result.dart';
 import 'package:propertease_admin/providers/property_reservation_provider.dart';
 import 'package:propertease_admin/providers/property_type_provider.dart';
+import 'package:propertease_admin/utils/authorization.dart';
 import 'package:propertease_admin/screens/reservation/reservation_detail_screen.dart';
 import 'package:propertease_admin/utils/debounce.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../models/property_type.dart';
 import '../../widgets/master_screen.dart';
@@ -42,6 +42,8 @@ class ReservationListWidgetState extends State<ReservationListWidget> {
 
   bool _isLoading = false;
   String? _error;
+  int _currentPage = 1;
+  final int _pageSize = 10;
 
   @override
   void initState() {
@@ -95,6 +97,9 @@ class ReservationListWidgetState extends State<ReservationListWidget> {
         'totalPriceFrom': minPrice,
         'totalPriceTo': maxPrice,
         'isActive': _isAvailable,
+        'page': _currentPage,
+        'pageSize': _pageSize,
+        if (Authorization.roleId == 2) 'renterId': Authorization.userId,
       });
 
       if (mounted) {
@@ -307,6 +312,7 @@ class ReservationListWidgetState extends State<ReservationListWidget> {
                 _selectedDateEnd = null;
                 _formattedStartDate = null;
                 _formattedEndDate = null;
+                _currentPage = 1;
               });
               _maxPriceController.clear();
               _minPriceController.clear();
@@ -347,11 +353,15 @@ class ReservationListWidgetState extends State<ReservationListWidget> {
       return const Center(child: Text('No reservations found.'));
     }
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.vertical,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: DataTable(
+    final totalPages = ((_result?.totalCount ?? 0) / _pageSize).ceil();
+    return Column(
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            scrollDirection: Axis.vertical,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: DataTable(
           columns: const [
             DataColumn(
               label: Expanded(
@@ -417,44 +427,68 @@ class ReservationListWidgetState extends State<ReservationListWidget> {
               DataCell(Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  InkWell(
-                    onTap: () async {
-                      await Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) =>
-                              ReservationDetailsScreen(reservation: e),
-                        ),
-                      );
-                      await _fetchReservations();
-                    },
-                    child: const Icon(Icons.info),
+                  Tooltip(
+                    message: 'Detalji',
+                    child: InkWell(
+                      onTap: () async {
+                        await Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                ReservationDetailsScreen(reservation: e),
+                          ),
+                        );
+                        await _fetchReservations();
+                      },
+                      child: const Icon(Icons.info_outline),
+                    ),
                   ),
                   const SizedBox(width: 8),
-                  InkWell(
-                    onTap: () {
-                      showDialog(
-                        context: context,
-                        builder: (BuildContext ctx) {
-                          return AlertDialog(
-                            title: const Text('Confirm Delete'),
-                            content: const Text(
-                                'Are you sure you want to delete this reservation?'),
-                            actions: [
-                              TextButton(
-                                child: const Text('Cancel'),
-                                onPressed: () => Navigator.of(ctx).pop(),
-                              ),
-                              TextButton(
-                                child: const Text('Delete'),
-                                onPressed: () =>
-                                    _handleDeleteReservation(e.id),
-                              ),
-                            ],
-                          );
-                        },
-                      );
-                    },
-                    child: const Icon(Icons.delete, color: Colors.red),
+                  Tooltip(
+                    message: 'Uredi',
+                    child: InkWell(
+                      onTap: () async {
+                        await Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                ReservationEditScreen(reservation: e),
+                          ),
+                        );
+                        await _fetchReservations();
+                      },
+                      child: const Icon(Icons.edit, color: Colors.blue),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Tooltip(
+                    message: 'Obriši',
+                    child: InkWell(
+                      onTap: () {
+                        showDialog(
+                          context: context,
+                          builder: (BuildContext ctx) {
+                            return AlertDialog(
+                              title: const Text('Potvrdi brisanje'),
+                              content: const Text(
+                                  'Da li ste sigurni da želite obrisati ovu rezervaciju?'),
+                              actions: [
+                                TextButton(
+                                  child: const Text('Odustani'),
+                                  onPressed: () => Navigator.of(ctx).pop(),
+                                ),
+                                TextButton(
+                                  style: TextButton.styleFrom(
+                                      foregroundColor: Colors.red),
+                                  child: const Text('Obriši'),
+                                  onPressed: () =>
+                                      _handleDeleteReservation(e.id),
+                                ),
+                              ],
+                            );
+                          },
+                        );
+                      },
+                      child: const Icon(Icons.delete_outline, color: Colors.red),
+                    ),
                   ),
                 ],
               )),
@@ -462,6 +496,36 @@ class ReservationListWidgetState extends State<ReservationListWidget> {
           }).toList(),
         ),
       ),
+    ),
+        ),  // Expanded
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.chevron_left),
+                onPressed: _currentPage > 1
+                    ? () {
+                        setState(() => _currentPage--);
+                        _fetchReservations();
+                      }
+                    : null,
+              ),
+              Text('$_currentPage / ${totalPages > 0 ? totalPages : 1}'),
+              IconButton(
+                icon: const Icon(Icons.chevron_right),
+                onPressed: _currentPage < totalPages
+                    ? () {
+                        setState(() => _currentPage++);
+                        _fetchReservations();
+                      }
+                    : null,
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

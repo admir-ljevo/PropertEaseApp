@@ -5,234 +5,68 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart';
 import 'package:http/io_client.dart';
 import 'package:propertease_client/models/message.dart';
+import 'package:propertease_client/config/app_config.dart';
+import 'package:propertease_client/utils/authorization.dart';
 
-import '../models/property.dart';
 import '../models/search_result.dart';
 
 class MessageProvider with ChangeNotifier {
-  static String? _baseUrl;
-  late String _endpoint;
-  HttpClient client = HttpClient();
-  IOClient? http;
-  MessageProvider() {
-    _endpoint = "Message";
-    _baseUrl = const String.fromEnvironment("baseUrl",
-        defaultValue: "https://10.0.2.2:7137/api/");
+  String get _baseUrl => AppConfig.apiBase;
+  final String _endpoint = 'Message';
+  late final IOClient http;
 
-    client.badCertificateCallback = (cert, host, port) => true;
+  MessageProvider() {
+    final client = HttpClient()
+      ..badCertificateCallback = (cert, host, port) => true;
     http = IOClient(client);
   }
 
-  Future<SearchResult<Message>> get({dynamic filter}) async {
-    var url = "$_baseUrl$_endpoint";
-
-    if (filter != null) {
-      var queryString = getQueryString(filter);
-      url = "$url?$queryString";
-    }
-
-    var uri = Uri.parse(url);
-    var headers = createHeaders();
-    var response = await http!.get(uri, headers: headers);
-
-    var result = SearchResult<Message>();
-
-    List data = jsonDecode(response.body);
-
-    result.count = data.length;
-
-    if (isValidResponse(response)) {
-      for (var item in data) {
-        result.result.add(fromJson(item));
-      }
-
-      return result;
-    }
-    throw Exception("Something is wrong");
-  }
-
-  Future<SearchResult<Message>> getByConversationId(int conversationId) async {
-    var url = "$_baseUrl$_endpoint/GetByConversationId/$conversationId";
-
-    var uri = Uri.parse(url);
-    var headers = createHeaders();
-    var response = await http!.get(uri, headers: headers);
-
-    var result = SearchResult<Message>();
-
-    List data = jsonDecode(response.body);
-    print(url);
-    result.count = data.length;
-
-    if (isValidResponse(response)) {
-      for (var item in data) {
-        result.result.add(Message.fromJson(item));
-      }
-      print(response.statusCode);
-      return result;
-    }
-    throw Exception("Something is wrong");
-  }
-
-  Future<Message> updateAsync(int? id, Message data) async {
-    var url = "$_baseUrl$_endpoint/$id";
-    var headers = createHeaders();
-    var requestBody =
-        jsonEncode(toJson(data)); // Make sure data has toJson() method
-
-    var response = await http!.put(
-      Uri.parse(url),
-      headers: headers,
-      body: requestBody,
-    );
-
-    if (isValidResponse(response)) {
-      return fromJson(jsonDecode(response.body));
-    } else {
-      throw Exception("Failed to update item");
-    }
-  }
-
-  Future<Message> addAsync(Message data) async {
-    var url = "$_baseUrl$_endpoint";
-    var headers = createHeaders();
-    var requestBody = jsonEncode(toJson(data));
-
-    var response =
-        await http!.post(Uri.parse(url), headers: headers, body: requestBody);
-    if (isValidResponse(response)) {
-      return Message.fromJson(jsonDecode(response.body));
-    } else {
-      final responseStatusCode = response.statusCode;
-      final responseBody = response.body;
-      final errorMessage =
-          "Failed to insert item. Status Code: $responseStatusCode, Response Body: $responseBody";
-      print(errorMessage);
-      throw Exception(errorMessage);
-    }
-  }
-
-  Future<Message> addMessage(Message data) async {
-    var url = "$_baseUrl$_endpoint/AddMessage";
-    var headers = createHeaders();
-    var requestBody = jsonEncode(toJson(data));
-
-    var response =
-        await http!.post(Uri.parse(url), headers: headers, body: requestBody);
-    if (isValidResponse(response)) {
-      return Message.fromJson(jsonDecode(response.body));
-    } else {
-      final responseStatusCode = response.statusCode;
-      final responseBody = response.body;
-      final errorMessage =
-          "Failed to insert item. Status Code: $responseStatusCode, Response Body: $responseBody";
-      print(errorMessage);
-      throw Exception(errorMessage);
-    }
-  }
-
-  Future<void> deleteById(int? id) async {
-    var url = "$_baseUrl$_endpoint/$id";
-    final headers = createHeaders();
-
-    final response = await http!.delete(Uri.parse(url), headers: headers);
-    print(url);
-    if (response.statusCode == 200) {
-      // Successful deletion
-      print("Property deleted successfully");
-    } else if (response.statusCode == 404) {
-      // Property not found, handle as needed
-      throw Exception("Property not found");
-    } else {
-      // Handle other error cases
-      throw Exception(
-          "Failed to delete property. Status code: ${response.statusCode}");
-    }
-  }
-
-  Future<SearchResult<Message>> getFiltered({dynamic filter}) async {
-    var url = "$_baseUrl$_endpoint/GetFilteredData";
-
-    if (filter != null) {
-      var queryString = getQueryString(filter);
-      url = "$url?$queryString";
-    }
-
-    var uri = Uri.parse(url);
-    var headers = createHeaders();
-    var response = await http!.get(uri, headers: headers);
-
-    var result = SearchResult<Message>();
-
-    List data = jsonDecode(response.body);
-
-    result.count = data.length;
-    print(url);
-    if (isValidResponse(response)) {
-      for (var item in data) {
-        result.result.add(fromJson(item));
-      }
-
-      return result;
-    }
-    throw Exception("Something is wrong");
-  }
-
-  Message fromJson(data) {
-    throw Exception("Method not implemented");
-  }
-
-  Map<String, dynamic> toJson(Message data) {
-    return data.toJson();
-  }
-
-  bool isValidResponse(Response response) {
-    if (response.statusCode < 299) {
-      return true;
-    }
-    if (response.statusCode == 401) {
-      throw Exception("Wrong credentials");
-    }
-    if (response.statusCode == 500) {
-      throw Exception("Something else is wrong");
-    }
-    throw Exception("runje");
-  }
-
   Map<String, String> createHeaders() {
-    // String username = Authorization.username ?? "";
-    // String password = Authorization.password ?? "";
-
-    // String basicAuth =
-    //     "Basic ${base64Encode(utf8.encode('$username:$password'))}";
-    var headers = {
-      "Content-Type": "application/json",
-      // "Authorization": basicAuth,
-    };
+    final headers = <String, String>{'Content-Type': 'application/json'};
+    if (Authorization.token != null && Authorization.token!.isNotEmpty) {
+      headers['Authorization'] = 'Bearer ${Authorization.token}';
+    }
     return headers;
   }
 
-  String getQueryString(Map params, {String prefix = '&'}) {
-    String query = '';
-    params.forEach((key, value) {
-      if (value != null) {
-        if (value is String ||
-            value is int ||
-            value is double ||
-            value is bool) {
-          var encoded = Uri.encodeComponent(value.toString());
-          query += '$prefix$key=$encoded';
-        } else if (value is DateTime) {
-          query += '$prefix$key=${value.toIso8601String()}';
-        } else if (value is List) {
-          for (var item in value) {
-            query += getQueryString({key: item}, prefix: '$prefix$key[]');
-          }
-        } else if (value is Map) {
-          query += getQueryString(value, prefix: '$prefix$key.');
-        }
+  bool isValidResponse(Response response) {
+    if (response.statusCode < 300) return true;
+    if (response.statusCode == 401) throw Exception('Unauthorized');
+    if (response.statusCode == 403) throw Exception('Forbidden');
+    throw Exception('HTTP ${response.statusCode}: ${response.body}');
+  }
+
+  Future<SearchResult<Message>> getByConversationId(int conversationId) async {
+    final url = '$_baseUrl$_endpoint/GetByConversationId/$conversationId';
+    final response =
+        await http.get(Uri.parse(url), headers: createHeaders());
+    if (isValidResponse(response)) {
+      final List data = jsonDecode(response.body);
+      final result = SearchResult<Message>();
+      result.count = data.length;
+      for (var item in data) {
+        result.result.add(Message.fromJson(item as Map<String, dynamic>));
       }
-    });
-    return query;
+      return result;
+    }
+    throw Exception('Failed to load messages');
+  }
+
+  Future<void> markAsRead(int conversationId, int recipientId) async {
+    final url = '${_baseUrl}${_endpoint}/MarkAsRead/$conversationId?recipientId=$recipientId';
+    await http.put(Uri.parse(url), headers: createHeaders());
+  }
+
+  Future<Message> addMessage(Message data) async {
+    final url = '$_baseUrl$_endpoint/AddMessage';
+    final response = await http.post(
+      Uri.parse(url),
+      headers: createHeaders(),
+      body: jsonEncode(data.toJson()),
+    );
+    if (isValidResponse(response)) {
+      return Message.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+    }
+    throw Exception('Failed to send message. Status: ${response.statusCode}');
   }
 }

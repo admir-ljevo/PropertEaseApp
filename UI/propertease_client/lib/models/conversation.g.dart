@@ -32,6 +32,7 @@ Conversation _$ConversationFromJson(Map<String, dynamic> json) => Conversation(
       lastSent: json['lastSent'] == null
           ? null
           : DateTime.parse(json['lastSent'] as String),
+      unreadCount: json['unreadCount'] as int?,
     );
 
 Map<String, dynamic> _$ConversationToJson(Conversation instance) =>
@@ -49,4 +50,5 @@ Map<String, dynamic> _$ConversationToJson(Conversation instance) =>
       'lastMessage': instance.lastMessage,
       'lastSent': instance.lastSent?.toIso8601String(),
       'renterId': instance.renterId,
+      'unreadCount': instance.unreadCount,
     };

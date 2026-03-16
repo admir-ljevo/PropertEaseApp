@@ -5,168 +5,128 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart';
 import 'package:http/io_client.dart';
 
-import '../models/property.dart';
+import '../config/app_config.dart';
 import '../models/search_result.dart';
+import '../utils/authorization.dart';
 
 abstract class BaseProvider<T> with ChangeNotifier {
-  static String? _baseUrl;
+  static String get baseUrl => AppConfig.apiBase;
   late String _endpoint;
   HttpClient client = HttpClient();
   IOClient? http;
+
   BaseProvider(String endpoint) {
     _endpoint = endpoint;
-    _baseUrl = const String.fromEnvironment("baseUrl",
-        defaultValue: "https://10.0.2.2:7137/api/");
-
     client.badCertificateCallback = (cert, host, port) => true;
     http = IOClient(client);
   }
 
   Future<SearchResult<T>> get({dynamic filter}) async {
-    var url = "$_baseUrl$_endpoint";
-
+    var url = '$baseUrl$_endpoint';
     if (filter != null) {
-      var queryString = getQueryString(filter);
-      url = "$url?$queryString";
+      url = '$url?${getQueryString(filter)}';
     }
-
-    var uri = Uri.parse(url);
-    var headers = createHeaders();
-    var response = await http!.get(uri, headers: headers);
-
-    var result = SearchResult<T>();
-
-    List data = jsonDecode(response.body);
-
-    result.count = data.length;
-
+    final response = await http!.get(Uri.parse(url), headers: createHeaders());
     if (isValidResponse(response)) {
-      for (var item in data) {
+      final result = SearchResult<T>();
+      final data = jsonDecode(response.body);
+      // Support both array and paginated {result:[...], totalCount:N}
+      final List items = data is List ? data : (data['result'] as List? ?? []);
+      result.count = items.length;
+      for (var item in items) {
         result.result.add(fromJson(item));
       }
-
       return result;
     }
-    throw Exception("Something is wrong");
-  }
-
-  Future<T> updateAsync(int? id, T data) async {
-    var url = "$_baseUrl$_endpoint/$id";
-    var headers = createHeaders();
-    var requestBody =
-        jsonEncode(toJson(data)); // Make sure data has toJson() method
-
-    var response = await http!.put(
-      Uri.parse(url),
-      headers: headers,
-      body: requestBody,
-    );
-
-    if (isValidResponse(response)) {
-      return fromJson(jsonDecode(response.body));
-    } else {
-      throw Exception("Failed to update item");
-    }
-  }
-
-  Future<T> addAsync(T data) async {
-    var url = "$_baseUrl$_endpoint";
-    var headers = createHeaders();
-    var requestBody = jsonEncode(toJson(data));
-
-    var response =
-        await http!.post(Uri.parse(url), headers: headers, body: requestBody);
-    if (isValidResponse(response)) {
-      return fromJson(jsonDecode(response.body));
-    } else {
-      final responseStatusCode = response.statusCode;
-      final responseBody = response.body;
-      final errorMessage =
-          "Failed to insert item. Status Code: $responseStatusCode, Response Body: $responseBody";
-      print(errorMessage);
-      throw Exception(errorMessage);
-    }
-  }
-
-  Future<void> deleteById(int? id) async {
-    var url = "$_baseUrl$_endpoint/$id";
-    final headers = createHeaders();
-
-    final response = await http!.delete(Uri.parse(url), headers: headers);
-    print(url);
-    if (response.statusCode == 200) {
-      // Successful deletion
-      print("Property deleted successfully");
-    } else if (response.statusCode == 404) {
-      // Property not found, handle as needed
-      throw Exception("Property not found");
-    } else {
-      // Handle other error cases
-      throw Exception(
-          "Failed to delete property. Status code: ${response.statusCode}");
-    }
+    throw Exception('Something went wrong');
   }
 
   Future<SearchResult<T>> getFiltered({dynamic filter}) async {
-    var url = "$_baseUrl$_endpoint/GetFilteredData";
-
+    var url = '$baseUrl$_endpoint/GetFilteredData';
     if (filter != null) {
-      var queryString = getQueryString(filter);
-      url = "$url?$queryString";
+      url = '$url?${getQueryString(filter)}';
     }
-
-    var uri = Uri.parse(url);
-    var headers = createHeaders();
-    var response = await http!.get(uri, headers: headers);
-
-    var result = SearchResult<T>();
-
-    List data = jsonDecode(response.body);
-
-    result.count = data.length;
-    print(url);
+    final response = await http!.get(Uri.parse(url), headers: createHeaders());
     if (isValidResponse(response)) {
-      for (var item in data) {
+      final result = SearchResult<T>();
+      final data = jsonDecode(response.body);
+      // API returns PagedResult: { "items": [...], "totalCount": N }
+      final List items = data is List
+          ? data
+          : (data['items'] as List? ?? data['result'] as List? ?? []);
+      result.count = data is Map
+          ? (data['totalCount'] as int? ?? items.length)
+          : items.length;
+      for (var item in items) {
         result.result.add(fromJson(item));
       }
-
       return result;
     }
-    throw Exception("Something is wrong");
+    throw Exception('Something went wrong');
   }
 
-  T fromJson(data) {
-    throw Exception("Method not implemented");
+  Future<T> getById(int id) async {
+    final url = '$baseUrl$_endpoint/$id';
+    final response = await http!.get(Uri.parse(url), headers: createHeaders());
+    if (isValidResponse(response)) {
+      return fromJson(jsonDecode(response.body));
+    }
+    throw Exception('Not found');
   }
 
-  Map<String, dynamic> toJson(T data) {
-    throw UnimplementedError(
-        "The 'toJson' method is not implemented for this provider.");
+  Future<T> addAsync(T data) async {
+    final url = '$baseUrl$_endpoint';
+    final response = await http!.post(
+      Uri.parse(url),
+      headers: createHeaders(),
+      body: jsonEncode(toJson(data)),
+    );
+    if (isValidResponse(response)) {
+      return fromJson(jsonDecode(response.body));
+    }
+    throw Exception(
+        'Failed to insert. Status: ${response.statusCode}, Body: ${response.body}');
   }
+
+  Future<T> updateAsync(int? id, T data) async {
+    final url = '$baseUrl$_endpoint/$id';
+    final response = await http!.put(
+      Uri.parse(url),
+      headers: createHeaders(),
+      body: jsonEncode(toJson(data)),
+    );
+    if (isValidResponse(response)) {
+      return fromJson(jsonDecode(response.body));
+    }
+    throw Exception('Failed to update. Status: ${response.statusCode}');
+  }
+
+  Future<void> deleteById(int? id) async {
+    final url = '$baseUrl$_endpoint/$id';
+    final response =
+        await http!.delete(Uri.parse(url), headers: createHeaders());
+    if (response.statusCode == 404) throw Exception('Not found');
+    if (response.statusCode >= 300) {
+      throw Exception('Failed to delete. Status: ${response.statusCode}');
+    }
+  }
+
+  T fromJson(data) => throw UnimplementedError('fromJson not implemented');
+  Map<String, dynamic> toJson(T data) =>
+      throw UnimplementedError('toJson not implemented');
 
   bool isValidResponse(Response response) {
-    if (response.statusCode < 299) {
-      return true;
-    }
-    if (response.statusCode == 401) {
-      throw Exception("Wrong credentials");
-    }
-    if (response.statusCode == 500) {
-      throw Exception("Something else is wrong");
-    }
-    throw Exception("runje");
+    if (response.statusCode < 300) return true;
+    if (response.statusCode == 401) throw Exception('Unauthorized');
+    if (response.statusCode == 403) throw Exception('Forbidden');
+    throw Exception('HTTP ${response.statusCode}: ${response.body}');
   }
 
   Map<String, String> createHeaders() {
-    // String username = Authorization.username ?? "";
-    // String password = Authorization.password ?? "";
-
-    // String basicAuth =
-    //     "Basic ${base64Encode(utf8.encode('$username:$password'))}";
-    var headers = {
-      "Content-Type": "application/json",
-      // "Authorization": basicAuth,
-    };
+    final headers = <String, String>{'Content-Type': 'application/json'};
+    if (Authorization.token != null && Authorization.token!.isNotEmpty) {
+      headers['Authorization'] = 'Bearer ${Authorization.token}';
+    }
     return headers;
   }
 
@@ -174,12 +134,8 @@ abstract class BaseProvider<T> with ChangeNotifier {
     String query = '';
     params.forEach((key, value) {
       if (value != null) {
-        if (value is String ||
-            value is int ||
-            value is double ||
-            value is bool) {
-          var encoded = Uri.encodeComponent(value.toString());
-          query += '$prefix$key=$encoded';
+        if (value is String || value is int || value is double || value is bool) {
+          query += '$prefix$key=${Uri.encodeComponent(value.toString())}';
         } else if (value is DateTime) {
           query += '$prefix$key=${value.toIso8601String()}';
         } else if (value is List) {

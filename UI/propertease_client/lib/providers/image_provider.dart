@@ -5,33 +5,27 @@ import 'package:flutter/material.dart';
 
 import 'package:http/io_client.dart';
 
+import '../config/app_config.dart';
 import '../models/photo.dart';
 
 class PhotoProvider with ChangeNotifier {
-  static String? _baseUrl;
-  String _endpoint = "Photo";
+  final String _endpoint = "Photo";
   HttpClient client = HttpClient()
     ..badCertificateCallback = (X509Certificate cert, String host, int port) {
-      // Allow connections to any https server, regardless of the certificate
       return true;
     };
   IOClient? http;
 
   PhotoProvider() {
-    _baseUrl = const String.fromEnvironment("baseUrl",
-        defaultValue: "https://10.0.2.2:7137/api/");
-
     client.badCertificateCallback = (cert, host, port) => true;
     http = IOClient(client);
   }
   Future<List<Photo>> getImagesByProperty(int? propertyId) async {
-    var url = "$_baseUrl$_endpoint/propertyId/$propertyId";
+    var url = "${AppConfig.apiBase}$_endpoint/propertyId/$propertyId";
 
     var uri = Uri.parse(url);
     var headers = createHeaders();
     var response = await http!.get(uri, headers: headers);
-
-    List<Image> images = [];
 
     if (response.statusCode == 200) {
       return (jsonDecode(response.body) as List)
@@ -45,7 +39,7 @@ class PhotoProvider with ChangeNotifier {
   }
 
   Future<Image> getFirstImageByPropertyId(int? propertyId) async {
-    var url = "$_baseUrl$_endpoint/GetFirstImage/propertyId/$propertyId";
+    var url = "${AppConfig.apiBase}$_endpoint/GetFirstImage/propertyId/$propertyId";
 
     var uri = Uri.parse(url);
     var headers = createHeaders();
@@ -53,21 +47,11 @@ class PhotoProvider with ChangeNotifier {
 
     if (response.statusCode == 200) {
       Photo data = Photo.fromJson(jsonDecode(response.body));
-      String? imgUrl = data.url;
-
-      // Check if imageBytes is available and not empty
-      if (data.imageBytes != null) {
-        return Image.memory(base64Decode(data.imageBytes!));
-      } else {
-        // Fallback to network image or placeholder image
-        return Image.network("https://10.0.2.2:7137$imgUrl");
-        // Or return a placeholder image if you have one
-        // return Image.asset("assets/images/placeholder.jpg");
+      if (data.url != null && data.url!.isNotEmpty) {
+        return Image.network('${AppConfig.serverBase}${data.url}');
       }
-    } else {
-      // Handle server error, e.g., return a placeholder image
-      return Image.asset("assets/images/house_placeholder.jpg");
     }
+    return Image.asset("assets/images/house_placeholder.jpg");
   }
 
   Map<String, String> createHeaders() {

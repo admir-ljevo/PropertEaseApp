@@ -4,351 +4,201 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/http.dart';
-
 import 'package:http_parser/http_parser.dart' as http_parser;
 import 'package:http/io_client.dart';
 
 import '../models/application_user.dart';
+import '../utils/authorization.dart';
+import 'base_provider.dart';
 
 class UserProvider with ChangeNotifier {
-  static String? _baseUrl;
-  late String _endpoint;
-  HttpClient client = HttpClient();
-  IOClient? ioClient;
-  Map<String, String> createHeaders() {
-    var headers = {
-      'Content-Type': 'application/json; charset=utf-8',
-      // "Authorization": basicAuth,
-    };
-    return headers;
-  }
+  static const String _baseUrl = BaseProvider.baseUrl;
+  final String _endpoint = 'ApplicationUser';
+
+  final HttpClient _client = HttpClient()
+    ..badCertificateCallback = (cert, host, port) => true;
+  late final IOClient _ioClient;
 
   UserProvider() {
-    _baseUrl = const String.fromEnvironment("baseUrl",
-        defaultValue: "https://10.0.2.2:7137/api/");
-    _endpoint = 'ApplicationUser';
-    client.badCertificateCallback = (cert, host, port) {
-      return true; // Disable certificate validation (for debugging purposes).
-    };
-    ioClient = IOClient(client);
-  }
-  bool isValidResponse(Response response) {
-    if (response.statusCode < 299) {
-      return true;
-    } else if (response.statusCode == 401) {
-      throw Exception("Wrong credentials");
-    } else {
-      throw Exception("Something else is wrong");
-    }
+    _ioClient = IOClient(_client);
   }
 
-  Future<void> deleteById(int? id) async {
-    var url = "$_baseUrl$_endpoint/$id";
-    final headers = createHeaders();
-
-    final response = await ioClient?.delete(Uri.parse(url), headers: headers);
-    print(url);
-    if (response!.statusCode == 200) {
-      print("User deleted successfully");
-    } else if (response.statusCode == 404) {
-      throw Exception("User not found");
-    } else {
-      // Handle other error cases
-      throw Exception(
-          "Failed to delete user. Status code: ${response.statusCode}");
+  Map<String, String> _headers() {
+    final h = <String, String>{'Content-Type': 'application/json; charset=utf-8'};
+    if (Authorization.token != null && Authorization.token!.isNotEmpty) {
+      h['Authorization'] = 'Bearer ${Authorization.token}';
     }
+    return h;
   }
 
-  Future<String?> changePassword(
-      String oldPassword, String newPassword, String userId) async {
-    var url =
-        'https://10.0.2.2:7137/Access/ChangePassword'; // Adjust the URL as needed
-
-    var body = {
-      'currentPassword': oldPassword,
-      'newPassword': newPassword,
-      'userId': userId,
-    };
-
-    var headers = createHeaders();
-
-    try {
-      final response = await ioClient?.post(
-        Uri.parse(url),
-        headers: headers,
-        body: jsonEncode(body),
-      );
-
-      if (response?.statusCode == 200) {
-        return "Password changed successfully";
-      } else {
-        final responseJson = json.decode(response!.body);
-        return responseJson['description']; // Return the error description
-      }
-    } catch (e) {
-      return 'Network error: ${e.toString()}';
-    }
+  bool _isValid(Response response) {
+    if (response.statusCode < 300) return true;
+    if (response.statusCode == 401) throw Exception('Wrong credentials');
+    throw Exception('Server error ${response.statusCode}');
   }
 
-  Future<List<ApplicationUser>> getAllUsers() async {
-    var url = '$_baseUrl$_endpoint/GetAllUsers';
-    var uri = Uri.parse(url);
-    var headers = createHeaders();
-    var response = await ioClient?.get(uri, headers: headers);
+  // ── Auth ────────────────────────────────────────────────────────────────────
 
-    List<ApplicationUser> users = [];
-    if (isValidResponse(response!)) {
-      return (jsonDecode(response.body) as List)
-          .map((item) => ApplicationUser.fromJson(item))
-          .toList();
-    }
-    throw Exception("Something is wrong");
-  }
-
-  Future<ApplicationUser> getClientById(int id) async {
-    var url = 'https://10.0.2.2:7137/api/Clients/$id';
-    var uri = Uri.parse(url);
-    var headers = createHeaders();
-    var response = await ioClient?.get(uri, headers: headers);
-
-    if (isValidResponse(response!)) {
-      final Map<String, dynamic> responseData = jsonDecode(response.body);
-      ApplicationUser user = ApplicationUser.fromJson(responseData);
-      print("Džamija");
-      return user;
-    } else {
-      throw Exception("Something is wrong");
-    }
-  }
-
-  Future<ApplicationUser> GetEmployeeById(int id) async {
-    var url = 'https://localhost:44340/api/Employee/$id';
-    var uri = Uri.parse(url);
-    var headers = createHeaders();
-    var response = await ioClient?.get(uri, headers: headers);
-
-    if (isValidResponse(response!)) {
-      final Map<String, dynamic> responseData = jsonDecode(response.body);
-      ApplicationUser user = ApplicationUser.fromJson(responseData);
-      return user;
-    } else {
-      throw Exception("Something is wrong");
-    }
-  }
-
-  Future<List<ApplicationUser>> getEmployees() async {
-    var url = 'https://localhost:44340/api/Employee/Get';
-    var uri = Uri.parse(url);
-    var headers = createHeaders();
-    var response = await ioClient?.get(uri, headers: headers);
-
-    try {
-      if (isValidResponse(response!)) {
-        return (jsonDecode(response.body) as List)
-            .map((item) => ApplicationUser.fromJson(item))
-            .toList();
-      } else {
-        throw Exception("Not valid response: ");
-      }
-    } catch (e) {
-      throw Exception(response!.statusCode);
-    }
-  }
-
-  Future<List<ApplicationUser>> get({dynamic filter}) async {
-    var url = "$_baseUrl$_endpoint/GetFilteredData";
-
-    if (filter != null) {
-      var queryString = getQueryString(filter);
-      url = "$url?$queryString";
-    }
-
-    var uri = Uri.parse(url);
-    var headers = createHeaders();
-    var response = await ioClient?.get(uri, headers: headers);
-    print(url);
-
-    try {
-      if (isValidResponse(response!)) {
-        return (jsonDecode(response.body) as List)
-            .map((item) => ApplicationUser.fromJson(item))
-            .toList();
-      } else {
-        throw Exception("Not valid response: ");
-      }
-    } catch (e) {
-      throw Exception(response!.statusCode);
-    }
-  }
-
+  /// Returns a map with token + user info on success, or null on failure.
   Future<Map<String, dynamic>?> signIn(String userName, String password) async {
     try {
-      final url = Uri.parse("https://10.0.2.2:7137/Access/SignIn");
-      var headers = createHeaders();
-      final response = await ioClient!.post(
+      final url = Uri.parse('${_baseUrl}Access/SignIn');
+      final response = await _ioClient.post(
         url,
+        headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'userName': userName,
           'password': password,
           'rememberMe': false,
         }),
-        headers: {
-          'Content-Type': 'application/json',
-        },
       );
-      if (response.statusCode == 200) {
-        String? profilePhoto = "";
 
-        // Successful login
-        final Map<String, dynamic> data = jsonDecode(response!.body);
-        final String accessToken = data['token'];
-        final List<dynamic> userRoles = data['user']['userRoles'];
-        final String userId = data['user']['id'].toString();
+      if (response.statusCode != 200) return null;
 
-        final String firstName = data['user']['person']['firstName'];
-        final String lastName = data['user']['person']['lastName'];
-        if (data['user']['person']['profilePhotoBytes'].toString().isNotEmpty)
-          profilePhoto = data['user']['person']['profilePhotoBytes'].toString();
-        print(profilePhoto);
-        late int roleId;
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final token = data['token'] as String?;
+      final user = data['user'] as Map<String, dynamic>?;
+      if (token == null || user == null) return null;
 
-        // Check if there is a userRole with role['id'] equal to 3
+      final roleId = data['roleId'] as int?;
+      final role = data['role'] as String?;
+      // Allow role ID 3 (Client) or legacy role name check
+      final isClient = roleId == 3 ||
+          role?.toLowerCase() == 'client' ||
+          role?.toLowerCase() == 'korisnik';
+      if (!isClient) return null;
 
-        bool isClient =
-            userRoles.any((userRole) => userRole['role']['id'] == 4);
-        if (isClient) {
-          roleId = 4;
-          return {
-            'accessToken': accessToken,
-            'firstName': firstName,
-            'lastName': lastName,
-            'profilePhoto': profilePhoto,
-            'userId': userId,
-            'roleId': roleId,
-          };
-        }
-        return null;
-      }
+      final person = user['person'] as Map<String, dynamic>?;
+      final photoBytes =
+          person?['profilePhotoBytes']?.toString().isNotEmpty == true
+              ? person!['profilePhotoBytes'].toString()
+              : null;
+
+      return {
+        'token': token,
+        'userId': user['id'],
+        'firstName': person?['firstName'] ?? '',
+        'lastName': person?['lastName'] ?? '',
+        'profilePhotoBytes': photoBytes,
+        'role': role,
+        'roleId': roleId,
+      };
     } catch (e) {
-      print(e.toString());
+      debugPrint('signIn error: $e');
+      return null;
     }
+  }
 
-    return null; // Return null if the login fails or there's an error
+  Future<String?> changePassword(
+      String oldPassword, String newPassword, String userId) async {
+    final url = Uri.parse('${_baseUrl}Access/ChangePassword');
+    try {
+      final response = await _ioClient.post(
+        url,
+        headers: _headers(),
+        body: jsonEncode({
+          'currentPassword': oldPassword,
+          'newPassword': newPassword,
+          'userId': userId,
+        }),
+      );
+      if (response.statusCode == 200) return 'Password changed successfully';
+      final body = jsonDecode(response.body);
+      return body['description'] ?? 'Error changing password';
+    } catch (e) {
+      return 'Network error: $e';
+    }
+  }
+
+  // ── User CRUD ───────────────────────────────────────────────────────────────
+
+  Future<ApplicationUser> getClientById(int id) async {
+    final url = Uri.parse('${_baseUrl}Clients/$id');
+    final response = await _ioClient.get(url, headers: _headers());
+    if (_isValid(response)) {
+      return ApplicationUser.fromJson(jsonDecode(response.body));
+    }
+    throw Exception('Failed to fetch user');
+  }
+
+  Future<ApplicationUser> getRenterById(int id) async {
+    final url = Uri.parse('${_baseUrl}Clients/$id');
+    final response = await _ioClient.get(url, headers: _headers());
+    if (_isValid(response)) {
+      return ApplicationUser.fromJson(jsonDecode(response.body));
+    }
+    throw Exception('Failed to fetch renter');
   }
 
   Future<void> addClient(ApplicationUser clientData, String password) async {
-    try {
-      final url = Uri.parse("https://10.0.2.2:7137/api/Clients/Add");
-
-      final request = http.MultipartRequest('POST', url);
-
-      request.fields['Id'] = clientData.id.toString();
-      request.fields['Email'] = clientData.email ?? '';
-      request.fields['UserName'] = clientData.userName ?? '';
-      request.fields['FirstName'] = clientData.person?.firstName ?? '';
-      request.fields['LastName'] = clientData.person?.lastName ?? '';
-      request.fields['BirthDate'] =
-          clientData.person?.birthDate?.toIso8601String() ?? '';
-      request.fields['Gender'] = clientData.person?.gender?.toString() ?? '';
-      request.fields['ProfilePhoto'] = clientData.person?.profilePhoto ?? '';
-      request.fields['ProfilePhotoThumbnail'] =
-          clientData.person?.profilePhotoThumbnail ?? '';
-      request.fields['BirthPlaceId'] =
-          clientData.person?.birthPlaceId?.toString() ?? '';
-      request.fields['Jmbg'] = clientData.person?.jmbg ?? '';
-      request.fields['PlaceOfResidenceId'] =
-          clientData.person?.placeOfResidenceId?.toString() ?? '';
-
-      request.fields['Address'] = clientData.person?.address ?? '';
-      request.fields['PostCode'] = clientData.person?.postCode ?? '';
-      request.fields['PhoneNumber'] = clientData.phoneNumber ?? '';
-      request.fields['Position'] = clientData.person?.position.toString() ?? '';
-      request.fields['Password'] = password;
-
-      if (clientData.file != null) {
-        request.files.add(
-          await http.MultipartFile.fromPath('File', clientData.file!.path,
-              contentType: http_parser.MediaType('image', 'jpeg')),
-        );
-      }
-
-      final streamedResponse = await ioClient!.send(request);
-
-      final response = await http.Response.fromStream(streamedResponse);
-
-      if (response.statusCode != 200) {
-        print('Error: ${response.statusCode} ${response.body}');
-      }
-    } catch (e) {
-      print('Err: ${e.toString()}');
+    final url = Uri.parse('${_baseUrl}Clients/Add');
+    final request = http.MultipartRequest('POST', url);
+    _fillUserFields(request, clientData, password: password);
+    if (clientData.file != null) {
+      request.files.add(await http.MultipartFile.fromPath(
+          'File', clientData.file!.path,
+          contentType: http_parser.MediaType('image', 'jpeg')));
+    }
+    final streamed = await _ioClient.send(request);
+    final response = await http.Response.fromStream(streamed);
+    if (response.statusCode != 200) {
+      throw Exception('addClient failed: ${response.statusCode} ${response.body}');
     }
   }
 
   Future<void> updateClient(ApplicationUser client, int id) async {
-    try {
-      final url = Uri.parse("https://10.0.2.2:7137/api/Clients/Edit/$id");
-      final request = http.MultipartRequest('PUT', url);
-      request.fields['Id'] = client.id.toString();
-      request.fields['Email'] = client.email ?? '';
-      request.fields['UserName'] = client.userName ?? '';
-      request.fields['FirstName'] = client.person?.firstName ?? '';
-      request.fields['LastName'] = client.person?.lastName ?? '';
-      request.fields['BirthDate'] =
-          client.person?.birthDate?.toIso8601String() ?? '';
-      request.fields['Gender'] = client.person?.gender?.toString() ?? '';
-      request.fields['ProfilePhoto'] = client.person?.profilePhoto ?? '';
-      request.fields['ProfilePhotoThumbnail'] =
-          client.person?.profilePhotoThumbnail ?? '';
-      request.fields['BirthPlaceId'] =
-          client.person?.birthPlaceId?.toString() ?? '';
-      request.fields['Jmbg'] = client.person?.jmbg ?? '';
-      request.fields['PlaceOfResidenceId'] =
-          client.person?.placeOfResidenceId?.toString() ?? '';
-
-      request.fields['Address'] = client.person?.address ?? '';
-      request.fields['PostCode'] = client.person?.postCode ?? '';
-      request.fields['PhoneNumber'] = client.phoneNumber ?? '';
-      request.fields['Position'] = client.person?.position.toString() ?? '';
-
-      if (client.file != null) {
-        request.files.add(
-          await http.MultipartFile.fromPath('File', client.file!.path,
-              contentType: http_parser.MediaType('image', 'jpeg')),
-        );
-      }
-      final streamedResponse = await ioClient!.send(request);
-
-      final response = await http.Response.fromStream(streamedResponse);
-
-      if (response.statusCode != 200) {
-        print('Error: ${response.statusCode} ${response.body}');
-      }
-    } catch (e) {
-      print('Err: ${e.toString()}');
+    final url = Uri.parse('${_baseUrl}Clients/Edit/$id');
+    final request = http.MultipartRequest('PUT', url);
+    _fillUserFields(request, client);
+    if (client.file != null) {
+      request.files.add(await http.MultipartFile.fromPath(
+          'File', client.file!.path,
+          contentType: http_parser.MediaType('image', 'jpeg')));
+    }
+    final streamed = await _ioClient.send(request);
+    final response = await http.Response.fromStream(streamed);
+    if (response.statusCode != 200) {
+      throw Exception('updateClient failed: ${response.statusCode} ${response.body}');
     }
   }
 
-  String getQueryString(Map params, {String prefix = '&'}) {
-    String query = '';
-    params.forEach((key, value) {
-      if (value != null) {
-        if (value is String ||
-            value is int ||
-            value is double ||
-            value is bool) {
-          var encoded = Uri.encodeComponent(value.toString());
-          query += '$prefix$key=$encoded';
-        } else if (value is DateTime) {
-          query += '$prefix$key=${value.toIso8601String()}';
-        } else if (value is List) {
-          for (var item in value) {
-            query += getQueryString({key: item}, prefix: '$prefix$key[]');
-          }
-        } else if (value is Map) {
-          query += getQueryString(value, prefix: '$prefix$key.');
-        }
-      }
-    });
-    return query;
+  void _fillUserFields(http.MultipartRequest req, ApplicationUser u,
+      {String? password}) {
+    req.fields['Id'] = u.id.toString();
+    req.fields['Email'] = u.email ?? '';
+    req.fields['UserName'] = u.userName ?? '';
+    req.fields['FirstName'] = u.person?.firstName ?? '';
+    req.fields['LastName'] = u.person?.lastName ?? '';
+    req.fields['BirthDate'] =
+        u.person?.birthDate?.toIso8601String() ?? '';
+    req.fields['Gender'] = u.person?.gender?.toString() ?? '';
+    req.fields['ProfilePhoto'] = u.person?.profilePhoto ?? '';
+    req.fields['ProfilePhotoThumbnail'] =
+        u.person?.profilePhotoThumbnail ?? '';
+    req.fields['BirthPlaceId'] =
+        u.person?.birthPlaceId?.toString() ?? '';
+    req.fields['Jmbg'] = u.person?.jmbg ?? '';
+    req.fields['PlaceOfResidenceId'] =
+        u.person?.placeOfResidenceId?.toString() ?? '';
+    req.fields['Address'] = u.person?.address ?? '';
+    req.fields['PostCode'] = u.person?.postCode ?? '';
+    req.fields['PhoneNumber'] = u.phoneNumber ?? '';
+    if (password != null) req.fields['Password'] = password;
+
+    // Attach auth header
+    if (Authorization.token != null && Authorization.token!.isNotEmpty) {
+      req.headers['Authorization'] = 'Bearer ${Authorization.token}';
+    }
+  }
+
+  // ── Helpers ─────────────────────────────────────────────────────────────────
+
+  Future<void> deleteById(int? id) async {
+    final url = Uri.parse('${_baseUrl}$_endpoint/$id');
+    final response = await _ioClient.delete(url, headers: _headers());
+    if (response.statusCode == 404) throw Exception('User not found');
+    if (response.statusCode >= 300) {
+      throw Exception('Delete failed: ${response.statusCode}');
+    }
   }
 }

@@ -1,13 +1,20 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_calendar_carousel/flutter_calendar_carousel.dart';
 import 'package:flutter_calendar_carousel/classes/event.dart';
+import 'package:propertease_client/config/app_config.dart';
 import 'package:propertease_client/models/property_reservation.dart';
 import 'package:propertease_client/providers/property_reservation_provider.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:propertease_client/utils/authorization.dart';
 
 import '../../models/property.dart';
 import 'paypal_payment_screen.dart';
+import 'reservation_detail_screen.dart';
+
+// ── Colours consistent with the rest of the client app ───────────────────────
+const _kPrimary = Color(0xFF115892);
 
 class ReservationAddScreen extends StatefulWidget {
   Property? property;
@@ -38,64 +45,89 @@ class ReservationAddScreenState extends State<ReservationAddScreen> {
   int numberOfDays = 0;
   final _scaffoldKey = GlobalKey<ScaffoldState>();
 
+
   void setTotalPrice() {
     if (widget.property!.isMonthly!)
       totalPrice = widget.property!.monthlyPrice! * numberOfMonths;
     if (widget.property!.isDaily!)
       totalPrice = widget.property!.dailyPrice! * numberOfDays;
     setState(() {
-      _priceController.text = totalPrice.toString();
+      _priceController.text = totalPrice.toStringAsFixed(2);
     });
   }
 
-  int? userId;
-  // Add a GlobalKey for the form
+  int? get userId => Authorization.userId;
   GlobalKey<FormState> formKey = GlobalKey<FormState>();
-  Future<void> getUserIdFromSharedPreferences() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    setState(() {
-      userId = int.tryParse(prefs.getString('userId')!)!;
-    });
-  }
+
+  bool _isSubmitting = false;
 
   Future<void> addReservation() async {
-    try {
-      PropertyReservation reservation = PropertyReservation();
-      reservation.id = 0;
-      reservation.clientId = userId;
-      reservation.renterId = renterId;
-      reservation.propertyId = widget.property!.id;
-      reservation.totalPrice = totalPrice;
-      reservation.dateOfOccupancyEnd = endDate;
-      reservation.isActive = isActive;
-      reservation.isMonthly = isMonthly;
-      reservation.isDaily = isDaily;
-      reservation.numberOfGuests = selectedGuests;
-      reservation.createdAt = DateTime.now();
-      reservation.modifiedAt = DateTime.now();
-      reservation.dateOfOccupancyStart = startDate;
-      reservation.numberOfMonths = numberOfMonths;
-      reservation.numberOfDays = numberOfDays;
-      reservation.description = _descriptionController.text;
-      reservation.reservationNumber = "#0001";
-      Navigator.of(context).push(
+    if (startDate == null || endDate == null) return;
+
+    final completer = Completer<PropertyReservation?>();
+
+    final reservationData = {
+      "propertyId": widget.property!.id,
+      "clientId": userId,
+      "renterId": renterId,
+      "numberOfGuests": selectedGuests,
+      "dateOfOccupancyStart": startDate!.toIso8601String(),
+      "dateOfOccupancyEnd": endDate!.toIso8601String(),
+      "totalPrice": totalPrice,
+      "isMonthly": isMonthly,
+      "isDaily": isDaily,
+      "numberOfMonths": numberOfMonths,
+      "numberOfDays": numberOfDays,
+      "description": _descriptionController.text,
+    };
+
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => PayPalScreen(
+          totalPrice: totalPrice,
+          reservationData: reservationData,
+          onReservationCreated: (r) {
+            if (!completer.isCompleted) completer.complete(r);
+          },
+          onReservationError: (error) {
+            if (!completer.isCompleted) completer.complete(null);
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text("Plaćanje neuspješno: $error"),
+                backgroundColor: Colors.red,
+                duration: const Duration(seconds: 5),
+              ));
+            }
+          },
+          onCancelled: () {
+            if (!completer.isCompleted) completer.complete(null);
+          },
+        ),
+      ),
+    );
+
+    if (!mounted) return;
+
+    // PayPalScreen popped. If backend call is still running, show loading.
+    if (!completer.isCompleted) {
+      setState(() => _isSubmitting = true);
+    }
+
+    final reservation = await completer.future.timeout(
+      const Duration(seconds: 30),
+      onTimeout: () => null,
+    );
+
+    if (!mounted) return;
+    setState(() => _isSubmitting = false);
+
+    if (reservation != null) {
+      Navigator.of(context).pushReplacement(
         MaterialPageRoute(
-          builder: (context) => PayPalScreen(
-            totalPrice: totalPrice,
-          ),
+          builder: (_) =>
+              ReservationDetailsScreen(reservationId: reservation.id!),
         ),
       );
-      await _reservationProvider.addAsync(reservation);
-
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text("Reservation added sucessfully"),
-        backgroundColor: Colors.green,
-      ));
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text("Error: ${e.toString()}"),
-        backgroundColor: Colors.red,
-      ));
     }
   }
 
@@ -113,21 +145,20 @@ class ReservationAddScreenState extends State<ReservationAddScreen> {
       int numberOfMonths = years * 12 + months + (days > 0 ? 1 : 0);
       return numberOfMonths;
     }
-    return 0; // Return a default value when dates are not available
+    return 0;
   }
 
   int calculateNumberOfDays(DateTime? startDate, DateTime? endDate) {
     if (startDate != null && endDate != null) {
-      int numberOfDays = endDate.difference(startDate).inDays;
+      return endDate.difference(startDate).inDays;
     }
-    return numberOfDays;
+    return 0;
   }
 
   Future<void> _selectStartDate(BuildContext context) async {
     DateTime currentDate = DateTime.now();
     DateTime initialDate = startDate ?? currentDate;
 
-    // Check if the initial date satisfies the selectableDayPredicate
     while (!(await _isDateSelectable(initialDate))) {
       initialDate = initialDate.add(const Duration(days: 1));
     }
@@ -155,7 +186,6 @@ class ReservationAddScreenState extends State<ReservationAddScreen> {
   }
 
   bool _isDateSelectable(DateTime date) {
-    // Add your logic to determine which dates should be selectable/marked
     if (_reservations != null) {
       for (final reservation in _reservations!) {
         if (date.isAfter(reservation.dateOfOccupancyStart!) &&
@@ -168,10 +198,10 @@ class ReservationAddScreenState extends State<ReservationAddScreen> {
   }
 
   Future<void> _selectEndDate(BuildContext context) async {
-    final DateTime startDateValue = startDate ??
-        DateTime(2023); // Use the selected start date as a reference
-    final DateTime minEndDate = startDateValue
-        .add(const Duration(days: 30)); // Calculate the minimum end date
+    final DateTime startDateValue = startDate ?? DateTime(2023);
+    final DateTime minEndDate = isDaily
+        ? startDateValue.add(const Duration(days: 1))
+        : startDateValue.add(const Duration(days: 30));
     final DateTime currentDate = DateTime.now();
 
     DateTime? initialDate =
@@ -220,317 +250,568 @@ class ReservationAddScreenState extends State<ReservationAddScreen> {
   }
 
   bool selectableDayPredicate(DateTime date, DateTime minEndDate) {
-    return date.isAfter(minEndDate);
+    return !date.isBefore(minEndDate);
   }
 
   @override
   void didChangeDependencies() {
-    // TODO: implement didChangeDependencies
     super.didChangeDependencies();
     _reservationProvider = context.read<PropertyReservationProvider>();
     fetchReservations();
-    getUserIdFromSharedPreferences();
     isMonthly = widget.property!.isMonthly!;
     isDaily = widget.property!.isDaily!;
     isActive = true;
     renterId = widget.property!.applicationUserId!;
-
-    _priceController.text = totalPrice.toString();
+    _priceController.text = totalPrice.toStringAsFixed(2);
   }
 
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
     _reservationProvider = context.read<PropertyReservationProvider>();
     fetchReservations();
-    getUserIdFromSharedPreferences();
     isActive = true;
-
     isMonthly = widget.property!.isMonthly!;
     isDaily = widget.property!.isDaily!;
     renterId = widget.property!.applicationUserId!;
-    _priceController.text = totalPrice.toString();
+    _priceController.text = totalPrice.toStringAsFixed(2);
   }
 
   Future<void> fetchReservations() async {
-    setState(() {
-      isLoading = true;
-    });
-
+    setState(() => isLoading = true);
     try {
-      var tempReservations = await _reservationProvider
-          .getFiltered(filter: {"propertyId": widget.property!.id});
-
+      final tempReservations = await _reservationProvider
+          .getFiltered(filter: {"propertyId": widget.property!.id, "isActive": true});
       setState(() {
         _reservations = tempReservations.result;
         isLoading = false;
       });
     } catch (e) {
-      print(e.toString());
-      isLoading = false;
+      debugPrint(e.toString());
+      setState(() => isLoading = false);
     }
   }
 
+  // ── helpers ────────────────────────────────────────────────────────────────
+
+  String _fmt(DateTime? d) =>
+      d != null ? '${d.day.toString().padLeft(2, '0')}.${d.month.toString().padLeft(2, '0')}.${d.year}' : 'Odaberite datum';
+
+  String get _durationLabel {
+    if (startDate == null || endDate == null) return '—';
+    if (isMonthly) return '$numberOfMonths mj.';
+    if (isDaily) return '$numberOfDays dana';
+    return '—';
+  }
+
+  // ── build ──────────────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
+    final p = widget.property!;
+    final photoUrl = (p.firstPhotoUrl != null && p.firstPhotoUrl!.isNotEmpty)
+        ? '${AppConfig.serverBase}${p.firstPhotoUrl}'
+        : null;
+
     return Scaffold(
+      backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
-        title: const Text("New reservation"),
+        backgroundColor: _kPrimary,
+        foregroundColor: Colors.white,
+        title: const Text('Nova rezervacija',
+            style: TextStyle(fontWeight: FontWeight.bold)),
+        elevation: 0,
       ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      body: Stack(
+        children: [
+          if (isLoading)
+            const Center(child: CircularProgressIndicator())
+          else
+            SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Text(
-                    "Property name:",
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  Text(
-                    widget.property?.name ?? '',
-                    style: const TextStyle(fontSize: 18),
-                  ),
+                  _buildPropertyCard(p, photoUrl),
+                  const SizedBox(height: 16),
+                  _buildDatesCard(),
+                  const SizedBox(height: 16),
+                  _buildGuestsCard(p),
+                  const SizedBox(height: 16),
+                  _buildPriceCard(p),
+                  const SizedBox(height: 16),
+                  _buildNotesCard(),
+                  const SizedBox(height: 24),
+                  _buildConfirmButton(),
+                  const SizedBox(height: 24),
                 ],
               ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    "City:",
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  Text(
-                    widget.property?.city?.name ?? '',
-                    style: const TextStyle(fontSize: 18),
-                  ),
-                ],
-              ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    "Address:",
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  Text(
-                    widget.property?.address ?? '',
-                    style: const TextStyle(fontSize: 18),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16.0), // Add some spacing
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    "Number of Guests:",
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  Container(
-                    width: 100,
-                    color: const Color.fromRGBO(238, 238, 238, 1),
-                    child: DropdownButton<int>(
-                      value: selectedGuests,
-                      items: List.generate(
-                        widget.property!.capacity!,
-                        (index) => index + 1,
-                      ).map((int value) {
-                        return DropdownMenuItem<int>(
-                          value: value,
-                          child: Text(value.toString()),
-                        );
-                      }).toList(),
-                      onChanged: (int? newValue) {
-                        setState(() {
-                          selectedGuests = newValue!;
-                          print(selectedGuests);
-                        });
-                      },
+            ),
+          // Loading overlay shown while backend creates the reservation
+          if (_isSubmitting)
+            Container(
+              color: Colors.black54,
+              child: const Center(
+                child: Card(
+                  margin: EdgeInsets.symmetric(horizontal: 40),
+                  child: Padding(
+                    padding: EdgeInsets.all(32),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CircularProgressIndicator(color: _kPrimary),
+                        SizedBox(height: 20),
+                        Text(
+                          'Kreiranje rezervacije...',
+                          style: TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.w600),
+                          textAlign: TextAlign.center,
+                        ),
+                        SizedBox(height: 8),
+                        Text(
+                          'Molimo pričekajte',
+                          style: TextStyle(
+                              fontSize: 13, color: Colors.black54),
+                        ),
+                      ],
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(height: 16.0), // Add some spacing
-
-              if (widget.property?.isMonthly == true)
-                const Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      "Reservation Type:",
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                    Text(
-                      "Monthly",
-                      style: TextStyle(fontSize: 18),
-                    ),
-                  ],
                 ),
-              if (widget.property?.isDaily == true)
-                const Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      "Reservation Type:",
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                    Text(
-                      "Daily",
-                      style: TextStyle(fontSize: 18),
-                    ),
-                  ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  // ── Property summary card ──────────────────────────────────────────────────
+
+  Widget _buildPropertyCard(Property p, String? photoUrl) {
+    return _SectionCard(
+      child: Row(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: photoUrl != null
+                ? Image.network(
+                    photoUrl,
+                    width: 90,
+                    height: 90,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => _photoPlaceholder(),
+                  )
+                : _photoPlaceholder(),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  p.name ?? '',
+                  style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: _kPrimary),
+                  overflow: TextOverflow.ellipsis,
                 ),
-              const SizedBox(height: 16.0), // Add some spacing
-
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    "Start Date:",
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  Text(
-                    startDate != null
-                        ? "${startDate!.day}/${startDate!.month}/${startDate!.year}"
-                        : 'Select a date',
-                    style: const TextStyle(fontSize: 18),
-                  ),
-                  ElevatedButton(
-                      style: ButtonStyle(
-                        backgroundColor: MaterialStateProperty.all(Colors.blue),
-                      ),
-                      onPressed: () {
-                        _selectStartDate(context);
-                      },
-                      child: const Row(
-                        children: [
-                          Text(
-                            "Pick a date",
-                            style: TextStyle(color: Colors.white),
-                          ),
-                          Icon(
-                            Icons.date_range,
-                            color: Colors.white,
-                            size: 22,
-                          )
-                        ],
-                      )),
-                ],
-              ),
-
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    "End Date:",
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  Text(
-                    endDate != null
-                        ? "${endDate!.day}/${endDate!.month}/${endDate!.year}"
-                        : 'Select a date',
-                    style: const TextStyle(fontSize: 18),
-                  ),
-                  ElevatedButton(
-                      style: ButtonStyle(
-                        backgroundColor: MaterialStateProperty.all(Colors.blue),
-                      ),
-                      onPressed: startDate != null
-                          ? () => _selectEndDate(context)
-                          : null,
-                      child: const Row(
-                        children: [
-                          Text(
-                            "Pick a date",
-                            style: TextStyle(color: Colors.white),
-                          ),
-                          Icon(
-                            Icons.date_range,
-                            color: Colors.white,
-                            size: 22,
-                          )
-                        ],
-                      )),
-                ],
-              ),
-              if (widget.property!.isMonthly!)
-                TextField(
-                    enabled: false,
-                    decoration: const InputDecoration(
-                      labelStyle: TextStyle(color: Colors.black, fontSize: 22),
-                      labelText: 'Monthly price (BAM)',
-                    ),
-                    controller: TextEditingController(
-                        text: widget.property!.monthlyPrice.toString() ?? ''),
+                const SizedBox(height: 4),
+                _iconText(Icons.location_city, p.city?.name ?? ''),
+                _iconText(Icons.home_work, p.propertyType?.name ?? ''),
+                _iconText(Icons.place_outlined, p.address ?? ''),
+                const SizedBox(height: 6),
+                Chip(
+                  label: Text(
+                    isMonthly ? 'Mjesečno' : 'Dnevno',
                     style: const TextStyle(
-                      color: Colors.black,
-                      fontSize: 24,
-                    )),
-              if (widget.property!.isDaily!)
-                TextField(
-                    enabled: false,
-                    decoration: const InputDecoration(
-                      labelStyle: TextStyle(color: Colors.black, fontSize: 22),
-                      labelText: 'Daily price (BAM)',
-                    ),
-                    controller: TextEditingController(
-                        text: widget.property!.dailyPrice.toString() ?? ''),
-                    style: const TextStyle(
-                      color: Colors.black,
-                      fontSize: 24,
-                    )),
-              TextField(
-                  enabled: false,
-                  decoration: const InputDecoration(
-                    labelStyle: TextStyle(color: Colors.black, fontSize: 22),
-                    labelText: 'Total price(BAM)',
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600),
                   ),
-                  controller: _priceController,
-                  style: const TextStyle(
-                    color: Colors.black,
-                    fontSize: 24,
-                  )),
-              TextField(
-                  minLines: 3,
-                  maxLines: 6,
-                  decoration: const InputDecoration(
-                    labelStyle: TextStyle(color: Colors.black, fontSize: 22),
-                    labelText: 'Additional information',
-                  ),
-                  controller: _descriptionController,
-                  style: const TextStyle(
-                    color: Colors.black,
-                    fontSize: 24,
-                  )),
-              const SizedBox(
-                height: 16,
-              ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+                  backgroundColor: _kPrimary,
+                  padding: EdgeInsets.zero,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _photoPlaceholder() => Container(
+        width: 90,
+        height: 90,
+        color: Colors.grey.shade200,
+        child: const Icon(Icons.home_work, size: 40, color: Colors.grey),
+      );
+
+  Widget _iconText(IconData icon, String text) => Padding(
+        padding: const EdgeInsets.only(top: 2),
+        child: Row(
+          children: [
+            Icon(icon, size: 14, color: Colors.grey.shade600),
+            const SizedBox(width: 4),
+            Expanded(
+              child: Text(text,
+                  style: TextStyle(
+                      fontSize: 13, color: Colors.grey.shade700),
+                  overflow: TextOverflow.ellipsis),
+            ),
+          ],
+        ),
+      );
+
+  // ── Date selection card ────────────────────────────────────────────────────
+
+  Widget _buildDatesCard() {
+    return _SectionCard(
+      title: 'Period boravka',
+      titleIcon: Icons.calendar_month,
+      child: Column(
+        children: [
+          _DateTile(
+            label: 'Datum dolaska',
+            value: _fmt(startDate),
+            isSet: startDate != null,
+            onTap: () => _selectStartDate(context),
+          ),
+          const Divider(height: 1),
+          _DateTile(
+            label: 'Datum odlaska',
+            value: _fmt(endDate),
+            isSet: endDate != null,
+            onTap: startDate != null ? () => _selectEndDate(context) : null,
+          ),
+          if (startDate != null && endDate != null) ...[
+            const Divider(height: 1),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(
                 children: [
-                  ElevatedButton(
-                      style: ButtonStyle(
-                        backgroundColor: MaterialStateProperty.all(Colors.blue),
-                      ),
-                      onPressed: endDate != null
-                          ? () async => {await addReservation()}
-                          : null,
-                      child: const Text(
-                        "Add reservation",
-                        style: TextStyle(color: Colors.white, fontSize: 20),
-                      ))
+                  const Icon(Icons.timelapse, size: 18, color: _kPrimary),
+                  const SizedBox(width: 8),
+                  const Text('Trajanje:',
+                      style: TextStyle(color: Colors.black54, fontSize: 14)),
+                  const Spacer(),
+                  Text(
+                    _durationLabel,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                        color: _kPrimary),
+                  ),
                 ],
-              )
-            ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  // ── Guests card ────────────────────────────────────────────────────────────
+
+  Widget _buildGuestsCard(Property p) {
+    final capacity = p.capacity ?? 1;
+    return _SectionCard(
+      title: 'Broj gostiju',
+      titleIcon: Icons.people_outline,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            Text(
+              'Odaberite broj gostiju',
+              style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
+            ),
+            const Spacer(),
+            _CounterButton(
+              icon: Icons.remove,
+              onTap: selectedGuests > 1
+                  ? () => setState(() => selectedGuests--)
+                  : null,
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                '$selectedGuests',
+                style: const TextStyle(
+                    fontSize: 22, fontWeight: FontWeight.bold, color: _kPrimary),
+              ),
+            ),
+            _CounterButton(
+              icon: Icons.add,
+              onTap: selectedGuests < capacity
+                  ? () => setState(() => selectedGuests++)
+                  : null,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Price summary card ─────────────────────────────────────────────────────
+
+  Widget _buildPriceCard(Property p) {
+    return _SectionCard(
+      title: 'Pregled cijene',
+      titleIcon: Icons.euro_outlined,
+      child: Column(
+        children: [
+          if (p.isMonthly == true)
+            _PriceRow(
+              label: 'Cijena po mjesecu',
+              value: '${p.monthlyPrice?.toStringAsFixed(2) ?? '—'} BAM',
+            ),
+          if (p.isDaily == true)
+            _PriceRow(
+              label: 'Cijena po danu',
+              value: '${p.dailyPrice?.toStringAsFixed(2) ?? '—'} BAM',
+            ),
+          const Divider(height: 1, indent: 16, endIndent: 16),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+            child: Row(
+              children: [
+                const Text('Ukupno:',
+                    style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87)),
+                const Spacer(),
+                Text(
+                  startDate != null && endDate != null
+                      ? '${totalPrice.toStringAsFixed(2)} BAM'
+                      : '—',
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: _kPrimary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Notes card ─────────────────────────────────────────────────────────────
+
+  Widget _buildNotesCard() {
+    return _SectionCard(
+      title: 'Napomena',
+      titleIcon: Icons.notes,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+        child: TextField(
+          controller: _descriptionController,
+          minLines: 3,
+          maxLines: 6,
+          decoration: InputDecoration(
+            hintText: 'Unesite dodatne informacije (opcionalno)...',
+            hintStyle: TextStyle(color: Colors.grey.shade400),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: _kPrimary, width: 1.5),
+            ),
+            filled: true,
+            fillColor: Colors.grey.shade50,
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           ),
         ),
+      ),
+    );
+  }
+
+  // ── Confirm button ─────────────────────────────────────────────────────────
+
+  Widget _buildConfirmButton() {
+    final canSubmit = startDate != null && endDate != null;
+    return SizedBox(
+      height: 52,
+      child: ElevatedButton.icon(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: canSubmit ? _kPrimary : Colors.grey.shade400,
+          foregroundColor: Colors.white,
+          elevation: canSubmit ? 3 : 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+        ),
+        icon: const Icon(Icons.payment),
+        label: const Text(
+          'Rezerviši i plati',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        onPressed: canSubmit ? () async => addReservation() : null,
+      ),
+    );
+  }
+}
+
+// ── Reusable widgets ───────────────────────────────────────────────────────────
+
+class _SectionCard extends StatelessWidget {
+  final String? title;
+  final IconData? titleIcon;
+  final Widget child;
+
+  const _SectionCard({this.title, this.titleIcon, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (title != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+              child: Row(
+                children: [
+                  if (titleIcon != null) ...[
+                    Icon(titleIcon, size: 18, color: _kPrimary),
+                    const SizedBox(width: 8),
+                  ],
+                  Text(
+                    title!,
+                    style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: _kPrimary,
+                        letterSpacing: 0.3),
+                  ),
+                ],
+              ),
+            ),
+          if (title != null) const SizedBox(height: 10),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+class _DateTile extends StatelessWidget {
+  final String label;
+  final String value;
+  final bool isSet;
+  final VoidCallback? onTap;
+
+  const _DateTile({
+    required this.label,
+    required this.value,
+    required this.isSet,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
+          children: [
+            Icon(
+              Icons.calendar_today_outlined,
+              size: 20,
+              color: isSet ? _kPrimary : Colors.grey.shade400,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label,
+                      style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade500,
+                          fontWeight: FontWeight.w500)),
+                  const SizedBox(height: 2),
+                  Text(
+                    value,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: isSet ? Colors.black87 : Colors.grey.shade400,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (onTap != null)
+              Icon(Icons.chevron_right,
+                  color: Colors.grey.shade400, size: 20),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CounterButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback? onTap;
+
+  const _CounterButton({required this.icon, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: onTap != null ? _kPrimary : Colors.grey.shade300,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Icon(icon, size: 20, color: Colors.white),
+      ),
+    );
+  }
+}
+
+class _PriceRow extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _PriceRow({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: Row(
+        children: [
+          Text(label,
+              style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
+          const Spacer(),
+          Text(value,
+              style: const TextStyle(
+                  fontSize: 14, fontWeight: FontWeight.w600)),
+        ],
       ),
     );
   }

@@ -1,211 +1,185 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:propertease_admin/config/app_config.dart';
 import 'package:propertease_admin/models/new.dart';
 import 'package:propertease_admin/screens/notifications/notification_edit_screen.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:propertease_admin/utils/authorization.dart';
+
+const _kPrimary = Color(0xFF115892);
 
 class NotificationDetailScreen extends StatefulWidget {
-  New? notification;
-
-  NotificationDetailScreen({required this.notification});
+  final New? notification;
+  const NotificationDetailScreen({super.key, required this.notification});
 
   @override
-  _NotificationDetailScreenState createState() =>
+  State<NotificationDetailScreen> createState() =>
       _NotificationDetailScreenState();
 }
 
 class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
-  final TextEditingController _contentController = TextEditingController();
-  String? firstName;
-  String? lastName;
-  String photoUrl = 'https://localhost:7137';
-  int? roleId;
-  Future<void> getUserIdFromSharedPreferences() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    setState(() {
-      firstName = prefs.getString('firstName');
-      lastName = prefs.getString('lastName');
-      photoUrl = 'https://localhost:7137${prefs.getString('profilePhoto')}';
-      roleId = prefs.getInt('roleId')!;
-    });
-  }
+  late New? _news;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    getUserIdFromSharedPreferences();
-    _contentController.text = widget.notification?.text ?? '';
+  void initState() {
+    super.initState();
+    _news = widget.notification;
   }
 
-  void _navigateToEditScreen(BuildContext context) async {
-    final updatedNotification = await Navigator.push(
+  Future<void> _openEdit() async {
+    final updated = await Navigator.push<New>(
       context,
       MaterialPageRoute(
-        builder: (context) => NotificationEditScreen(
-          notification: widget.notification,
-        ),
-      ),
+          builder: (_) => NotificationEditScreen(notification: _news)),
     );
-
-    if (updatedNotification != null) {
-      setState(() {
-        widget.notification = updatedNotification;
-        _contentController.text = widget.notification!.text!;
-      });
+    if (updated != null && mounted) {
+      setState(() => _news = updated);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final n = _news;
+    if (n == null) {
+      return const Scaffold(body: Center(child: Text('Vijest nije pronađena')));
+    }
+
+    final date = n.createdAt != null
+        ? DateFormat('dd.MM.yyyy – HH:mm').format(n.createdAt!)
+        : '—';
+    final author =
+        '${n.user?.person?.firstName ?? ''} ${n.user?.person?.lastName ?? ''}'
+            .trim();
+
     return Scaffold(
+      backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
-        title: const Text('News details'),
-        actions: <Widget>[
-          if (roleId == 1)
-            Row(
-              children: [
-                const Text(
-                  "Edit notification",
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 20),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.edit),
-                  onPressed: () {
-                    _navigateToEditScreen(context);
-                  },
-                ),
-              ],
+        title: const Text('Detalji vijesti'),
+        backgroundColor: _kPrimary,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        actions: [
+          if (Authorization.isAdmin)
+            IconButton(
+              icon: const Icon(Icons.edit_outlined),
+              tooltip: 'Uredi',
+              onPressed: _openEdit,
             ),
-          const SizedBox(
-            width: 50,
-          ),
+          const SizedBox(width: 8),
         ],
       ),
       body: SingleChildScrollView(
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Hero image
+            _buildHeroImage(n),
+
+            // Content card
             Padding(
-              padding: const EdgeInsets.all(8.0),
+              padding: const EdgeInsets.all(24),
               child: Center(
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: const Color.fromARGB(255, 0, 113, 165),
-                    borderRadius: BorderRadius.circular(10.0),
-                  ),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(
-                      minWidth: 300,
-                      maxWidth: 600,
-                      maxHeight: double.infinity,
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Center(
-                        child: Text(
-                          widget.notification?.name ?? "",
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 24,
-                            fontFamily: 'Roboto',
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 860),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Title
+                      Text(
+                        n.name ?? '',
+                        style: const TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: _kPrimary,
+                          height: 1.3,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Meta row
+                      Row(
+                        children: [
+                          _MetaChip(
+                            icon: Icons.person_outline,
+                            label: author.isNotEmpty ? author : '—',
                           ),
-                        ),
+                          const SizedBox(width: 12),
+                          _MetaChip(
+                            icon: Icons.calendar_today_outlined,
+                            label: date,
+                          ),
+                        ],
                       ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            Center(
-              child: Container(
-                height: 500,
-                width: 1000,
-                decoration: const BoxDecoration(
-                  borderRadius: BorderRadius.vertical(
-                    top: Radius.circular(10.0),
-                  ),
-                ),
-                child: ClipRRect(
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(10.0),
-                  ),
-                  child: Image.network(
-                    'https://localhost:7137/${widget.notification?.image}',
-                    fit: BoxFit.cover,
-                    height: 170,
-                    width: 250,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(
-              height: 50,
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(15),
-                  color: Colors.green,
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.calendar_today,
-                        color: Colors.white,
-                      ),
-                      const SizedBox(width: 8),
+                      const SizedBox(height: 24),
+                      const Divider(),
+                      const SizedBox(height: 20),
+
+                      // Body text
                       Text(
-                        'Created at: ${DateFormat('yyyy-MM-dd HH:mm').format(widget.notification?.createdAt ?? DateTime.now())}',
+                        n.text ?? '',
                         style: const TextStyle(
-                          color: Colors.white,
+                          fontSize: 15,
+                          height: 1.7,
+                          color: Colors.black87,
                         ),
                       ),
+                      const SizedBox(height: 40),
                     ],
                   ),
-                ),
-                Container(
-                  padding: const EdgeInsets.all(15),
-                  color: Colors.green,
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.edit,
-                        color: Colors.white,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Author: ${widget.notification?.user?.person?.firstName} ${widget.notification?.user?.person?.lastName}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            Container(
-              width: 1060,
-              child: Padding(
-                padding: const EdgeInsets.all(30.0),
-                child: TextField(
-                  style: const TextStyle(color: Colors.black),
-                  controller: _contentController,
-                  enabled: false,
-                  decoration: const InputDecoration(
-                    labelText: 'News content',
-                    border: OutlineInputBorder(),
-                  ),
-                  minLines: 10,
-                  maxLines: null,
-                  keyboardType: TextInputType.multiline,
                 ),
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildHeroImage(New n) {
+    if (n.image != null && n.image!.isNotEmpty) {
+      return Image.network(
+        '${AppConfig.serverBase}/${n.image}',
+        height: 320,
+        width: double.infinity,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => _imagePlaceholder(),
+      );
+    }
+    return _imagePlaceholder();
+  }
+
+  Widget _imagePlaceholder() => Container(
+        height: 200,
+        color: Colors.grey.shade200,
+        child: const Center(
+          child: Icon(Icons.newspaper, size: 72, color: Colors.grey),
+        ),
+      );
+}
+
+class _MetaChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  const _MetaChip({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: _kPrimary.withOpacity(0.07),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: _kPrimary),
+          const SizedBox(width: 6),
+          Text(label,
+              style: const TextStyle(
+                  fontSize: 13,
+                  color: _kPrimary,
+                  fontWeight: FontWeight.w500)),
+        ],
       ),
     );
   }

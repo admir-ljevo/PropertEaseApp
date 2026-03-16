@@ -3,179 +3,548 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/io_client.dart';
 import 'package:intl/intl.dart';
+import 'package:propertease_admin/config/app_config.dart';
+import 'package:propertease_admin/models/application_user.dart';
 import 'package:propertease_admin/models/conversation.dart';
-import 'package:propertease_admin/models/search_result.dart';
 import 'package:propertease_admin/providers/conversation_provider.dart';
 import 'package:propertease_admin/screens/messaging/message_list_screen.dart';
+import 'package:propertease_admin/utils/authorization.dart';
 import 'package:provider/provider.dart';
 import 'package:signalr_core/signalr_core.dart' as signalr;
 
 class ConversationListScreen extends StatefulWidget {
-  int? renterId;
-  ConversationListScreen({super.key, this.renterId});
+  const ConversationListScreen({super.key});
 
   @override
-  State<StatefulWidget> createState() => ConvesrationListScreenState();
+  State<StatefulWidget> createState() => _ConversationListScreenState();
 }
 
-class ConvesrationListScreenState extends State<ConversationListScreen> {
-  late ConversationProvider _conversationProvider;
-  late Future<SearchResult<Conversation>> conversationsFuture;
-  late signalr.HubConnection signalR;
+class _ConversationListScreenState extends State<ConversationListScreen> {
+  late ConversationProvider _provider;
+  List<Conversation> _propertyConversations = [];
+  List<Conversation> _adminConversations = [];
+  bool _loading = true;
+  String? _error;
+  late signalr.HubConnection _signalR;
 
-  void initSignalRConnection() async {
+  @override
+  void initState() {
+    super.initState();
+    _provider = context.read<ConversationProvider>();
+    _fetchAll();
+    _initSignalR();
+  }
+
+  void _initSignalR() async {
     try {
-      signalR = signalr.HubConnectionBuilder()
+      _signalR = signalr.HubConnectionBuilder()
           .withUrl(
-            'https://localhost:7137/hubs/messageHub',
+            '${AppConfig.serverBase}/hubs/messageHub',
             signalr.HttpConnectionOptions(
               client: IOClient(
-                HttpClient()..badCertificateCallback = (x, y, z) => true,
-              ),
-              logging: (level, message) => print(message),
+                  HttpClient()..badCertificateCallback = (x, y, z) => true),
+              logging: (level, message) {},
             ),
           )
           .build();
-
-      signalR.on('newMessage', (message) {
-        // Handle the received message
-        print('Received new message: $message');
-        refreshConversations(); // Update UI or handle the new message as needed
-      });
-      await signalR.start();
+      // Silent refresh on new message — no full-screen spinner
+      _signalR.on('newMessage', (_) => _fetchAll(silent: true));
+      await _signalR.start();
     } catch (e) {
-      print('Error initializing SignalR: $e');
-      // Handle the error appropriately based on your application's requirements.
-    }
-  }
-
-  void _onNewMessage(List<dynamic>? parameters) async {
-    if (parameters != null && parameters.length >= 2) {
-      final methodName = parameters[0] as String;
-      final message = parameters[1] as String;
-      print("MethodName = $methodName, Message = $message");
-      refreshConversations();
+      debugPrint('SignalR error: $e');
     }
   }
 
   @override
   void dispose() {
-    signalR.off('newMessage'); // Unsubscribe from the event
-    signalR.stop();
+    _signalR.off('newMessage');
+    _signalR.stop();
     super.dispose();
   }
 
-  @override
-  void initState() {
-    super.initState();
-    _conversationProvider = context.read<ConversationProvider>();
-    conversationsFuture = fetchConversations();
-    initSignalRConnection();
-  }
-
-  Future<SearchResult<Conversation>> fetchConversations() async {
-    try {
-      var tempConversations = await _conversationProvider
-          .getByPropertyAndRenter(null, widget.renterId!);
-      print('Fetched Conversations: ${tempConversations}');
-      return tempConversations;
-    } catch (e) {
-      print(e.toString());
-      throw e;
+  /// [silent] = true → refresh data in the background without showing a spinner.
+  /// Used by SignalR so the list doesn't flicker on every incoming message.
+  Future<void> _fetchAll({bool silent = false}) async {
+    if (!mounted) return;
+    if (!silent) {
+      setState(() {
+        _loading = true;
+        _error = null;
+      });
     }
-  }
 
-  void refreshConversations() {
-    setState(() {
-      conversationsFuture = fetchConversations();
-    });
+    try {
+      final userId = Authorization.userId!;
+      final isRenter = Authorization.isRenter;
+
+      List<Conversation> propConvs = [];
+      if (isRenter) {
+        final result = await _provider.getByPropertyAndRenter(null, userId);
+        propConvs = result.result;
+      }
+
+      final adminResult = await _provider.getAdminConversations(userId);
+
+      if (mounted) {
+        setState(() {
+          _propertyConversations = propConvs;
+          _adminConversations = adminResult.result;
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+          _loading = false;
+        });
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text("Conversations"),
-      ),
-      body: FutureBuilder(
-        future: conversationsFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
-            return Center(child: Text("Error: ${snapshot.error}"));
-          } else if (!snapshot.hasData || snapshot.data!.result.isEmpty) {
-            return Center(child: Text("No conversations available."));
-          } else {
-            var conversations = snapshot.data!.result;
-            return ListView.builder(
-              itemCount: conversations.length,
-              itemBuilder: (context, index) {
-                return buildConversationItem(conversations[index]);
-              },
-            );
-          }
-        },
-      ),
+      appBar: AppBar(title: const Text('Inbox')),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _error != null
+              ? Center(child: Text('Error: $_error'))
+              : RefreshIndicator(
+                  onRefresh: () => _fetchAll(),
+                  child: _buildBody(),
+                ),
     );
   }
 
-  Widget buildConversationItem(Conversation conversation) {
-    Widget leadingWidget =
-        conversation.client!.person!.profilePhotoBytes != null
-            ? Image.memory(
-                base64Decode(conversation.client!.person!.profilePhotoBytes!),
-                width: 150,
-                height: 150,
-              )
-            : Image.asset(
-                'assets/images/user_placeholder.jpg',
-                width: 80,
-                height: 80,
-              );
+  Widget _buildBody() {
+    final showPropertySection = Authorization.isRenter;
 
-    return ListTile(
-      leading: leadingWidget,
-      title: Text(
-          "Client: ${conversation.client?.person?.firstName} ${conversation.client?.person?.lastName}"),
-      subtitle: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return ListView(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      children: [
+        // ── Section 1: Property conversations ─────────────────────────────
+        if (showPropertySection) ...[
+          _sectionHeader(
+            icon: Icons.home_work_outlined,
+            label: 'Razgovori o nekretninama',
+            count: _propertyConversations
+                .where((c) => (c.unreadCount ?? 0) > 0)
+                .length,
+          ),
+          if (_propertyConversations.isEmpty)
+            _emptyState('Nema razgovora o nekretninama.')
+          else
+            ..._propertyConversations.map(
+                (c) => _ConversationCard(
+                      conversation: c,
+                      currentUserId: Authorization.userId,
+                      isAdminConv: false,
+                      onTap: () => _openConversation(c,
+                          _otherUser(c, Authorization.userId)),
+                    )),
+        ],
+
+        // ── Section 2: Admin conversations ────────────────────────────────
+        _sectionHeader(
+          icon: Icons.support_agent_outlined,
+          label: Authorization.isAdmin
+              ? 'Poruke upućene meni'
+              : 'Razgovori s administratorom',
+          count: _adminConversations
+              .where((c) => (c.unreadCount ?? 0) > 0)
+              .length,
+          trailing: !Authorization.isAdmin
+              ? IconButton(
+                  icon: const Icon(Icons.add_comment_outlined),
+                  tooltip: 'Novi razgovor s administratorom',
+                  onPressed: _startNewAdminConversation,
+                )
+              : null,
+        ),
+        if (_adminConversations.isEmpty)
+          _emptyState('Nema poruka.')
+        else
+          ..._adminConversations.map((c) => _ConversationCard(
+                conversation: c,
+                currentUserId: Authorization.userId,
+                isAdminConv: true,
+                onTap: () => _openConversation(
+                    c, _otherUser(c, Authorization.userId)),
+              )),
+
+        const SizedBox(height: 16),
+      ],
+    );
+  }
+
+  ApplicationUser? _otherUser(Conversation c, int? me) =>
+      (c.client?.id != me) ? c.client : c.renter;
+
+  Widget _sectionHeader({
+    required IconData icon,
+    required String label,
+    int count = 0,
+    Widget? trailing,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 8, 4),
+      child: Row(
         children: [
+          Icon(icon, size: 16, color: Colors.blueGrey.shade400),
+          const SizedBox(width: 6),
           Text(
-            'Property: ${conversation.property?.name ?? "N/A"}',
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-          if (conversation.lastMessage != null) Text("Last message: "),
-          if (conversation.lastMessage != null)
-            Text(
-              conversation.lastMessage!.length > 30
-                  ? '${conversation.lastMessage!.substring(0, 30)}...'
-                  : conversation.lastMessage!,
+            label,
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 12,
+              color: Colors.blueGrey.shade600,
+              letterSpacing: 0.3,
             ),
-          SizedBox(height: 4),
-          Text(
-            'Created: ${formattedLastSent(conversation.lastSent)}',
-            style: TextStyle(color: Colors.grey),
           ),
+          if (count > 0) ...[
+            const SizedBox(width: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+              decoration: BoxDecoration(
+                color: Colors.blue,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                '$count',
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+          const Spacer(),
+          if (trailing != null) trailing,
         ],
       ),
-      onTap: () {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (context) => MessageListScreen(
-              conversationId: conversation.id,
-              recipientId: conversation.clientId,
-              onConversationListUpdated: refreshConversations,
-            ),
-          ),
-        );
-      },
     );
   }
 
-  String formattedLastSent(DateTime? lastSent) {
-    return lastSent != null
-        ? DateFormat('MMM d, yyyy h:mm a').format(lastSent)
-        : 'N/A';
+  Widget _emptyState(String message) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Text(message, style: const TextStyle(color: Colors.black38)),
+      );
+
+  void _openConversation(Conversation conversation, ApplicationUser? other) {
+    final me = Authorization.userId!;
+    final recipientId = (conversation.clientId != me)
+        ? conversation.clientId
+        : conversation.renterId;
+    final recipientName =
+        '${other?.person?.firstName ?? ''} ${other?.person?.lastName ?? ''}'
+            .trim();
+
+    Navigator.of(context)
+        .push(MaterialPageRoute(
+          builder: (_) => MessageListScreen(
+            conversationId: conversation.id,
+            recipientId: recipientId,
+            recipientName: recipientName.isNotEmpty ? recipientName : null,
+            recipientPhotoBytes: other?.person?.profilePhotoBytes,
+            recipientPhotoUrl: other?.person?.profilePhoto,
+            onConversationListUpdated: () => _fetchAll(silent: true),
+          ),
+        ))
+        .then((_) => _fetchAll(silent: true));
+  }
+
+  Future<void> _startNewAdminConversation() async {
+    try {
+      final admins = await _provider.getAdmins();
+      if (!mounted) return;
+      if (admins.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Nema dostupnih administratora.')));
+        return;
+      }
+      showModalBottomSheet(
+        context: context,
+        builder: (_) => _AdminPickerSheet(
+          admins: admins,
+          onSelected: _openOrCreateAdminConversation,
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Greška: $e')));
+      }
+    }
+  }
+
+  void _openOrCreateAdminConversation(ApplicationUser admin) async {
+    Navigator.of(context).pop();
+    final me = Authorization.userId!;
+
+    for (final c in _adminConversations) {
+      if ((c.clientId == me && c.renterId == admin.id) ||
+          (c.renterId == me && c.clientId == admin.id)) {
+        _openConversation(c, admin);
+        return;
+      }
+    }
+
+    try {
+      final newConv = Conversation(clientId: me, renterId: admin.id);
+      final created = await _provider.addAsync(newConv);
+      if (mounted) {
+        _openConversation(created, admin);
+        _fetchAll(silent: true);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Greška pri kreiranju razgovora: $e')));
+      }
+    }
+  }
+}
+
+// ── Conversation card ──────────────────────────────────────────────────────────
+
+class _ConversationCard extends StatelessWidget {
+  final Conversation conversation;
+  final int? currentUserId;
+  final bool isAdminConv;
+  final VoidCallback onTap;
+
+  const _ConversationCard({
+    required this.conversation,
+    required this.currentUserId,
+    required this.isAdminConv,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final other = (conversation.client?.id != currentUserId)
+        ? conversation.client
+        : conversation.renter;
+    final name =
+        '${other?.person?.firstName ?? ''} ${other?.person?.lastName ?? ''}'
+            .trim();
+    final displayName =
+        name.isNotEmpty ? name : (other?.userName ?? 'Korisnik');
+    final unread = conversation.unreadCount ?? 0;
+    final hasUnread = unread > 0;
+
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
+      elevation: hasUnread ? 3 : 1,
+      shadowColor: hasUnread ? Colors.blue.shade100 : Colors.black12,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: hasUnread
+            ? BorderSide(color: Colors.blue.shade200, width: 1.5)
+            : BorderSide(color: Colors.grey.shade200),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // Avatar with unread badge
+              _buildAvatar(other?.person?.profilePhotoBytes, unread,
+                  photoUrl: other?.person?.profilePhoto),
+              const SizedBox(width: 12),
+              // Content
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Name + timestamp
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            displayName,
+                            style: TextStyle(
+                              fontWeight: hasUnread
+                                  ? FontWeight.bold
+                                  : FontWeight.w600,
+                              fontSize: 14,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          _formatDate(conversation.lastSent),
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: hasUnread
+                                ? Colors.blue.shade600
+                                : Colors.grey,
+                            fontWeight: hasUnread
+                                ? FontWeight.w600
+                                : FontWeight.normal,
+                          ),
+                        ),
+                      ],
+                    ),
+                    // Property chip (for property convs)
+                    if (!isAdminConv &&
+                        conversation.property?.name != null) ...[
+                      const SizedBox(height: 3),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.shade50,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          conversation.property!.name!,
+                          style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.blue.shade700,
+                              fontWeight: FontWeight.w500),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                    // Last message
+                    if (conversation.lastMessage != null) ...[
+                      const SizedBox(height: 3),
+                      Text(
+                        conversation.lastMessage!.length > 60
+                            ? '${conversation.lastMessage!.substring(0, 60)}...'
+                            : conversation.lastMessage!,
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          color: hasUnread
+                              ? Colors.black87
+                              : Colors.grey.shade600,
+                          fontWeight: hasUnread
+                              ? FontWeight.w500
+                              : FontWeight.normal,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAvatar(String? photoBytes, int unread, {String? photoUrl}) {
+    Widget avatar;
+    if (photoBytes != null && photoBytes.isNotEmpty) {
+      try {
+        avatar = CircleAvatar(
+            radius: 24,
+            backgroundImage: MemoryImage(base64Decode(photoBytes)));
+      } catch (_) {
+        avatar = const CircleAvatar(radius: 24, child: Icon(Icons.person));
+      }
+    } else if (photoUrl != null && photoUrl.isNotEmpty) {
+      avatar = CircleAvatar(
+          radius: 24,
+          backgroundImage:
+              NetworkImage('${AppConfig.serverBase}$photoUrl'));
+    } else {
+      avatar = const CircleAvatar(radius: 24, child: Icon(Icons.person));
+    }
+
+    if (unread <= 0) return avatar;
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        avatar,
+        Positioned(
+          right: -2,
+          top: -2,
+          child: Container(
+            padding: const EdgeInsets.all(4),
+            decoration: const BoxDecoration(
+              color: Colors.blue,
+              shape: BoxShape.circle,
+            ),
+            constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+            child: Text(
+              '$unread',
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _formatDate(DateTime? dt) {
+    if (dt == null) return '';
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final dtDay = DateTime(dt.year, dt.month, dt.day);
+    if (dtDay == today) return DateFormat.Hm().format(dt);
+    if (dtDay == today.subtract(const Duration(days: 1))) return 'Jučer';
+    return DateFormat('MMM d').format(dt);
+  }
+}
+
+// ── Admin picker sheet ─────────────────────────────────────────────────────────
+
+class _AdminPickerSheet extends StatelessWidget {
+  final List<ApplicationUser> admins;
+  final ValueChanged<ApplicationUser> onSelected;
+
+  const _AdminPickerSheet({required this.admins, required this.onSelected});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Padding(
+          padding: EdgeInsets.all(16),
+          child: Text('Odaberite administratora',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        ),
+        ...admins.map((a) {
+          final name =
+              '${a.person?.firstName ?? ''} ${a.person?.lastName ?? ''}'.trim();
+          Widget avatar;
+          if (a.person?.profilePhotoBytes != null) {
+            try {
+              avatar = CircleAvatar(
+                  backgroundImage:
+                      MemoryImage(base64Decode(a.person!.profilePhotoBytes!)));
+            } catch (_) {
+              avatar = const CircleAvatar(child: Icon(Icons.person));
+            }
+          } else {
+            avatar = const CircleAvatar(child: Icon(Icons.person));
+          }
+          return ListTile(
+            leading: avatar,
+            title: Text(name.isNotEmpty ? name : (a.userName ?? 'Admin')),
+            onTap: () => onSelected(a),
+          );
+        }),
+        const SizedBox(height: 16),
+      ],
+    );
   }
 }

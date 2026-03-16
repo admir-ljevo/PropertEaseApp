@@ -1,19 +1,22 @@
 import 'package:flutter/material.dart';
-import 'package:propertease_client/models/conversation.dart';
 import 'package:propertease_client/providers/conversation_provider.dart';
 import 'package:propertease_client/providers/message_provider.dart';
+import 'package:propertease_client/providers/payment_provider.dart';
 import 'package:propertease_client/providers/property_provider.dart';
 import 'package:propertease_client/providers/property_reservation_provider.dart';
 import 'package:propertease_client/providers/rating_provider.dart';
 import 'package:propertease_client/screens/users/client_add_screen.dart';
+import 'package:propertease_client/utils/authorization.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'providers/application_user_provider.dart';
 import 'providers/city_provider.dart';
+import 'providers/country_provider.dart';
 import 'providers/image_provider.dart';
 import 'providers/notification_provider.dart';
 import 'providers/property_type_provider.dart';
+import 'providers/reservation_notification_provider.dart';
+import 'providers/user_rating_provider.dart';
 import 'screens/property/property_list.dart';
 
 void main() {
@@ -23,12 +26,16 @@ void main() {
       ChangeNotifierProvider(create: (_) => PropertyProvider()),
       ChangeNotifierProvider(create: (_) => PropertyTypeProvider()),
       ChangeNotifierProvider(create: (_) => CityProvider()),
+      ChangeNotifierProvider(create: (_) => CountryProvider()),
       ChangeNotifierProvider(create: (_) => PhotoProvider()),
       ChangeNotifierProvider(create: (_) => RatingProvider()),
       ChangeNotifierProvider(create: (_) => NotificationProvider()),
       ChangeNotifierProvider(create: (_) => ConversationProvider()),
       ChangeNotifierProvider(create: (_) => MessageProvider()),
-      ChangeNotifierProvider(create: (_) => PropertyReservationProvider())
+      ChangeNotifierProvider(create: (_) => PropertyReservationProvider()),
+      ChangeNotifierProvider(create: (_) => PaymentProvider()),
+      ChangeNotifierProvider(create: (_) => ReservationNotificationProvider()),
+      ChangeNotifierProvider(create: (_) => UserRatingProvider()),
     ],
     child: const MyApp(),
   ));
@@ -37,29 +44,45 @@ void main() {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'PropertEase',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a blue toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF115892),
+          brightness: Brightness.light,
+        ),
         useMaterial3: true,
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: Colors.grey.shade50,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.grey.shade300),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide:
+                const BorderSide(color: Color(0xFF115892), width: 2),
+          ),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF115892),
+            foregroundColor: Colors.white,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+            textStyle: const TextStyle(
+                fontSize: 16, fontWeight: FontWeight.w600),
+          ),
+        ),
       ),
       home: const LoginWidget(),
     );
@@ -69,211 +92,230 @@ class MyApp extends StatelessWidget {
 class LoginWidget extends StatefulWidget {
   const LoginWidget({super.key});
 
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
   @override
   State<StatefulWidget> createState() => LoginWidgetState();
 }
 
 class LoginWidgetState extends State<LoginWidget> {
-  final TextEditingController _usernameController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+  final _usernameController = TextEditingController();
+  final _passwordController = TextEditingController();
+  bool _obscurePassword = true;
+  bool _isLoading = false;
+
   late UserProvider _userProvider;
 
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
     _userProvider = context.read<UserProvider>();
   }
 
   @override
-  void didChangeDependencies() {
-    // TODO: implement didChangeDependencies
-    super.didChangeDependencies();
-    _userProvider = context.read<UserProvider>();
+  void dispose() {
+    _usernameController.dispose();
+    _passwordController.dispose();
+    super.dispose();
   }
 
-  void showUnsucessfullLoginMessage() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Wrong username and/or password '),
-        backgroundColor: Colors.red,
-      ),
-    );
-  }
+  Future<void> _login() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _isLoading = true);
+    try {
+      final result = await _userProvider.signIn(
+        _usernameController.text.trim(),
+        _passwordController.text,
+      );
 
-  void showSucessfullLoginMessage(String username) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: <Widget>[
-            const Icon(
-              Icons.check_circle,
-              color: Colors.white,
-            ),
-            const SizedBox(width: 8),
-            Text('Welcome, $username',
-                style: const TextStyle(color: Colors.white)),
-          ],
-        ),
-        duration: const Duration(seconds: 10), // Show for 3 seconds
-        backgroundColor: Colors.green,
-        action: SnackBarAction(
-          label: 'Dismiss',
-          textColor: Colors.white,
-          onPressed: () {
-            // Handle the action if needed
-          },
-        ),
-        behavior: SnackBarBehavior.floating, // Adds a floating animation
-      ),
-    );
+      if (!mounted) return;
+
+      if (result != null) {
+        // Populate Authorization
+        Authorization.token = result['token'] as String;
+        Authorization.userId = result['userId'] is int
+            ? result['userId'] as int
+            : int.tryParse(result['userId'].toString());
+        Authorization.firstName = result['firstName'] as String?;
+        Authorization.lastName = result['lastName'] as String?;
+        Authorization.profilePhotoBytes =
+            result['profilePhotoBytes'] as String?;
+        Authorization.role = result['role'] as String?;
+        Authorization.roleId = result['roleId'] as int?;
+        Authorization.username = _usernameController.text.trim();
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const PropertyListWidget()),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Pogrešno korisničko ime ili lozinka.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Greška: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Login',
-          style: TextStyle(color: Colors.blue),
-        ),
-        backgroundColor: Colors.white,
-      ),
-      body: Center(
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 400, maxHeight: 450),
-          width: 400,
-          child: Card(
-            elevation: 5,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10.0),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: SingleChildScrollView(
-                // Wrap the Column with a SingleChildScrollView
-                child: Column(
-                  children: [
-                    Image.asset(
-                      "assets/images/user_placeholder.jpg",
-                      height: 100,
-                      width: 100,
-                    ),
-                    const SizedBox(height: 20),
-                    TextField(
-                      controller: _usernameController,
-
-                      decoration: const InputDecoration(
-                        labelText: 'Username',
-                        prefixIcon: Icon(
-                          Icons.mail,
-                          color: Colors.blue,
-                        ),
+      backgroundColor: const Color(0xFFF0F4F8),
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // ── Logo / brand ────────────────────────────────────────────
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF115892),
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF115892).withOpacity(0.3),
+                        blurRadius: 20,
+                        offset: const Offset(0, 8),
                       ),
-                      // Replace this with your controller
-                    ),
-                    const SizedBox(height: 20),
-                    Stack(
-                      alignment: Alignment.centerRight,
-                      children: [
-                        TextField(
-                          controller: _passwordController,
-
-                          decoration: const InputDecoration(
-                            labelText: "Password",
-                            prefixIcon: Icon(
-                              Icons.password,
-                              color: Colors.blue,
-                            ),
-                          ),
-                          obscureText: true,
-                          // Replace this with your controller
-                        ),
-                        GestureDetector(
-                          onTap: () {
-                            // Toggle password visibility
-                          },
-                          child: const Padding(
-                            padding: EdgeInsets.only(right: 12.0),
-                            child: Icon(
-                              Icons.visibility_off,
-                              color: Colors.grey,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                    ElevatedButton(
-                      onPressed: () async {
-                        var password = _passwordController.text;
-                        var username = _usernameController.text;
-
-                        // Call the signIn function to authenticate
-                        final Map<String, dynamic>? loginResult =
-                            await _userProvider.signIn(
-                          _usernameController.text,
-                          _passwordController.text,
-                        );
-
-                        if (loginResult != null) {
-                          final String authToken = loginResult['accessToken'];
-                          final String userId = loginResult['userId'];
-                          final String firstName = loginResult['firstName'];
-                          final String lastName = loginResult['lastName'];
-                          final String profilePhoto =
-                              loginResult['profilePhoto'];
-                          final SharedPreferences prefs =
-                              await SharedPreferences.getInstance();
-                          prefs.setString('authToken', authToken);
-                          prefs.setString('userId', userId); // Store the userId
-                          prefs.setString('firstName', firstName);
-                          prefs.setString('lastName', lastName);
-                          prefs.setString('profilePhoto', profilePhoto);
-                          showSucessfullLoginMessage(username);
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const PropertyListWidget(),
-                            ),
-                          );
-                        } else {
-                          showUnsucessfullLoginMessage();
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        primary: Colors.blue,
-                      ),
-                      child: const Text(
-                        "Login",
-                        style: TextStyle(color: Colors.white),
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => const ClientAddScreen(),
-                          ),
-                        );
-                      },
-                      child: Text(
-                        "Create an account",
-                        style: TextStyle(color: Colors.blue),
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
+                  child: const Icon(Icons.home_work_rounded,
+                      color: Colors.white, size: 44),
                 ),
-              ),
+                const SizedBox(height: 20),
+                const Text(
+                  'PropertEase',
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF115892),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Pronađite savršenu nekretninu',
+                  style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+                ),
+                const SizedBox(height: 36),
+
+                // ── Login card ───────────────────────────────────────────────
+                Card(
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                    side: BorderSide(color: Colors.grey.shade200),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const Text(
+                            'Prijava',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+
+                          // Username
+                          TextFormField(
+                            controller: _usernameController,
+                            decoration: const InputDecoration(
+                              labelText: 'Korisničko ime',
+                              prefixIcon: Icon(Icons.person_outline),
+                            ),
+                            textInputAction: TextInputAction.next,
+                            validator: (v) => (v == null || v.trim().isEmpty)
+                                ? 'Unesite korisničko ime'
+                                : null,
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Password
+                          TextFormField(
+                            controller: _passwordController,
+                            obscureText: _obscurePassword,
+                            decoration: InputDecoration(
+                              labelText: 'Lozinka',
+                              prefixIcon: const Icon(Icons.lock_outline),
+                              suffixIcon: IconButton(
+                                icon: Icon(
+                                  _obscurePassword
+                                      ? Icons.visibility_off_outlined
+                                      : Icons.visibility_outlined,
+                                ),
+                                onPressed: () => setState(
+                                    () => _obscurePassword = !_obscurePassword),
+                              ),
+                            ),
+                            textInputAction: TextInputAction.done,
+                            onFieldSubmitted: (_) => _login(),
+                            validator: (v) => (v == null || v.isEmpty)
+                                ? 'Unesite lozinku'
+                                : null,
+                          ),
+                          const SizedBox(height: 24),
+
+                          // Login button
+                          SizedBox(
+                            height: 50,
+                            child: _isLoading
+                                ? const Center(
+                                    child: CircularProgressIndicator())
+                                : ElevatedButton(
+                                    onPressed: _login,
+                                    child: const Text('Prijava'),
+                                  ),
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Register link
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text('Nemate račun?',
+                                  style: TextStyle(
+                                      color: Colors.grey.shade600)),
+                              TextButton(
+                                onPressed: () => Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                      builder: (_) => const ClientAddScreen()),
+                                ),
+                                child: const Text(
+                                  'Registrujte se',
+                                  style: TextStyle(
+                                      color: Color(0xFF115892),
+                                      fontWeight: FontWeight.w600),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),

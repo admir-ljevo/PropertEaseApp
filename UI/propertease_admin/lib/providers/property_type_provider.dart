@@ -6,7 +6,12 @@ class PropertyTypeProvider extends BaseProvider<PropertyType> {
 
   @override
   PropertyType fromJson(data) {
-    // TODO: implement fromJson
     return PropertyType.fromJson(data);
   }
+
+  @override
+  Map<String, dynamic> toJson(PropertyType data) => {
+    'id': data.id ?? 0,
+    'name': data.name,
+  };
 }

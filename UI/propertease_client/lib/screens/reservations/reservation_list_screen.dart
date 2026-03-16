@@ -1,16 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart';
 import 'package:intl/intl.dart';
+import 'package:propertease_client/config/app_config.dart';
 import 'package:propertease_client/models/property_reservation.dart';
 import 'package:propertease_client/models/search_result.dart';
 import 'package:propertease_client/providers/property_reservation_provider.dart';
+import 'package:propertease_client/utils/authorization.dart';
+import 'package:propertease_client/widgets/master_screen.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
-import '../../models/property.dart';
-import '../../models/property_type.dart';
-import '../../providers/property_provider.dart';
-import '../../providers/property_type_provider.dart';
 import 'reservation_detail_screen.dart';
 
 class ReservationListScreen extends StatefulWidget {
@@ -22,399 +18,367 @@ class ReservationListScreen extends StatefulWidget {
 
 class ReservationListScreenState extends State<ReservationListScreen> {
   late PropertyReservationProvider _reservationProvider;
-  late PropertyProvider _propertyProvider;
-  late PropertyTypeProvider _propertyTypeProvider;
-  SearchResult<PropertyReservation>? result;
-  SearchResult<Property>? propertyResult;
-  SearchResult<PropertyType>? propertyTypeResult;
+
+  SearchResult<PropertyReservation>? _result;
+  bool _loading = true;
+  String? _error;
+
+  int _currentPage = 1;
+  static const int _pageSize = 5;
+
+  // filters
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _minPriceController = TextEditingController();
   final TextEditingController _maxPriceController = TextEditingController();
-  GlobalKey<FormState> formKey = GlobalKey<FormState>();
-  String? formattedEndDate;
-  String? formattedStartDate;
-  int? propertyTypeId;
-  DateTime? selectedDateStart;
-  DateTime? selectedDateEnd;
-  bool? _isAvailable;
-  SearchResult<PropertyReservation>? reservations;
-  PropertyType? _selectedProperty = null;
+  DateTime? _selectedDateStart;
+  DateTime? _selectedDateEnd;
+  bool? _isActive;
 
-  String? firstName;
-  String? lastName;
-  String? photoUrl;
-  int? roleId;
-  int? userId;
-  Future<void> getUserIdFromSharedPreferences() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    setState(() {
-      userId = int.tryParse(prefs.getString('userId')!)!;
-      firstName = prefs.getString('firstName');
-      lastName = prefs.getString('lastName');
-
-      photoUrl = prefs.getString('profilePhoto');
-      roleId = prefs.getInt('roleId');
-    });
-  }
-
-  @override
-  void didChangeDependencies() {
-    // TODO: implement didChangeDependencies
-    super.didChangeDependencies();
-    getUserIdFromSharedPreferences();
-
-    _propertyProvider = context.read<PropertyProvider>();
-    _reservationProvider = context.read<PropertyReservationProvider>();
-    _propertyTypeProvider = context.read<PropertyTypeProvider>();
-    _fetchReservations();
-  }
-
-  Future<void> _selectDateStart(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2101),
-    );
-
-    if (picked != null && picked != DateTime.now()) {
-      selectedDateStart = picked;
-
-      formattedStartDate = DateFormat('yyyy-MM-dd').format(selectedDateStart!);
-    }
-  }
-
-  Future<void> _selectDateEnd(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2101),
-    );
-
-    if (picked != null && picked != DateTime.now()) {
-      selectedDateEnd = picked;
-      formattedEndDate = DateFormat('yyyy-MM-dd').format(selectedDateEnd!);
-    }
-  }
+  int? get userId => Authorization.userId;
 
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
-    getUserIdFromSharedPreferences();
-    _propertyProvider = context.read<PropertyProvider>();
     _reservationProvider = context.read<PropertyReservationProvider>();
-    _propertyTypeProvider = context.read<PropertyTypeProvider>();
-
     _fetchReservations();
   }
 
-  Future<void> _fetchReservations() async {
+  Future<void> _fetchReservations({int page = 1}) async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
     try {
-      propertyResult = await _propertyProvider.get();
-      propertyTypeResult = await _propertyTypeProvider.get();
-
-      double? minPrice;
-      double? maxPrice;
-      if (_minPriceController.text.isNotEmpty) {
-        minPrice = double.tryParse(_minPriceController.text);
-      }
-      if (_maxPriceController.text.isNotEmpty) {
-        maxPrice = double.tryParse(_maxPriceController.text);
-      }
-      var tempReservations = await _reservationProvider.getFiltered(filter: {
-        'propertyName': _nameController.text,
-        'propertyTypeId': propertyTypeId,
-        'dateOccupancyStartedStart': formattedStartDate,
-        'dateOccupancyStartedEnd': formattedEndDate,
-        'totalPriceFrom': minPrice,
-        'totalPriceTo': maxPrice,
-        'isActive': _isAvailable,
+      final result = await _reservationProvider.getFiltered(filter: {
         'clientId': userId,
+        'propertyName': _nameController.text.isNotEmpty ? _nameController.text : null,
+        'totalPriceFrom': _minPriceController.text.isNotEmpty ? double.tryParse(_minPriceController.text) : null,
+        'totalPriceTo': _maxPriceController.text.isNotEmpty ? double.tryParse(_maxPriceController.text) : null,
+        'dateOccupancyStartedStart': _selectedDateStart,
+        'dateOccupancyStartedEnd': _selectedDateEnd,
+        'isActive': _isActive,
+        'page': page,
+        'pageSize': _pageSize,
       });
-
       setState(() {
-        reservations = tempReservations;
+        _result = result;
+        _currentPage = page;
+        _loading = false;
       });
     } catch (e) {
-      throw Exception(e.toString());
+      setState(() {
+        _error = e.toString();
+        _loading = false;
+      });
     }
+  }
+
+  void _showFilterDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Filter reservations'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: _nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Property name',
+                  prefixIcon: Icon(Icons.search),
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _minPriceController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Min price'),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _maxPriceController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Max price'),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  const Text('From: '),
+                  TextButton(
+                    onPressed: () async {
+                      final d = await showDatePicker(
+                        context: context,
+                        initialDate: DateTime.now(),
+                        firstDate: DateTime(2000),
+                        lastDate: DateTime(2101),
+                      );
+                      if (d != null) setState(() => _selectedDateStart = d);
+                    },
+                    child: Text(_selectedDateStart != null
+                        ? DateFormat('dd.MM.yyyy').format(_selectedDateStart!)
+                        : 'Select'),
+                  ),
+                ],
+              ),
+              Row(
+                children: [
+                  const Text('To:   '),
+                  TextButton(
+                    onPressed: () async {
+                      final d = await showDatePicker(
+                        context: context,
+                        initialDate: DateTime.now(),
+                        firstDate: DateTime(2000),
+                        lastDate: DateTime(2101),
+                      );
+                      if (d != null) setState(() => _selectedDateEnd = d);
+                    },
+                    child: Text(_selectedDateEnd != null
+                        ? DateFormat('dd.MM.yyyy').format(_selectedDateEnd!)
+                        : 'Select'),
+                  ),
+                ],
+              ),
+              DropdownButtonFormField<bool?>(
+                value: _isActive,
+                decoration: const InputDecoration(labelText: 'Status'),
+                items: const [
+                  DropdownMenuItem(value: null, child: Text('All')),
+                  DropdownMenuItem(value: true, child: Text('Active')),
+                  DropdownMenuItem(value: false, child: Text('Inactive')),
+                ],
+                onChanged: (v) => setState(() => _isActive = v),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              _nameController.clear();
+              _minPriceController.clear();
+              _maxPriceController.clear();
+              setState(() {
+                _selectedDateStart = null;
+                _selectedDateEnd = null;
+                _isActive = null;
+              });
+              Navigator.of(ctx).pop();
+              _fetchReservations();
+            },
+            child: const Text('Clear'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              _fetchReservations();
+            },
+            child: const Text('Apply'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    // TODO: implement build
-    return Scaffold(
-      appBar: AppBar(
-        title: Text("My reservations"),
-      ),
-      body: SingleChildScrollView(
-          child: Column(
+    final totalPages = _result == null || _result!.count == 0
+        ? 1
+        : ((_result!.count) / _pageSize).ceil();
+
+    return MasterScreenWidget(
+      currentIndex: 1,
+      titleWidget: Row(
         children: [
-          ElevatedButton(
-              onPressed: () {
-                _showFilterDialog(context);
-              },
-              child: Text("Filters")),
-          _buildDataListView(),
+          const Text('Rezervacije'),
+          const Spacer(),
+          IconButton(
+            icon: const Icon(Icons.filter_list, color: Colors.white),
+            onPressed: _showFilterDialog,
+          ),
         ],
-      )),
+      ),
+      child: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _error != null
+              ? Center(child: Text(_error!))
+              : Column(
+                  children: [
+                    Expanded(child: _buildList()),
+                    _buildPagination(totalPages),
+                  ],
+                ),
     );
   }
 
-  void _showFilterDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text("Apply Filters"),
-          content: SingleChildScrollView(
-            child: Column(
-              children: [
-                TextFormField(
-                  decoration: const InputDecoration(
-                      labelText: 'Property name',
-                      prefixIcon: Icon(Icons.search)),
-                  controller: _nameController,
-                  onChanged: (value) {
-                    // Handle onChanged logic if needed
-                  },
-                ),
-                DropdownButtonFormField<PropertyType?>(
-                  value: _selectedProperty,
-                  onChanged: (PropertyType? newValue) {
-                    _selectedProperty = newValue!;
-                    propertyTypeId = newValue.id;
-                  },
-                  items: (propertyTypeResult?.result ?? [])
-                      .map<DropdownMenuItem<PropertyType?>>(
-                    (PropertyType? propertyType) {
-                      if (propertyType != null && propertyType.name != null) {
-                        return DropdownMenuItem<PropertyType?>(
-                          value: propertyType,
-                          child: Text(propertyType.name!),
-                        );
-                      } else {
-                        return const DropdownMenuItem<PropertyType?>(
-                          value: null,
-                          child: Text('Undefined'),
-                        );
-                      }
-                    },
-                  ).toList(),
-                  decoration: const InputDecoration(
-                    labelText: 'Property type',
-                  ),
-                ),
-                // Add more filter widgets here
-                TextButton(
-                  onPressed: () {
-                    _selectDateStart(context);
-                  },
-                  child: const Text('Reservation start'),
-                ),
-                TextButton(
-                  onPressed: () {
-                    _selectDateEnd(context);
-                  },
-                  child: const Text('Reservation end'),
-                ),
-                TextFormField(
-                  decoration:
-                      const InputDecoration(labelText: 'Price range from'),
-                  keyboardType: TextInputType.number,
-                  controller: _minPriceController,
-                  onChanged: (value) {},
-                ),
-                TextFormField(
-                  decoration:
-                      const InputDecoration(labelText: 'Price range to'),
-                  keyboardType: TextInputType.number,
-                  controller: _maxPriceController,
-                  onChanged: (value) {},
-                ),
-                DropdownButtonFormField<bool?>(
-                  value: _isAvailable,
-                  onChanged: (bool? newValue) {
-                    _isAvailable = newValue!;
-                  },
-                  items: const [
-                    DropdownMenuItem<bool?>(
-                      value: null,
-                      child: Text('All'),
-                    ),
-                    DropdownMenuItem<bool?>(
-                      value: false,
-                      child: Text('Available'),
-                    ),
-                    DropdownMenuItem<bool?>(
-                      value: true,
-                      child: Text('Occupied'),
-                    ),
-                  ],
-                  decoration: const InputDecoration(
-                    labelText: 'Available',
-                  ),
-                ),
-              ],
-            ),
-          ),
-          actions: <Widget>[
-            TextButton(
-              style: ButtonStyle(
-                backgroundColor: MaterialStateProperty.all(Colors.blue),
-              ),
-              onPressed: () async {
-                setState(() {
-                  _selectedProperty = null;
-                  propertyTypeId = null;
-                  _isAvailable = null;
-                  propertyTypeId = null;
-                  formKey.currentState?.reset();
-                  formattedEndDate = null;
-                  formattedStartDate = null;
-                  _maxPriceController.clear();
-                  _minPriceController.clear();
-                  _nameController.clear();
-                });
+  Widget _buildList() {
+    final items = _result?.result ?? [];
+    if (items.isEmpty) {
+      return const Center(child: Text('No reservations found.'));
+    }
+    return ListView.builder(
+      padding: const EdgeInsets.all(12),
+      itemCount: items.length,
+      itemBuilder: (ctx, i) => _buildCard(items[i]),
+    );
+  }
 
-                await _fetchReservations();
-              },
-              child: const Text(
-                "Clear filters",
-                style: TextStyle(color: Colors.white),
-              ),
+  Widget _buildCard(PropertyReservation r) {
+    final photos = r.property?.photos;
+    final rawUrl = (photos != null && photos.isNotEmpty) ? photos.first.url : null;
+    final photoUrl = (rawUrl != null && rawUrl.isNotEmpty) ? '${AppConfig.serverBase}$rawUrl' : null;
+    final startFmt = r.dateOfOccupancyStart != null
+        ? DateFormat('dd.MM.yyyy').format(r.dateOfOccupancyStart!)
+        : '-';
+    final endFmt = r.dateOfOccupancyEnd != null
+        ? DateFormat('dd.MM.yyyy').format(r.dateOfOccupancyEnd!)
+        : '-';
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 3,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () {
+          Navigator.of(context).push(MaterialPageRoute(
+            builder: (_) => ReservationDetailsScreen(reservationId: r.id!),
+          ));
+        },
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Property image
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+              child: photoUrl != null
+                  ? Image.network(
+                      photoUrl,
+                      height: 160,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => _imagePlaceholder(),
+                    )
+                  : _imagePlaceholder(),
             ),
-            TextButton(
-              style: ButtonStyle(
-                backgroundColor: MaterialStateProperty.all(
-                    Colors.blue), // Set the background color to blue
-              ),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text(
-                "Cancel",
-                style: TextStyle(color: Colors.white),
-              ),
-            ),
-            TextButton(
-              style: ButtonStyle(
-                backgroundColor: MaterialStateProperty.all(
-                    Colors.blue), // Set the background color to blue
-              ),
-              onPressed: () {
-                // Apply filter logic here
-                _fetchReservations();
-                Navigator.of(context).pop();
-              },
-              child: const Text(
-                "Apply",
-                style: TextStyle(color: Colors.white),
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          r.property?.name ?? '-',
+                          style: const TextStyle(
+                              fontSize: 17, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: r.isActive == true
+                              ? Colors.green.shade100
+                              : Colors.red.shade100,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          r.isActive == true ? 'Active' : 'Inactive',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: r.isActive == true
+                                ? Colors.green.shade800
+                                : Colors.red.shade800,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      const Icon(Icons.location_city, size: 14,
+                          color: Colors.grey),
+                      const SizedBox(width: 4),
+                      Text(r.property?.city?.name ?? '-',
+                          style: const TextStyle(
+                              fontSize: 13, color: Colors.grey)),
+                      const SizedBox(width: 12),
+                      const Icon(Icons.place, size: 14, color: Colors.grey),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(r.property?.address ?? '-',
+                            style: const TextStyle(
+                                fontSize: 13, color: Colors.grey),
+                            overflow: TextOverflow.ellipsis),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      const Icon(Icons.calendar_today,
+                          size: 14, color: Colors.blueGrey),
+                      const SizedBox(width: 4),
+                      Text('$startFmt – $endFmt',
+                          style: const TextStyle(fontSize: 13)),
+                      const Spacer(),
+                      Text(
+                        '\$${r.totalPrice?.toStringAsFixed(2) ?? '0.00'}',
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
           ],
-        );
-      },
-    );
-  }
-
-  Widget _buildDataListView() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: DataTable(
-        columns: const [
-          DataColumn(
-            label: Text(
-              "Property name",
-              style: TextStyle(fontStyle: FontStyle.italic),
-            ),
-          ),
-          DataColumn(
-            label: Text(
-              "Property type",
-              style: TextStyle(fontStyle: FontStyle.italic),
-            ),
-          ),
-          DataColumn(
-            label: Text(
-              "City",
-              style: TextStyle(fontStyle: FontStyle.italic),
-            ),
-          ),
-          DataColumn(
-            label: Text(
-              "Reservation start",
-              style: TextStyle(fontStyle: FontStyle.italic),
-            ),
-          ),
-          DataColumn(
-            label: Text(
-              "Reservation end",
-              style: TextStyle(fontStyle: FontStyle.italic),
-            ),
-          ),
-          DataColumn(
-            label: Text(
-              "Total price",
-              style: TextStyle(fontStyle: FontStyle.italic),
-            ),
-          ),
-          DataColumn(
-            label: Text(
-              "Reservation status",
-              style: TextStyle(fontStyle: FontStyle.italic),
-            ),
-          ),
-        ],
-        rows: reservations?.result
-                .map(
-                  (PropertyReservation e) => DataRow(
-                    cells: [
-                      DataCell(Text(e.property?.name ?? '/')),
-                      DataCell(Text(e.property?.propertyType?.name ?? '/')),
-                      DataCell(Text(e.property?.city?.name ?? '/')),
-                      DataCell(
-                        Text(
-                          DateFormat('dd-MM-yyyy')
-                              .format(e.dateOfOccupancyStart ?? DateTime.now()),
-                        ),
-                      ),
-                      DataCell(
-                        Text(
-                          DateFormat('dd-MM-yyyy')
-                              .format(e.dateOfOccupancyEnd ?? DateTime.now()),
-                        ),
-                      ),
-                      DataCell(Text(e.totalPrice.toString())),
-                      DataCell(
-                          Text(e.isActive == true ? 'Active' : 'Inactive')),
-                    ],
-                    onSelectChanged: (_) {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => ReservationDetailsScreen(
-                            reservation: e,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                )
-                .toList() ??
-            [],
+        ),
       ),
     );
   }
 
-// Function to navigate to a different screen
-  void navigateToDetailsScreen(PropertyReservation reservation) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) =>
-            ReservationDetailsScreen(reservation: reservation),
+  Widget _imagePlaceholder() {
+    return Container(
+      height: 160,
+      width: double.infinity,
+      color: Colors.grey.shade200,
+      child: const Icon(Icons.home, size: 60, color: Colors.grey),
+    );
+  }
+
+  Widget _buildPagination(int totalPages) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.chevron_left),
+            onPressed: _currentPage > 1
+                ? () => _fetchReservations(page: _currentPage - 1)
+                : null,
+          ),
+          Text('Page $_currentPage of $totalPages',
+              style: const TextStyle(fontSize: 14)),
+          IconButton(
+            icon: const Icon(Icons.chevron_right),
+            onPressed: _currentPage < totalPages
+                ? () => _fetchReservations(page: _currentPage + 1)
+                : null,
+          ),
+        ],
       ),
     );
   }
@@ -424,7 +388,6 @@ class ReservationListScreenState extends State<ReservationListScreen> {
     _nameController.dispose();
     _minPriceController.dispose();
     _maxPriceController.dispose();
-
     super.dispose();
   }
 }

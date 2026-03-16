@@ -13,7 +13,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'providers/application_role_provider.dart';
 import 'providers/application_user_provider.dart';
 import 'providers/conversation_provider.dart';
+import 'providers/country_provider.dart';
 import 'providers/message_provider.dart';
+import 'providers/payment_provider.dart';
+import 'providers/reservation_notification_provider.dart';
 
 void main() {
   runApp(MultiProvider(
@@ -27,8 +30,11 @@ void main() {
       ChangeNotifierProvider(create: (_) => NotificationProvider()),
       ChangeNotifierProvider(create: (_) => UserProvider()),
       ChangeNotifierProvider(create: (_) => RoleProvider()),
+      ChangeNotifierProvider(create: (_) => CountryProvider()),
       ChangeNotifierProvider(create: (_) => ConversationProvider()),
       ChangeNotifierProvider(create: (_) => MessageProvider()),
+      ChangeNotifierProvider(create: (_) => ReservationNotificationProvider()),
+      ChangeNotifierProvider(create: (_) => PaymentProvider()),
     ],
     child: const MyApp(),
   ));

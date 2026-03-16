@@ -2,24 +2,39 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:propertease_client/models/application_user.dart';
 import 'package:propertease_client/models/message.dart';
 import 'package:propertease_client/models/search_result.dart';
+import 'package:propertease_client/config/app_config.dart';
 import 'package:propertease_client/providers/message_provider.dart';
+import 'package:propertease_client/screens/users/renter_profile_screen.dart';
+import 'package:propertease_client/utils/authorization.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:signalr_core/signalr_core.dart';
 import 'package:http/io_client.dart';
 
 class MessageListScreen extends StatefulWidget {
   final int? conversationId;
-  int? recipientId;
+  final int? recipientId;
   final VoidCallback? onConversationListUpdated;
+  final String? chatTitle;
+  // Photo bytes for the two participants — already loaded in the conversations list,
+  // so we don't need to re-fetch them with every message.
+  final String? otherUserPhotoBytes;
+  final String? otherUserPhotoUrl;
+  final String? myPhotoBytes;
+  final ApplicationUser? renter;
 
-  MessageListScreen({
+  const MessageListScreen({
     Key? key,
     this.conversationId,
     this.recipientId,
     this.onConversationListUpdated,
+    this.chatTitle,
+    this.otherUserPhotoBytes,
+    this.otherUserPhotoUrl,
+    this.myPhotoBytes,
+    this.renter,
   }) : super(key: key);
 
   @override
@@ -29,6 +44,7 @@ class MessageListScreen extends StatefulWidget {
 class MessageListScreenState extends State<MessageListScreen> {
   late TextEditingController _messageController;
   late MessageProvider _messageProvider;
+  final ScrollController _scrollController = ScrollController();
   Message message = Message();
   String? firstName;
   String? lastName;
@@ -45,15 +61,26 @@ class MessageListScreenState extends State<MessageListScreen> {
     _messageController = TextEditingController();
 
     initSignalRConnection();
-    getUserIdFromSharedPreferences();
+    _loadUserInfo();
     fetchMessages();
+    _markAsReadNow();
+  }
+
+  void _markAsReadNow() {
+    final uid = Authorization.userId;
+    if (uid == null || widget.conversationId == null) return;
+    _messageProvider.markAsRead(widget.conversationId!, uid).then((_) {
+      // Notify the conversation list to refresh its unread counts once
+      // the server has confirmed the messages are marked as read.
+      widget.onConversationListUpdated?.call();
+    }).catchError((_) {});
   }
 
   void initSignalRConnection() async {
     try {
       signalR = HubConnectionBuilder()
           .withUrl(
-            'https://10.0.2.2:7137/hubs/messageHub',
+            '${AppConfig.serverBase}/hubs/messageHub',
             HttpConnectionOptions(
               client: IOClient(
                   HttpClient()..badCertificateCallback = (x, y, z) => true),
@@ -62,10 +89,9 @@ class MessageListScreenState extends State<MessageListScreen> {
           )
           .build();
 
-      signalR.on('newMessage', (message) {
-        // Handle the received message
-        print('Received new message: $message');
-        fetchMessages(); // Update UI or handle the new message as needed
+      signalR.on('newMessage', (_) {
+        _syncMessages();
+        _markAsReadNow();
       });
       await signalR.start();
     } catch (e) {
@@ -85,60 +111,80 @@ class MessageListScreenState extends State<MessageListScreen> {
 
   @override
   void dispose() {
-    signalR.off('newMessage'); // Unsubscribe from the event
+    signalR.off('newMessage');
     signalR.stop();
+    _scrollController.dispose();
     super.dispose();
   }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _messageProvider = context.read<MessageProvider>();
-    getUserIdFromSharedPreferences();
-    fetchMessages();
+  void _loadUserInfo() {
+    userId = Authorization.userId;
+    firstName = Authorization.firstName;
+    lastName = Authorization.lastName;
   }
 
   Future<void> fetchMessages() async {
     try {
-      var tempMessages =
+      final result =
           await _messageProvider.getByConversationId(widget.conversationId!);
-      setState(() {
-        messages = tempMessages;
-      });
-    } catch (e) {
-      print(e.toString());
-    }
+      if (!mounted) return;
+      setState(() => messages = result);
+      _scrollToBottom();
+    } catch (_) {}
   }
 
-  Future<void> getUserIdFromSharedPreferences() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    setState(() {
-      userId = int.tryParse(prefs.getString('userId')!)!;
-      firstName = prefs.getString('firstName');
-      lastName = prefs.getString('lastName');
-      photoUrl = prefs.getString('profilePhoto');
-      roleId = prefs.getInt('roleId');
+  /// Syncs the list with the server without blocking the UI.
+  void _syncMessages() {
+    _messageProvider
+        .getByConversationId(widget.conversationId!)
+        .then((result) {
+      if (mounted) setState(() => messages = result);
+    }).catchError((_) {});
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.jumpTo(0);
+      }
     });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Message list")),
+      appBar: AppBar(
+        title: GestureDetector(
+          onTap: widget.renter != null
+              ? () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => RenterProfileScreen(renter: widget.renter, renterId: widget.recipientId),
+                    ),
+                  )
+              : null,
+          child: Row(
+            children: [
+              Expanded(child: Text(widget.chatTitle ?? 'Chat')),
+              if (widget.renter != null)
+                const Icon(Icons.chevron_right, size: 18),
+            ],
+          ),
+        ),
+      ),
       body: Column(
         children: [
           Expanded(
             child: messages != null
                 ? ListView.builder(
+                    controller: _scrollController,
                     itemCount: messages!.result.length,
                     reverse: true,
                     itemBuilder: (context, index) {
                       return buildMessageItem(messages!.result[index]);
                     },
                   )
-                : Center(
-                    child: CircularProgressIndicator(),
-                  ),
+                : const Center(child: CircularProgressIndicator()),
           ),
           buildInputArea(),
         ],
@@ -177,93 +223,135 @@ class MessageListScreenState extends State<MessageListScreen> {
   }
 
   Future<void> sendMessage() async {
+    final content = _messageController.text.trim();
+    if (content.isEmpty) return;
+
+    if (widget.conversationId == null || widget.conversationId == 0 || userId == null) {
+      return;
+    }
+
+    // ── Optimistic insert ─────────────────────────────────────────────────
+    // Show the message immediately without waiting for the server.
+    final optimistic = Message()
+      ..content = content
+      ..senderId = userId
+      ..recipientId = widget.recipientId
+      ..conversationId = widget.conversationId
+      ..createdAt = DateTime.now();
+
+    _messageController.clear();
+    setState(() {
+      messages ??= SearchResult<Message>();
+      messages!.result.insert(0, optimistic); // list is reversed
+    });
+    _scrollToBottom();
+
     try {
-      message.content = _messageController.text;
-      message.senderId = userId;
-      message.recipientId = widget.recipientId;
-      message.conversationId = widget.conversationId;
-      message.createdAt = DateTime.now();
-      message.modifiedAt = DateTime.now();
+      await _messageProvider.addMessage(optimistic);
 
-      await _messageProvider.addMessage(message);
-      await fetchMessages();
-      _messageController.text = "";
+      // Sync list in background (gets real server-assigned ID, etc.)
+      _syncMessages();
 
-      // Convert the map to a JSON-encoded string
-      final jsonString = jsonEncode(message.toJson());
-
-      // Pass the JSON-encoded string in the list of arguments
-      await signalR.invoke('newMessage', args: ['newMessage', jsonString]);
+      // SignalR notification — best-effort
+      try {
+        await signalR.invoke(
+            'newMessage', args: ['newMessage', jsonEncode(optimistic.toJson())]);
+      } catch (_) {}
     } catch (e) {
-      print(e.toString());
+      // Roll back the optimistic insert and restore text
+      if (!mounted) return;
+      setState(() {
+        messages?.result.remove(optimistic);
+      });
+      _messageController.text = content;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text('Failed to send: $e'),
+            backgroundColor: Colors.red),
+      );
     }
   }
 
   Widget buildMessageItem(Message message) {
-    final isCurrentUserRecipient = message.recipientId == userId;
+    // isMine = true  → I sent this message → show on RIGHT (blue)
+    // isMine = false → they sent this to me → show on LEFT (grey)
+    final isMine = message.senderId == userId;
 
-    return ListTile(
-      title: Row(
-        mainAxisAlignment: isCurrentUserRecipient
-            ? MainAxisAlignment.end
-            : MainAxisAlignment.start,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      child: Row(
+        mainAxisAlignment:
+            isMine ? MainAxisAlignment.end : MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          if (!isCurrentUserRecipient)
-            _buildSenderAvatar(message.sender?.person?.profilePhotoBytes),
-          SizedBox(width: 8),
-          Column(
-            crossAxisAlignment: isCurrentUserRecipient
-                ? CrossAxisAlignment.end
-                : CrossAxisAlignment.start,
-            children: [
-              Text(
-                "${message.sender?.person?.firstName ?? ''} ${message.sender?.person?.lastName ?? ''}",
-              ),
-              Text(
-                DateFormat.Hm().format(message.createdAt!),
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey,
+          if (!isMine) ...[
+            _buildSenderAvatar(widget.otherUserPhotoBytes, photoUrl: widget.otherUserPhotoUrl),
+            const SizedBox(width: 8),
+          ],
+          Flexible(
+            child: Column(
+              crossAxisAlignment:
+                  isMine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+              children: [
+                Text(
+                  isMine
+                      ? ''
+                      : '${message.sender?.person?.firstName ?? ''} ${message.sender?.person?.lastName ?? ''}'.trim(),
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
                 ),
-              ),
-            ],
-          ),
-          if (isCurrentUserRecipient)
-            _buildSenderAvatar(message.sender?.person?.profilePhotoBytes),
-        ],
-      ),
-      subtitle: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(10.0),
-          child: Container(
-            color: isCurrentUserRecipient
-                ? Color.fromARGB(255, 212, 211, 211)
-                : Colors.blue,
-            child: Padding(
-              padding: const EdgeInsets.all(10.0),
-              child: Text(
-                message.content!,
-                style: TextStyle(
-                  fontSize: 20,
-                  color: isCurrentUserRecipient ? Colors.black : Colors.white,
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: isMine
+                        ? Colors.blue
+                        : const Color.fromARGB(255, 212, 211, 211),
+                    borderRadius: BorderRadius.only(
+                      topLeft: const Radius.circular(16),
+                      topRight: const Radius.circular(16),
+                      bottomLeft: Radius.circular(isMine ? 16 : 4),
+                      bottomRight: Radius.circular(isMine ? 4 : 16),
+                    ),
+                  ),
+                  child: Text(
+                    message.content ?? '',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: isMine ? Colors.white : Colors.black87,
+                    ),
+                  ),
                 ),
-              ),
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Text(
+                    message.createdAt != null
+                        ? DateFormat.Hm().format(message.createdAt!)
+                        : '',
+                    style: const TextStyle(fontSize: 11, color: Colors.grey),
+                  ),
+                ),
+              ],
             ),
           ),
-        ),
+          if (isMine) ...[
+            const SizedBox(width: 8),
+            _buildSenderAvatar(widget.myPhotoBytes ?? Authorization.profilePhotoBytes),
+          ],
+        ],
       ),
     );
   }
 
-  Widget _buildSenderAvatar(String? profilePhotoBytes) {
-    final imageProvider = profilePhotoBytes != null
-        ? MemoryImage(base64Decode(profilePhotoBytes))
-        : AssetImage("assets/images/user_placeholder.jpg")
-            as ImageProvider<Object>;
-
-    return CircleAvatar(
-      backgroundImage: imageProvider,
-    );
+  Widget _buildSenderAvatar(String? profilePhotoBytes, {String? photoUrl}) {
+    if (profilePhotoBytes != null && profilePhotoBytes.isNotEmpty) {
+      try {
+        return CircleAvatar(
+            backgroundImage: MemoryImage(base64Decode(profilePhotoBytes)));
+      } catch (_) {}
+    }
+    if (photoUrl != null && photoUrl.isNotEmpty) {
+      return CircleAvatar(backgroundImage: NetworkImage(photoUrl));
+    }
+    return const CircleAvatar(child: Icon(Icons.person));
   }
 }

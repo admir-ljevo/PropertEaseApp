@@ -5,8 +5,9 @@ import 'package:propertease_admin/models/property_type.dart';
 import 'package:propertease_admin/models/search_result.dart';
 import 'package:propertease_admin/providers/city_provider.dart';
 
-import 'package:propertease_admin/providers/property_provider.dart';
+import 'package:propertease_admin/providers/property_provider.dart' show PropertyProvider, UpcomingReservationsException;
 import 'package:propertease_admin/providers/property_type_provider.dart';
+import 'package:propertease_admin/utils/authorization.dart';
 import 'package:propertease_admin/utils/debounce.dart';
 import 'package:propertease_admin/widgets/master_screen.dart';
 import 'property_add_screen.dart';
@@ -41,6 +42,8 @@ class PropertyListWidgetState extends State<PropertyListWidget> {
   bool _isLoading = false;
   String? _error;
   final _debounce = Debounce(); // 400 ms — prevents firing on every keystroke
+  int _currentPage = 1;
+  final int _pageSize = 10;
 
   // ── lifecycle ─────────────────────────────────────────────────────────────
 
@@ -92,6 +95,9 @@ class PropertyListWidgetState extends State<PropertyListWidget> {
         'isAvailable': _isAvailable,
         'priceFrom': double.tryParse(_minPriceController.text),
         'priceTo': double.tryParse(_maxPriceController.text),
+        'page': _currentPage,
+        'pageSize': _pageSize,
+        if (Authorization.roleId == 2) 'applicationUserId': Authorization.userId,
       });
       if (!mounted) return;
       setState(() => _result = result);
@@ -108,6 +114,7 @@ class PropertyListWidgetState extends State<PropertyListWidget> {
       _selectedCity = null;
       _selectedType = null;
       _isAvailable = null;
+      _currentPage = 1;
     });
     _nameController.clear();
     _minPriceController.clear();
@@ -116,11 +123,31 @@ class PropertyListWidgetState extends State<PropertyListWidget> {
   }
 
   Future<void> _deleteProperty(int id) async {
-    // Capture before any await to avoid using BuildContext across async gaps
     final nav = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
     try {
       await _propertyProvider.deleteById(id);
+      nav.pop();
+      await _fetchProperties();
+      messenger.showSnackBar(const SnackBar(
+          content: Text('Nekretnina uspješno obrisana.'),
+          backgroundColor: Colors.green));
+    } on UpcomingReservationsException catch (e) {
+      nav.pop(); // close the first confirmation dialog
+      _showForceDeleteDialog(id, e.count);
+    } catch (_) {
+      nav.pop();
+      messenger.showSnackBar(const SnackBar(
+          content: Text('Greška pri brisanju.'),
+          backgroundColor: Colors.red));
+    }
+  }
+
+  Future<void> _forceDeleteProperty(int id) async {
+    final nav = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await _propertyProvider.forceDeleteById(id);
       nav.pop();
       await _fetchProperties();
       messenger.showSnackBar(const SnackBar(
@@ -203,7 +230,7 @@ class PropertyListWidgetState extends State<PropertyListWidget> {
                       value: c, child: Text(c.name ?? ''))),
                 ],
                 onChanged: (v) {
-                  setState(() => _selectedCity = v);
+                  setState(() { _selectedCity = v; _currentPage = 1; });
                   _fetchProperties();
                 },
               )),
@@ -211,6 +238,8 @@ class PropertyListWidgetState extends State<PropertyListWidget> {
               width: 160,
               child: DropdownButtonFormField<PropertyType?>(
                 value: _selectedType,
+                                isExpanded: true,
+
                 decoration:
                     const InputDecoration(labelText: 'Tip', isDense: true),
                 items: [
@@ -220,7 +249,7 @@ class PropertyListWidgetState extends State<PropertyListWidget> {
                       value: t, child: Text(t.name ?? ''))),
                 ],
                 onChanged: (v) {
-                  setState(() => _selectedType = v);
+                  setState(() { _selectedType = v; _currentPage = 1; });
                   _fetchProperties();
                 },
               )),
@@ -228,6 +257,7 @@ class PropertyListWidgetState extends State<PropertyListWidget> {
               width: 140,
               child: DropdownButtonFormField<bool?>(
                 value: _isAvailable,
+                isExpanded: true,
                 decoration:
                     const InputDecoration(labelText: 'Status', isDense: true),
                 items: const [
@@ -238,7 +268,7 @@ class PropertyListWidgetState extends State<PropertyListWidget> {
                       value: false, child: Text('Iznajmljeno')),
                 ],
                 onChanged: (v) {
-                  setState(() => _isAvailable = v);
+                  setState(() { _isAvailable = v; _currentPage = 1; });
                   _fetchProperties();
                 },
               )),
@@ -287,46 +317,88 @@ class PropertyListWidgetState extends State<PropertyListWidget> {
       return const Center(child: Text('Nema pronađenih nekretnina.'));
     }
 
-    return SingleChildScrollView(
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: DataTable(
-          headingRowColor:
-              MaterialStateProperty.all(const Color(0xFFE3F2FD)),
-          columns: const [
-            DataColumn(label: Text('Tip')),
-            DataColumn(label: Text('Naziv')),
-            DataColumn(label: Text('Grad')),
-            DataColumn(label: Text('Adresa')),
-            DataColumn(label: Text('Cijena')),
-            DataColumn(label: Text('Status')),
-            DataColumn(label: Text('Akcije')),
-          ],
-          rows: rows.map((e) {
-            // FIXED: always exactly 7 cells, no conditional if inside cells list
-            final priceLabel = e.isDaily == true
-                ? '${e.dailyPrice} BAM/dan'
-                : e.isMonthly == true
-                    ? '${e.monthlyPrice} BAM/mj.'
-                    : '/';
-            final statusLabel =
-                e.isAvailable == true ? 'Dostupno' : 'Iznajmljeno';
-            final statusColor =
-                e.isAvailable == true ? Colors.green : Colors.orange;
-            return DataRow(cells: [
-              DataCell(Text(e.propertyType?.name ?? '/')),
-              DataCell(Text(e.name ?? '/')),
-              DataCell(Text(e.city?.name ?? '/')),
-              DataCell(Text(e.address ?? '/')),
-              DataCell(Text(priceLabel)),
-              DataCell(Text(statusLabel,
-                  style: TextStyle(
-                      color: statusColor, fontWeight: FontWeight.w600))),
-              DataCell(_buildActions(e)),
-            ]);
-          }).toList(),
+    final totalPages = ((_result?.totalCount ?? 0) / _pageSize).ceil();
+    return Column(
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: DataTable(
+                headingRowColor:
+                    MaterialStateProperty.all(const Color(0xFFE3F2FD)),
+                columns: const [
+                  DataColumn(label: Text('Tip')),
+                  DataColumn(label: Text('Naziv')),
+                  DataColumn(label: Text('Grad')),
+                  DataColumn(label: Text('Adresa')),
+                  DataColumn(label: Text('Cijena')),
+                  DataColumn(label: Text('Status')),
+                  DataColumn(label: Text('Akcije')),
+                ],
+                rows: rows.map((e) {
+                  final priceLabel = e.isDaily == true
+                      ? '${e.dailyPrice} BAM/dan'
+                      : e.isMonthly == true
+                          ? '${e.monthlyPrice} BAM/mj.'
+                          : '/';
+                  final String statusLabel;
+                  final Color statusColor;
+                  if (e.isAvailable == true) {
+                    statusLabel = 'Dostupno';
+                    statusColor = Colors.green;
+                  } else if (e.availableFrom != null) {
+                    final d = e.availableFrom!;
+                    statusLabel = 'Dostupno od: ${d.day.toString().padLeft(2, '0')}.${d.month.toString().padLeft(2, '0')}.${d.year}';
+                    statusColor = Colors.orange;
+                  } else {
+                    statusLabel = 'Iznajmljeno';
+                    statusColor = Colors.orange;
+                  }
+                  return DataRow(cells: [
+                    DataCell(Text(e.propertyType?.name ?? '/')),
+                    DataCell(Text(e.name ?? '/')),
+                    DataCell(Text(e.city?.name ?? '/')),
+                    DataCell(Text(e.address ?? '/')),
+                    DataCell(Text(priceLabel)),
+                    DataCell(Text(statusLabel,
+                        style: TextStyle(
+                            color: statusColor, fontWeight: FontWeight.w600))),
+                    DataCell(_buildActions(e)),
+                  ]);
+                }).toList(),
+              ),
+            ),
+          ),
         ),
-      ),
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.chevron_left),
+                onPressed: _currentPage > 1
+                    ? () {
+                        setState(() => _currentPage--);
+                        _fetchProperties();
+                      }
+                    : null,
+              ),
+              Text('$_currentPage / ${totalPages > 0 ? totalPages : 1}'),
+              IconButton(
+                icon: const Icon(Icons.chevron_right),
+                onPressed: _currentPage < totalPages
+                    ? () {
+                        setState(() => _currentPage++);
+                        _fetchProperties();
+                      }
+                    : null,
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -350,6 +422,29 @@ class PropertyListWidgetState extends State<PropertyListWidget> {
           onPressed: () => Navigator.of(context).push(MaterialPageRoute(
               builder: (_) => PropertyDetailScreen(property: e)))),
     ]);
+  }
+
+  void _showForceDeleteDialog(int id, int upcomingCount) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Nekretnina ima rezervacije'),
+        content: Text(
+            'Ova nekretnina ima $upcomingCount nadolazećih rezervacija. '
+            'Brisanje će sakriti nekretninu, ali rezervacije će ostati sačuvane. '
+            'Želite li nastaviti?'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Odustani')),
+          TextButton(
+            onPressed: () => _forceDeleteProperty(id),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Obriši svejedno'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showDeleteDialog(Property e) {

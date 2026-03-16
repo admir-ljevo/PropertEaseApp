@@ -1,5 +1,6 @@
 import 'package:json_annotation/json_annotation.dart';
 import 'package:propertease_admin/models/city.dart';
+import 'package:propertease_admin/models/photo.dart';
 import 'package:propertease_admin/models/property_type.dart';
 
 part 'property.g.dart';
@@ -45,8 +46,11 @@ class Property {
   double? longitude;
   double? averageRating;
   bool? isAvailable;
+  DateTime? availableFrom;
   PropertyType? propertyType;
   City? city;
+  @JsonKey(includeToJson: false)
+  List<Photo>? photos;
   Property({
     this.id = 0,
     this.createdAt,
@@ -93,7 +97,11 @@ class Property {
       _$PropertyFromJson(json);
 
   /// Connect the generated [_$PropertyToJson] function to the `toJson` method.
-  Map<String, dynamic> toJson() => _$PropertyToJson(this);
+  Map<String, dynamic> toJson() {
+    final map = _$PropertyToJson(this);
+    map.removeWhere((key, value) => value == null);
+    return map;
+  }
   // Map<String, dynamic> toJson(Property data) => _$PropertyToJson(this);
 }
 
