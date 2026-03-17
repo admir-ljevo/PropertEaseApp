@@ -1,3 +1,21 @@
-
 # Environment secrets
 .env
+
+# Visual Studio local files
+.vs/
+
+# Build output
+**/bin/
+**/obj/
+
+# Flutter/Dart
+**/.dart_tool/
+**/build/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/pubspec.lock
+
+# Android local
+**/android/local.properties
+**/android/.gradle/
+**/android/app/google-services.json
