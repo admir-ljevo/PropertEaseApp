@@ -12,7 +12,7 @@ import '../utils/authorization.dart';
 import 'base_provider.dart';
 
 class UserProvider with ChangeNotifier {
-  static const String _baseUrl = BaseProvider.baseUrl;
+  static String get _baseUrl => BaseProvider.baseUrl;
   final String _endpoint = 'ApplicationUser';
 
   final HttpClient _client = HttpClient()

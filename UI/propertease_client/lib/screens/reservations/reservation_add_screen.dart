@@ -188,7 +188,7 @@ class ReservationAddScreenState extends State<ReservationAddScreen> {
   bool _isDateSelectable(DateTime date) {
     if (_reservations != null) {
       for (final reservation in _reservations!) {
-        if (date.isAfter(reservation.dateOfOccupancyStart!) &&
+        if (!date.isBefore(reservation.dateOfOccupancyStart!) &&
             date.isBefore(reservation.dateOfOccupancyEnd!)) {
           return false;
         }

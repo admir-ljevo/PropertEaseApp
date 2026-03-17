@@ -129,6 +129,10 @@ namespace PropertEase.Services.AccessManager
                           : user.IsClient ? "Client"
                           : null);
 
+            var isRenter = user.UserRoles?.Any(r => r.Role?.Name == "Renter") == true
+                        || user.IsCompanyOwner
+                        || user.IsEmployee;
+
             return new LoginInformation
             {
                 User = user,
@@ -136,7 +140,7 @@ namespace PropertEase.Services.AccessManager
                 UserId = user.Id,
                 Role = roleName,
                 RoleId = roleId,
-                IsRenter = user.IsCompanyOwner || user.IsEmployee
+                IsRenter = isRenter
             };
         }
 

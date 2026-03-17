@@ -29,6 +29,9 @@ public static class DatabaseSeeder
             await SeedPropertiesAsync(db, userManager, logger, env.WebRootPath);
             await SeedReservationsAsync(db, userManager, logger);
             await SeedRatingsAsync(db, userManager, logger);
+            await SeedProfilePhotosAsync(db, userManager, logger);
+            await SeedConversationsAsync(db, userManager, logger);
+            await SeedNotificationsAsync(db, userManager, logger);
             logger.LogInformation("Database seeding completed.");
         }
         catch (Exception ex)
@@ -450,6 +453,135 @@ public static class DatabaseSeeder
 
         await db.SaveChangesAsync();
         logger.LogInformation("Seeded property and user ratings.");
+    }
+
+    // ─── PROFILE PHOTOS ───────────────────────────────────────────────────────
+
+    private static async Task SeedProfilePhotosAsync(
+        DatabaseContext db,
+        UserManager<ApplicationUser> userManager,
+        ILogger logger)
+    {
+        var users = new[] { "desktop", "mobile", "izdavac" };
+        int[] picsumSeeds = { 200, 201, 202 };
+
+        for (int i = 0; i < users.Length; i++)
+        {
+            var user = await userManager.FindByNameAsync(users[i]);
+            if (user == null) continue;
+
+            var person = await db.Persons.FirstOrDefaultAsync(p => p.ApplicationUserId == user.Id);
+            if (person == null || person.ProfilePhoto != null) continue;
+
+            var url   = $"https://picsum.photos/seed/{picsumSeeds[i]}/200/200";
+            var bytes = await DownloadImageAsync(url, logger);
+            if (bytes == null) continue;
+
+            var fileName  = $"avatar_{users[i]}_{Guid.NewGuid():N}.jpg";
+            person.ProfilePhoto      = $"/uploads/images/{fileName}";
+            person.ProfilePhotoBytes = bytes;
+        }
+
+        await db.SaveChangesAsync();
+        logger.LogInformation("Seeded profile photos for users.");
+    }
+
+    // ─── CONVERSATIONS ─────────────────────────────────────────────────────────
+
+    private static async Task SeedConversationsAsync(
+        DatabaseContext db,
+        UserManager<ApplicationUser> userManager,
+        ILogger logger)
+    {
+        if (await db.Conversations.AnyAsync()) return;
+
+        var mobile  = await userManager.FindByNameAsync("mobile");
+        var renter  = await userManager.FindByNameAsync("izdavac");
+        if (mobile == null || renter == null) return;
+
+        var property = await db.Properties
+            .FirstOrDefaultAsync(p => p.ApplicationUserId == renter.Id && !p.IsDeleted);
+        if (property == null) return;
+
+        var now = DateTime.UtcNow;
+        var messages = new[]
+        {
+            (SenderId: mobile.Id,  RecipientId: renter.Id,  Content: "Pozdrav! Da li je nekretnina slobodna u periodu 1-7. aprila?",                           SentAt: now.AddHours(-5)),
+            (SenderId: renter.Id,  RecipientId: mobile.Id,  Content: "Zdravo! Da, nekretnina je slobodna u tom periodu. Cijena je 90 KM po noći.",             SentAt: now.AddHours(-4)),
+            (SenderId: mobile.Id,  RecipientId: renter.Id,  Content: "Odlično! Da li je moguće early check-in oko 11h?",                                        SentAt: now.AddHours(-3)),
+            (SenderId: renter.Id,  RecipientId: mobile.Id,  Content: "Nažalost, standardni check-in je od 14h. Ako stignu ranijе, prtljag mogu ostaviti kod nas.", SentAt: now.AddHours(-2)),
+            (SenderId: mobile.Id,  RecipientId: renter.Id,  Content: "Razumijem, hvala na informaciji. Rezervišemo!",                                           SentAt: now.AddHours(-1)),
+        };
+
+        var conversation = new Conversation
+        {
+            ClientId    = mobile.Id,
+            RenterId    = renter.Id,
+            PropertyId  = property.Id,
+            LastMessage = messages.Last().Content,
+            LastSent    = messages.Last().SentAt,
+            CreatedAt   = messages.First().SentAt,
+        };
+        db.Conversations.Add(conversation);
+        await db.SaveChangesAsync();
+
+        foreach (var m in messages)
+        {
+            db.Messages.Add(new Message
+            {
+                ConversationId = conversation.Id,
+                SenderId       = m.SenderId,
+                RecipientId    = m.RecipientId,
+                Content        = m.Content,
+                IsRead         = false,
+                CreatedAt      = m.SentAt,
+            });
+        }
+        await db.SaveChangesAsync();
+        logger.LogInformation("Seeded 1 conversation with {Count} messages.", messages.Length);
+    }
+
+    // ─── NOTIFICATIONS ─────────────────────────────────────────────────────────
+
+    private static async Task SeedNotificationsAsync(
+        DatabaseContext db,
+        UserManager<ApplicationUser> userManager,
+        ILogger logger)
+    {
+        if (await db.Notifications.AnyAsync()) return;
+
+        var mobile = await userManager.FindByNameAsync("mobile");
+        var renter = await userManager.FindByNameAsync("izdavac");
+        if (mobile == null || renter == null) return;
+
+        var now = DateTime.UtcNow;
+
+        db.Notifications.AddRange(
+            new Notification
+            {
+                UserId    = mobile.Id,
+                Name      = "Dobrodošli u PropertEase!",
+                Text      = "Hvala što ste se prijavili. Pregledajte naše ponude nekretnina i pronađite savršen smještaj za vaš odmor.",
+                CreatedAt = now.AddDays(-3),
+            },
+            new Notification
+            {
+                UserId    = mobile.Id,
+                Name      = "Nova promocija – proljetni popusti",
+                Text      = "Iskoristite proljetnu sezonu! Odabrane nekretnine imaju popust do 20% za rezervacije u aprilu i maju.",
+                CreatedAt = now.AddDays(-1),
+            },
+            new Notification
+            {
+                UserId    = renter.Id,
+                Name      = "Vaša nekretnina je dobila novu ocjenu",
+                Text      = "Korisnik 'Mobilni Korisnik' je ostavio ocjenu 5★ za vašu nekretninu. Provjerite recenziju!",
+                CreatedAt = now.AddHours(-6),
+            }
+        );
+
+        await db.SaveChangesAsync();
+        logger.LogInformation("Seeded notifications.");
     }
 
     // ─── HELPERS ──────────────────────────────────────────────────────────────
