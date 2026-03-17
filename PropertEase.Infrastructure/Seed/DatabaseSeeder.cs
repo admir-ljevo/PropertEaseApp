@@ -115,7 +115,7 @@ public static class DatabaseSeeder
             EmailConfirmed  = true,
             IsAdministrator = true,
             Active          = true,
-        }, password: "test", role: "Admin", firstName: "Admin", lastName: "Korisnik", city: city);
+        }, password: "test", roles: new[] { "Admin", "Renter" }, firstName: "Admin", lastName: "Korisnik", city: city);
 
         await EnsureUser(userManager, hasher, db, logger, new ApplicationUser
         {
@@ -124,7 +124,7 @@ public static class DatabaseSeeder
             EmailConfirmed = true,
             IsClient       = true,
             Active         = true,
-        }, password: "test", role: "Client", firstName: "Mobilni", lastName: "Korisnik", city: city);
+        }, password: "test", roles: new[] { "Client" }, firstName: "Mobilni", lastName: "Korisnik", city: city);
 
         await EnsureUser(userManager, hasher, db, logger, new ApplicationUser
         {
@@ -133,7 +133,7 @@ public static class DatabaseSeeder
             EmailConfirmed  = true,
             IsCompanyOwner  = true,
             Active          = true,
-        }, password: "test", role: "Renter", firstName: "Marko", lastName: "Izdavač", city: city);
+        }, password: "test", roles: new[] { "Renter" }, firstName: "Marko", lastName: "Izdavač", city: city);
     }
 
     private static async Task EnsureUser(
@@ -143,7 +143,7 @@ public static class DatabaseSeeder
         ILogger logger,
         ApplicationUser user,
         string password,
-        string role,
+        string[] roles,
         string firstName,
         string lastName,
         City? city)
@@ -151,13 +151,13 @@ public static class DatabaseSeeder
         var existing = await userManager.FindByNameAsync(user.UserName!);
         if (existing != null)
         {
-            // Repair password so "test" always works on existing accounts
             existing.PasswordHash = hasher.HashPassword(existing, password);
             existing.Active       = true;
             await userManager.UpdateAsync(existing);
 
-            if (!await userManager.IsInRoleAsync(existing, role))
-                await userManager.AddToRoleAsync(existing, role);
+            foreach (var role in roles)
+                if (!await userManager.IsInRoleAsync(existing, role))
+                    await userManager.AddToRoleAsync(existing, role);
 
             if (!await db.Persons.AnyAsync(p => p.ApplicationUserId == existing.Id))
             {
@@ -167,7 +167,6 @@ public static class DatabaseSeeder
             return;
         }
 
-        // Create without password validation, then hash directly
         var result = await userManager.CreateAsync(user);
         if (!result.Succeeded)
         {
@@ -178,12 +177,14 @@ public static class DatabaseSeeder
 
         user.PasswordHash = hasher.HashPassword(user, password);
         await userManager.UpdateAsync(user);
-        await userManager.AddToRoleAsync(user, role);
+
+        foreach (var role in roles)
+            await userManager.AddToRoleAsync(user, role);
 
         db.Persons.Add(MakePerson(firstName, lastName, user.Id, city));
         await db.SaveChangesAsync();
 
-        logger.LogInformation("Seeded user '{Username}' with role '{Role}'.", user.UserName, role);
+        logger.LogInformation("Seeded user '{Username}' with roles '{Roles}'.", user.UserName, string.Join(", ", roles));
     }
 
     private static Person MakePerson(string firstName, string lastName, int userId, City? city) =>
