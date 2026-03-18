@@ -104,7 +104,12 @@ class UserProvider with ChangeNotifier {
       );
       if (response.statusCode == 200) return 'Password changed successfully';
       final body = jsonDecode(response.body);
-      return body['description'] ?? 'Error changing password';
+      if (body is List && body.isNotEmpty) {
+        final code = body.first['code'] as String? ?? '';
+        if (code == 'PasswordMismatch') return 'PasswordMismatch';
+        return body.first['description'] as String? ?? 'Error changing password';
+      }
+      return 'Error changing password';
     } catch (e) {
       return 'Network error: $e';
     }

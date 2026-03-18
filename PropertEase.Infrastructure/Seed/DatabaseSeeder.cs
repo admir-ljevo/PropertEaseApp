@@ -110,11 +110,10 @@ public static class DatabaseSeeder
 
         await EnsureUser(userManager, hasher, db, logger, new ApplicationUser
         {
-            UserName        = "desktop",
-            Email           = "desktop@propertease.test",
-            EmailConfirmed  = true,
-            IsAdministrator = true,
-            Active          = true,
+            UserName       = "desktop",
+            Email          = "desktop@propertease.test",
+            EmailConfirmed = true,
+            Active         = true,
         }, password: "test", roles: new[] { "Admin", "Renter" }, firstName: "Admin", lastName: "Korisnik", city: city);
 
         await EnsureUser(userManager, hasher, db, logger, new ApplicationUser
@@ -122,17 +121,15 @@ public static class DatabaseSeeder
             UserName       = "mobile",
             Email          = "mobile@propertease.test",
             EmailConfirmed = true,
-            IsClient       = true,
             Active         = true,
         }, password: "test", roles: new[] { "Client" }, firstName: "Mobilni", lastName: "Korisnik", city: city);
 
         await EnsureUser(userManager, hasher, db, logger, new ApplicationUser
         {
-            UserName        = "izdavac",
-            Email           = "izdavac@propertease.test",
-            EmailConfirmed  = true,
-            IsCompanyOwner  = true,
-            Active          = true,
+            UserName       = "izdavac",
+            Email          = "izdavac@propertease.test",
+            EmailConfirmed = true,
+            Active         = true,
         }, password: "test", roles: new[] { "Renter" }, firstName: "Marko", lastName: "Izdavač", city: city);
     }
 

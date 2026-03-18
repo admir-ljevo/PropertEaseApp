@@ -27,9 +27,6 @@ class ApplicationUser {
   bool? active;
   int? personId;
   Person? person;
-  bool? isAdministrator;
-  bool? isEmployee;
-  bool? isClient;
   String? userName;
   String? email;
   String? phoneNumber;
@@ -44,9 +41,6 @@ class ApplicationUser {
     this.createdAt,
     this.active = true,
     this.personId = 0,
-    this.isAdministrator = false,
-    this.isEmployee = false,
-    this.isClient = false,
     this.userName = "",
     this.email = "",
     this.phoneNumber = "",

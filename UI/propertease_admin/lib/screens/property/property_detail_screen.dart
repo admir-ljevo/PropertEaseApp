@@ -513,8 +513,8 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
     final point = LatLng(property.latitude!, property.longitude!);
     return _SectionCard(
       title: 'Lokacija',
-      child: SizedBox(
-        height: 250,
+      child: AspectRatio(
+        aspectRatio: 16 / 9,
         child: ClipRRect(
           borderRadius: BorderRadius.circular(8),
           child: FlutterMap(

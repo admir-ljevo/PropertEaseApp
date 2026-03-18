@@ -49,6 +49,12 @@ namespace PropertEase.Controllers
             return Ok(await ApplicationUsersService.GetEmployees());
         }
 
+        [HttpGet("GetRenters")]
+        public async Task<IActionResult> GetRenters()
+        {
+            return Ok(await ApplicationUsersService.GetRenters());
+        }
+
         [HttpGet("{id:int}")]
         public virtual async Task<IActionResult> Get(int id)
         {

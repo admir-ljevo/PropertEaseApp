@@ -14,6 +14,7 @@ namespace PropertEase.Services.Services.ApplicationUsersService
         Task<PropertEase.Core.Dto.PagedResult<ApplicationUserDto>> GetFiltered(UserFilter filter);
         Task<List<ApplicationUserDto>> GetEmployees();
         Task<List<ApplicationUserDto>> GetClients();
+        Task<List<ApplicationUserDto>> GetRenters();
         Task<ApplicationUserDto> EditEmployee(EmployeeUpdateDto user);
         Task<ApplicationUserDto> EditClient(ClientUpdateDto user);
 

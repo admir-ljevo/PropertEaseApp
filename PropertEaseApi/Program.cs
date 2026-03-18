@@ -238,6 +238,11 @@ builder.Logging.AddConsole();
 var app = builder.Build();
 
 // ─── MIGRATE + SEED DATABASE ─────────────────────────────────────────────────
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<PropertEase.Infrastructure.DatabaseContext>();
+    db.Database.Migrate();
+}
 await DatabaseSeeder.SeedAsync(app.Services);
 
 // ─── MIDDLEWARE PIPELINE ─────────────────────────────────────────────────────

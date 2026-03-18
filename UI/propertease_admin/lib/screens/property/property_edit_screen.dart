@@ -670,8 +670,8 @@ class _PropertyEditScreenState extends State<PropertyEditScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SizedBox(
-          height: 300,
+        AspectRatio(
+          aspectRatio: 16 / 9,
           child: ClipRRect(
             borderRadius: BorderRadius.circular(12),
             child: FlutterMap(

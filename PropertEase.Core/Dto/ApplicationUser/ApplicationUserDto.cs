@@ -19,10 +19,6 @@ namespace PropertEase.Core.Dto.ApplicationUser
         public bool Active { get; set; }
         public int PersonId { get; set; }
         public PersonDto Person { get; set; }
-        public bool IsAdministrator { get; set; }
-        public bool IsEmployee { get; set; }
-        public bool IsClient { get; set; }
-        public bool IsCompanyOwner { get; set; }
         public ICollection<ApplicationUserRoleDto>? UserRoles { get; set; }
 
     }

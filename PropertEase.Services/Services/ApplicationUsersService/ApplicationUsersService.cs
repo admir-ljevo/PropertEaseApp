@@ -76,7 +76,6 @@ namespace PropertEase.Services.Services.ApplicationUsersService
             newUser.PhoneNumber = user.PhoneNumber;
             newUser.ConcurrencyStamp = Guid.NewGuid().ToString();
             newUser.PasswordHash = _passwordHasher.HashPassword(new ApplicationUser(), user.Password);
-            newUser.IsEmployee = true;
             newUser = await _unitOfWork.ApplicationUsersRepository.AddAsync(newUser);
             await _unitOfWork.SaveChangesAsync();
 
@@ -131,8 +130,6 @@ namespace PropertEase.Services.Services.ApplicationUsersService
             newUser.EmailConfirmed = true;
             newUser.ConcurrencyStamp = Guid.NewGuid().ToString();
             newUser.PasswordHash = _passwordHasher.HashPassword(new ApplicationUser(), user.Password);
-            newUser.IsClient = true;
-            
             newUser = await _unitOfWork.ApplicationUsersRepository.AddAsync(newUser);
             await _unitOfWork.SaveChangesAsync();
 
@@ -191,8 +188,6 @@ namespace PropertEase.Services.Services.ApplicationUsersService
                 editUser.NormalizedEmail = user.Email.ToUpper();
                 editUser.UserName = user.UserName;
                 editUser.NormalizedUserName = user.UserName.ToUpper();
-                editUser.IsEmployee = false;
-                editedUser.IsClient = true;
                 editUser.PhoneNumber = user.PhoneNumber;
                 editUser.UserRoles = null;
                 editUser.Person = null;
@@ -245,7 +240,6 @@ namespace PropertEase.Services.Services.ApplicationUsersService
                 editUser.NormalizedEmail = user.Email.ToUpper();
                 editUser.UserName = user.UserName;
                 editUser.NormalizedUserName = user.UserName.ToUpper();
-                editUser.IsEmployee = true;
                 editUser.PhoneNumber = user.PhoneNumber;
                 editUser.UserRoles = null;
                 editUser.Person = null;
@@ -284,6 +278,11 @@ namespace PropertEase.Services.Services.ApplicationUsersService
         public async Task<List<ApplicationUserDto>> GetEmployees()
         {
             return await _unitOfWork.ApplicationUsersRepository.GetEmployees();
+        }
+
+        public async Task<List<ApplicationUserDto>> GetRenters()
+        {
+            return await _unitOfWork.ApplicationUsersRepository.GetRenters();
         }
 
         public async Task<PropertEase.Core.Dto.PagedResult<ApplicationUserDto>> GetFiltered(UserFilter filter)

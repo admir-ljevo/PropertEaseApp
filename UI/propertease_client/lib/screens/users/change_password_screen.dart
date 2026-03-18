@@ -5,147 +5,159 @@ import 'package:provider/provider.dart';
 import '../../models/application_user.dart';
 
 class ChangePasswordScreen extends StatefulWidget {
-  ApplicationUser? user;
-  ChangePasswordScreen({super.key, this.user});
+  final ApplicationUser? user;
+  const ChangePasswordScreen({super.key, this.user});
 
   @override
-  State<StatefulWidget> createState() => ChangePasswordScreenState();
+  State<ChangePasswordScreen> createState() => _ChangePasswordScreenState();
 }
 
-class ChangePasswordScreenState extends State<ChangePasswordScreen> {
+class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   late UserProvider _userProvider;
-  TextEditingController _oldPasswordController = TextEditingController();
-  TextEditingController _newPasswordController = TextEditingController();
-  TextEditingController _confirmPasswordController = TextEditingController();
-  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  String newPasswordError = ''; // Define an error message variable
+  final _formKey = GlobalKey<FormState>();
+  final _oldPasswordController = TextEditingController();
+  final _newPasswordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+
+  bool _obscureOld = true;
+  bool _obscureNew = true;
+  bool _obscureConfirm = true;
+  bool _loading = false;
 
   @override
-  void didChangeDependencies() {
-    // TODO: implement didChangeDependencies
-    super.didChangeDependencies();
+  void initState() {
+    super.initState();
     _userProvider = context.read<UserProvider>();
   }
 
   @override
-  void initState() {
-    // TODO: implement initState
-    super.initState();
-    _userProvider = context.read<UserProvider>();
-    _scaffoldKey.currentState;
+  void dispose() {
+    _oldPasswordController.dispose();
+    _newPasswordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _loading = true);
+    try {
+      final result = await _userProvider.changePassword(
+        _oldPasswordController.text,
+        _newPasswordController.text,
+        widget.user!.id!.toString(),
+      );
+      if (!mounted) return;
+      if (result == 'Password changed successfully') {
+        _oldPasswordController.clear();
+        _newPasswordController.clear();
+        _confirmPasswordController.clear();
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Lozinka uspješno promijenjena'),
+          backgroundColor: Colors.green,
+        ));
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Trenutna lozinka nije ispravna'),
+          backgroundColor: Colors.red,
+        ));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Greška: $e'),
+          backgroundColor: Colors.red,
+        ));
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Change Password"),
+      appBar: AppBar(title: const Text('Promjena lozinke')),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            children: [
+              _pwField(
+                controller: _oldPasswordController,
+                label: 'Trenutna lozinka',
+                obscure: _obscureOld,
+                onToggle: () => setState(() => _obscureOld = !_obscureOld),
+                validator: (v) => (v == null || v.isEmpty) ? 'Unesite trenutnu lozinku' : null,
+              ),
+              const SizedBox(height: 16),
+              _pwField(
+                controller: _newPasswordController,
+                label: 'Nova lozinka',
+                obscure: _obscureNew,
+                onToggle: () => setState(() => _obscureNew = !_obscureNew),
+                validator: (v) {
+                  if (v == null || v.isEmpty) return 'Unesite novu lozinku';
+                  if (v.length < 8) return 'Lozinka mora imati najmanje 8 znakova';
+                  if (!RegExp(r'[A-Z]').hasMatch(v)) return 'Lozinka mora sadržavati veliko slovo';
+                  if (!RegExp(r'\d').hasMatch(v)) return 'Lozinka mora sadržavati broj';
+                  if (v == _oldPasswordController.text) return 'Nova lozinka mora biti različita od trenutne';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              _pwField(
+                controller: _confirmPasswordController,
+                label: 'Potvrdi novu lozinku',
+                obscure: _obscureConfirm,
+                onToggle: () => setState(() => _obscureConfirm = !_obscureConfirm),
+                validator: (v) {
+                  if (v == null || v.isEmpty) return 'Unesite potvrdu lozinke';
+                  if (v != _newPasswordController.text) return 'Lozinke se ne podudaraju';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  onPressed: _loading ? null : _submit,
+                  child: _loading
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Promijeni lozinku'),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            const SizedBox(height: 16.0),
-            TextField(
-              controller: _oldPasswordController,
-              obscureText: true,
-              decoration: const InputDecoration(
-                labelText: "Old Password",
-              ),
-            ),
-            const SizedBox(height: 16.0),
-            TextField(
-              controller: _newPasswordController,
-              obscureText: true,
-              decoration: const InputDecoration(
-                labelText: "New Password",
-              ),
-              onChanged: (password) {
-                // Validate the password
-                if (!RegExp(r'^(?=.*[A-Z])(?=.*\d).{8,}$').hasMatch(password)) {
-                  setState(() {
-                    newPasswordError =
-                        'Password must be at least 8 characters, with at least one uppercase letter and one digit.';
-                  });
-                } else {
-                  // Password is valid
-                  setState(() {
-                    newPasswordError = '';
-                  });
-                }
-              },
-            ),
-            Text(
-              newPasswordError,
-              style: const TextStyle(
-                color: Colors.red, // Customize the error text color
-              ),
-            ),
-            const SizedBox(height: 16.0),
-            TextField(
-              controller: _confirmPasswordController,
-              obscureText: true,
-              decoration: const InputDecoration(
-                labelText: "Confirm New Password",
-              ),
-            ),
-            const SizedBox(height: 32.0),
-            ElevatedButton(
-              onPressed: () async {
-                // Check if the newPassword and confirmPassword match
-                if (_newPasswordController.text !=
-                    _confirmPasswordController.text) {
-                  // Display a SnackBar for the password mismatch
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                          "New Password and Confirm Password do not match."),
-                      backgroundColor:
-                          Colors.red, // Customize the SnackBar appearance
-                    ),
-                  );
-                } else if (newPasswordError.isEmpty) {
-                  try {
-                    if (_newPasswordController.text ==
-                        _oldPasswordController.text) {
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                        content: Text(
-                            "Old password cannot be the same as new password"),
-                        backgroundColor: Colors.red,
-                      ));
-                      return;
-                    }
-                    String? result = await _userProvider.changePassword(
-                      _oldPasswordController.text,
-                      _newPasswordController.text,
-                      widget.user!.id!.toString(),
-                    );
+    );
+  }
 
-                    if (result == "Password changed successfully") {
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                        content: Text("Password changed successfully"),
-                        backgroundColor: Colors.green,
-                      ));
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                        content: Text("Old password doesn't match"),
-                        backgroundColor:
-                            Colors.red, // Customize the SnackBar appearance
-                      ));
-                    }
-                  } catch (e) {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                      content: Text("An error occurred."),
-                      backgroundColor:
-                          Colors.red, // Customize the SnackBar appearance
-                    ));
-                  }
-                }
-              },
-              child: const Text("Change Password"),
-            )
-          ],
+  Widget _pwField({
+    required TextEditingController controller,
+    required String label,
+    required bool obscure,
+    required VoidCallback onToggle,
+    required String? Function(String?) validator,
+  }) {
+    return TextFormField(
+      controller: controller,
+      obscureText: obscure,
+      validator: validator,
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: const Icon(Icons.lock_outline),
+        border: const OutlineInputBorder(),
+        suffixIcon: IconButton(
+          icon: Icon(obscure ? Icons.visibility : Icons.visibility_off),
+          onPressed: onToggle,
         ),
       ),
     );

@@ -36,13 +36,18 @@ namespace PropertEase.Infrastructure.Repositories.ApplicationUsersRepository
 
         public async Task<List<ApplicationUserDto>> GetClients()
         {
-            return await ProjectToListAsync<ApplicationUserDto>(DatabaseContext.Users.Where(u => u.Active && u.IsClient));
+            return await ProjectToListAsync<ApplicationUserDto>(
+                DatabaseContext.Users.Where(u =>
+                    u.Active && !u.IsDeleted &&
+                    u.Roles.Any(r => !r.IsDeleted && r.Role.Name == "Client")));
         }
 
         public async Task<List<ApplicationUserDto>> GetEmployees()
         {
-            var employees = await ProjectToListAsync<ApplicationUserDto>(DatabaseContext.Users.Where(x => x.IsEmployee == true && x.IsDeleted == false && x.Active == true));
-            return employees;
+            return await ProjectToListAsync<ApplicationUserDto>(
+                DatabaseContext.Users.Where(u =>
+                    u.Active && !u.IsDeleted &&
+                    u.Roles.Any(r => !r.IsDeleted && r.Role.Name == "Renter")));
         }
 
         public async Task<PropertEase.Core.Dto.PagedResult<ApplicationUserDto>> GetFiltered(UserFilter filter)
@@ -58,6 +63,14 @@ namespace PropertEase.Infrastructure.Repositories.ApplicationUsersRepository
                 query.Skip((filter.Page - 1) * filter.PageSize).Take(filter.PageSize));
 
             return new PropertEase.Core.Dto.PagedResult<ApplicationUserDto> { Items = items, TotalCount = totalCount };
+        }
+
+        public async Task<List<ApplicationUserDto>> GetRenters()
+        {
+            return await ProjectToListAsync<ApplicationUserDto>(
+                DatabaseContext.Users.Where(u =>
+                    !u.IsDeleted && u.Active &&
+                    u.Roles.Any(r => !r.IsDeleted && r.Role.Name == "Renter")));
         }
 
         public async Task<List<ApplicationUserDto>> GetAdminsAsync()

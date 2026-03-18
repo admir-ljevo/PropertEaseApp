@@ -174,14 +174,15 @@ class RenterAddScreenState extends State<RenterAddScreen> {
                 child: Column(
                   children: [
                     Row(children: [
-                      Expanded(child: _field('Ime', _firstNameController)),
+                      Expanded(child: _field('Ime', _firstNameController,
+                          validator: (v) => (v == null || v.trim().length < 2) ? 'Ime mora imati najmanje 2 znaka' : null)),
                       const SizedBox(width: 16),
-                      Expanded(
-                          child: _field('Prezime', _lastNameController)),
+                      Expanded(child: _field('Prezime', _lastNameController,
+                          validator: (v) => (v == null || v.trim().length < 2) ? 'Prezime mora imati najmanje 2 znaka' : null)),
                     ]),
                     const SizedBox(height: 16),
                     Row(children: [
-                      Expanded(child: _field('JMBG', _jmbgController)),
+                      Expanded(child: _field('JMBG', _jmbgController, validator: _validateJmbg)),
                       const SizedBox(width: 16),
                       Expanded(
                         child: InkWell(
@@ -258,14 +259,12 @@ class RenterAddScreenState extends State<RenterAddScreen> {
                 child: Column(
                   children: [
                     Row(children: [
-                      Expanded(
-                          child: _field(
-                              'Korisničko ime', _userNameController)),
+                      Expanded(child: _field('Korisničko ime', _userNameController, validator: _validateUsername)),
                       const SizedBox(width: 16),
-                      Expanded(child: _field('Email', _emailController)),
+                      Expanded(child: _field('Email', _emailController, validator: _validateEmail)),
                     ]),
                     const SizedBox(height: 16),
-                    _field('Telefon', _phoneNumberController),
+                    _field('Telefon', _phoneNumberController, validator: _validatePhone),
                     const SizedBox(height: 16),
                     Row(children: [
                       Expanded(
@@ -355,15 +354,40 @@ class RenterAddScreenState extends State<RenterAddScreen> {
   }
 
   TextFormField _field(String label, TextEditingController ctrl,
-      {bool required = true}) {
+      {bool required = true, String? Function(String?)? validator}) {
     return TextFormField(
       controller: ctrl,
-      validator: required
-          ? (v) => (v == null || v.isEmpty) ? 'Obavezno polje' : null
-          : null,
+      validator: validator ??
+          (required
+              ? (v) => (v == null || v.trim().isEmpty) ? 'Obavezno polje' : null
+              : null),
       decoration: InputDecoration(
           labelText: label, border: const OutlineInputBorder()),
     );
+  }
+
+  static String? _validateEmail(String? v) {
+    if (v == null || v.isEmpty) return 'Obavezno polje';
+    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(v)) return 'Unesite ispravan email';
+    return null;
+  }
+
+  static String? _validatePhone(String? v) {
+    if (v == null || v.isEmpty) return 'Obavezno polje';
+    if (!RegExp(r'^\+?[\d\s\-]{6,20}$').hasMatch(v)) return 'Unesite ispravan broj telefona';
+    return null;
+  }
+
+  static String? _validateJmbg(String? v) {
+    if (v == null || v.isEmpty) return 'Obavezno polje';
+    if (!RegExp(r'^\d{13}$').hasMatch(v)) return 'JMBG mora imati tačno 13 cifara';
+    return null;
+  }
+
+  static String? _validateUsername(String? v) {
+    if (v == null || v.trim().isEmpty) return 'Obavezno polje';
+    if (v.trim().length < 3) return 'Korisničko ime mora imati najmanje 3 znaka';
+    return null;
   }
 }
 

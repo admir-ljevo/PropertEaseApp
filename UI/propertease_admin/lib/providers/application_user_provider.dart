@@ -82,6 +82,25 @@ class UserProvider with ChangeNotifier {
     }
   }
 
+  Future<List<ApplicationUser>> getRenters() async {
+    var url = '${AppConfig.apiBase}Employee/GetRenters';
+    var uri = Uri.parse(url);
+    var headers = createHeaders();
+    var response = await http.get(uri, headers: headers);
+
+    try {
+      if (isValidResponse(response)) {
+        return (jsonDecode(response.body) as List)
+            .map((item) => ApplicationUser.fromJson(item))
+            .toList();
+      } else {
+        throw Exception("Not valid response");
+      }
+    } catch (e) {
+      throw Exception(response.statusCode);
+    }
+  }
+
   Future<List<ApplicationUser>> getEmployees() async {
     var url = '${AppConfig.apiBase}Employee/Get';
     var uri = Uri.parse(url);
@@ -411,8 +430,19 @@ class UserProvider with ChangeNotifier {
       }),
     );
     if (response.statusCode != 200) {
-      final body = jsonDecode(response.body);
-      throw Exception(body.toString());
+      try {
+        final errors = jsonDecode(response.body) as List;
+        final code = errors.isNotEmpty ? (errors.first['code'] as String? ?? '') : '';
+        if (code == 'PasswordMismatch') throw Exception('Trenutna lozinka nije ispravna');
+        final desc = errors.isNotEmpty
+            ? (errors.first['description'] as String? ?? 'Greška pri promjeni lozinke')
+            : 'Greška pri promjeni lozinke';
+        throw Exception(desc);
+      } on Exception {
+        rethrow;
+      } catch (_) {
+        throw Exception('Greška pri promjeni lozinke');
+      }
     }
   }
 

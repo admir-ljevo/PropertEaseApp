@@ -188,9 +188,10 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       }
     } catch (e) {
       if (mounted) {
+        final msg = e is Exception ? e.toString().replaceFirst('Exception: ', '') : e.toString();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Greška: $e'),
+            content: Text(msg),
             backgroundColor: Colors.red,
             duration: const Duration(seconds: 10),
           ),
@@ -481,12 +482,10 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                                 onToggle: () =>
                                     setState(() => _pwObscureNew = !_pwObscureNew),
                                 validator: (v) {
-                                  if (v == null || v.isEmpty) {
-                                    return 'Unesite novu lozinku';
-                                  }
-                                  if (v.length < 6) {
-                                    return 'Lozinka mora imati najmanje 6 znakova';
-                                  }
+                                  if (v == null || v.isEmpty) return 'Unesite novu lozinku';
+                                  if (v.length < 8) return 'Lozinka mora imati najmanje 8 znakova';
+                                  if (!RegExp(r'[A-Z]').hasMatch(v)) return 'Lozinka mora sadržavati veliko slovo';
+                                  if (!RegExp(r'\d').hasMatch(v)) return 'Lozinka mora sadržavati broj';
                                   return null;
                                 },
                               ),
@@ -497,9 +496,11 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                                 obscure: _pwObscureConfirm,
                                 onToggle: () => setState(
                                     () => _pwObscureConfirm = !_pwObscureConfirm),
-                                validator: (v) => v != _newPwController.text
-                                    ? 'Lozinke se ne podudaraju'
-                                    : null,
+                                validator: (v) {
+                                  if (v == null || v.isEmpty) return 'Unesite potvrdu lozinke';
+                                  if (v != _newPwController.text) return 'Lozinke se ne podudaraju';
+                                  return null;
+                                },
                               ),
                               const SizedBox(height: 16),
                               SizedBox(

@@ -225,19 +225,7 @@ namespace PropertEase.Infrastructure.Migrations
                     b.Property<bool>("EmailConfirmed")
                         .HasColumnType("bit");
 
-                    b.Property<bool>("IsAdministrator")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("IsClient")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("IsCompanyOwner")
-                        .HasColumnType("bit");
-
                     b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("IsEmployee")
                         .HasColumnType("bit");
 
                     b.Property<bool>("LockoutEnabled")

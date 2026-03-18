@@ -20,5 +20,6 @@ namespace PropertEase.Infrastructure.Repositories.ApplicationUsersRepository
         Task<ApplicationUserDto> GetByIdAsync(int id);
         new Task<List<ApplicationUserDto>> GetClients();
         Task<List<ApplicationUserDto>> GetAdminsAsync();
+        Task<List<ApplicationUserDto>> GetRenters();
     }
 }

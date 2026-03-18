@@ -40,7 +40,7 @@ class _RenterReservationReportScreenState
   }
 
   Future<void> _fetchRenters() async {
-    final list = await _userProvider.getEmployees();
+    final list = await _userProvider.getRenters();
     setState(() => _renters = list);
   }
 

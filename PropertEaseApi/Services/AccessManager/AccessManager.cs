@@ -121,17 +121,12 @@ namespace PropertEase.Services.AccessManager
             if (user == null)
                 throw new UserNotFoundException();
 
-            var firstUserRole = user.UserRoles?.FirstOrDefault();
+            var adminRole = user.UserRoles?.FirstOrDefault(r => r.Role?.Name == "Admin");
+            var firstUserRole = adminRole ?? user.UserRoles?.FirstOrDefault();
             var roleId = firstUserRole?.RoleId;
-            var roleName = firstUserRole?.Role?.Name
-                        ?? (user.IsAdministrator ? "Administrator"
-                          : user.IsEmployee || user.IsCompanyOwner ? "Renter"
-                          : user.IsClient ? "Client"
-                          : null);
+            var roleName = firstUserRole?.Role?.Name;
 
-            var isRenter = user.UserRoles?.Any(r => r.Role?.Name == "Renter") == true
-                        || user.IsCompanyOwner
-                        || user.IsEmployee;
+            var isRenter = user.UserRoles?.Any(r => r.Role?.Name == "Renter") == true;
 
             return new LoginInformation
             {
