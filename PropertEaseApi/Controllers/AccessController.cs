@@ -41,7 +41,6 @@ namespace PropertEase.Controllers
             }
             catch (WrongCredentialsException)
             {
-                // fall through to BadRequest
             }
             return BadRequest(Messages.WrongCredentials);
         }
@@ -65,10 +64,8 @@ namespace PropertEase.Controllers
             return BadRequest(result.Errors);
         }
 
-        /// <summary>
-        /// Public — sends a 6-digit OTP to the user's email. Always returns 200 to avoid
-        /// leaking whether the email is registered.
-        /// </summary>
+        // Public — sends a 6-digit OTP to the user email. Always returns 200 for seucrity
+    
         [HttpPost]
         public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordModel model)
         {
@@ -79,9 +76,7 @@ namespace PropertEase.Controllers
             return Ok(new { message = "Ako je email registrovan, poslan je kod za resetovanje lozinke." });
         }
 
-        /// <summary>
-        /// Public — verifies the OTP and sets the new password.
-        /// </summary>
+       
         [HttpPost]
         public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordModel model)
         {

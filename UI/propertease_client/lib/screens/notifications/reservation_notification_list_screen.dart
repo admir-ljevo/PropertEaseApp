@@ -58,9 +58,8 @@ class _ReservationNotificationListScreenState
 
       _hub!.on('NewNotification', (_) => _load());
       await _hub!.start();
-    } catch (_) {
-      // SignalR unavailable; initial load via _load() is still shown
-    }
+    } catch (_) {}
+
   }
 
   Future<void> _load() async {

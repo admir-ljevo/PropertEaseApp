@@ -26,6 +26,9 @@ namespace PropertEase.Controllers
             this.mapper = mapper;
         }
 
+        [NonAction] public override Task<MessageDto> Get(int id) => throw new NotSupportedException();
+        [NonAction] public override Task<MessageDto> Post(MessageUpsertDto insertEntity) => throw new NotSupportedException();
+
         [HttpGet("GetByConversationId/{conversationId}")]
         public async Task<IActionResult> GetByConversationId(
             int conversationId,

@@ -21,7 +21,6 @@ class Message {
   String? content;
   bool? isRead;
 
-  // Constructor
   Message({
     this.id = 0,
     this.isDeleted = false,
@@ -38,10 +37,8 @@ class Message {
     this.isRead = false,
   });
 
-  // Factory constructor to create an instance from a JSON object
   factory Message.fromJson(Map<String, dynamic> json) =>
       _$MessageFromJson(json);
 
-  // Convert the instance to a JSON object
   Map<String, dynamic> toJson() => _$MessageToJson(this);
 }

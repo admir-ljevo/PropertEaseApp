@@ -59,7 +59,6 @@ class _PropertyCompareScreenState extends State<PropertyCompareScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Property header cards ───────────────────────────────────────
             Row(
               children: [
                 Expanded(
@@ -95,7 +94,6 @@ class _PropertyCompareScreenState extends State<PropertyCompareScreen> {
             if (b != null) ...[
               const SizedBox(height: 24),
 
-              // ── Column header labels ────────────────────────────────────
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 child: Row(
@@ -140,7 +138,6 @@ class _PropertyCompareScreenState extends State<PropertyCompareScreen> {
               ),
               const SizedBox(height: 8),
 
-              // ── Prices ─────────────────────────────────────────────────
               _sectionTitle('Cijene'),
               _CompareTable(children: [
                 if ((a.isMonthly == true) || (b.isMonthly == true))
@@ -167,7 +164,6 @@ class _PropertyCompareScreenState extends State<PropertyCompareScreen> {
 
               const SizedBox(height: 12),
 
-              // ── Key stats ──────────────────────────────────────────────
               _sectionTitle('Karakteristike'),
               _CompareTable(children: [
                 _NumRow(
@@ -238,7 +234,6 @@ class _PropertyCompareScreenState extends State<PropertyCompareScreen> {
 
               const SizedBox(height: 12),
 
-              // ── Info ───────────────────────────────────────────────────
               _sectionTitle('Informacije'),
               _CompareTable(children: [
                 _TextRow(
@@ -255,7 +250,6 @@ class _PropertyCompareScreenState extends State<PropertyCompareScreen> {
 
               const SizedBox(height: 12),
 
-              // ── Amenities ─────────────────────────────────────────────
               _sectionTitle('Sadržaji'),
               _CompareTable(children: [
                 _BoolRow(
@@ -335,8 +329,6 @@ class _PropertyCompareScreenState extends State<PropertyCompareScreen> {
                 fontWeight: FontWeight.bold, fontSize: 14)),
       );
 }
-
-// ── Property header card ─────────────────────────────────────────────────────
 
 class _PropertyHeaderCard extends StatelessWidget {
   final Property property;
@@ -454,8 +446,6 @@ class _PropertyHeaderCard extends StatelessWidget {
       );
 }
 
-// ── Picker placeholder ───────────────────────────────────────────────────────
-
 class _PickerPlaceholder extends StatelessWidget {
   final VoidCallback onTap;
   const _PickerPlaceholder({required this.onTap});
@@ -498,8 +488,6 @@ class _PickerPlaceholder extends StatelessWidget {
     );
   }
 }
-
-// ── Property picker bottom sheet ─────────────────────────────────────────────
 
 class _PropertyPickerSheet extends StatefulWidget {
   final PropertyProvider provider;
@@ -654,8 +642,6 @@ class _PropertyPickerSheetState extends State<_PropertyPickerSheet> {
       );
 }
 
-// ── Comparison table ─────────────────────────────────────────────────────────
-
 class _CompareTable extends StatelessWidget {
   final List<Widget> children;
   const _CompareTable({required this.children});
@@ -672,8 +658,6 @@ class _CompareTable extends StatelessWidget {
     );
   }
 }
-
-// ── Row types ────────────────────────────────────────────────────────────────
 
 class _NumRow extends StatelessWidget {
   final String label;

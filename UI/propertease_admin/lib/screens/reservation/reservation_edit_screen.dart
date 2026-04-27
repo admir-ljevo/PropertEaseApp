@@ -26,7 +26,6 @@ class _ReservationEditScreenState extends State<ReservationEditScreen> {
   bool _isMonthly = true;
   int _guests = 1;
 
-  // Tracks whether the user tried to save (enables date error display)
   bool _submitted = false;
 
   int get _computedDays =>
@@ -156,7 +155,6 @@ class _ReservationEditScreenState extends State<ReservationEditScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ── read-only context ────────────────────────────────────────
               _buildCard(
                 title: 'Informacije o rezervaciji',
                 icon: Icons.receipt_long,
@@ -169,7 +167,6 @@ class _ReservationEditScreenState extends State<ReservationEditScreen> {
               ),
               const SizedBox(height: 12),
 
-              // ── guests, rental type, dates ───────────────────────────────
               _buildCard(
                 title: 'Gosti i datumi',
                 icon: Icons.people,
@@ -239,7 +236,6 @@ class _ReservationEditScreenState extends State<ReservationEditScreen> {
               ),
               const SizedBox(height: 12),
 
-              // ── price ────────────────────────────────────────────────────
               _buildCard(
                 title: 'Cijena',
                 icon: Icons.attach_money,
@@ -265,7 +261,6 @@ class _ReservationEditScreenState extends State<ReservationEditScreen> {
               ),
               const SizedBox(height: 12),
 
-              // ── status (read-only — managed by state machine) ────────────
               _buildCard(
                 title: 'Status',
                 icon: Icons.info_outline,
@@ -288,7 +283,6 @@ class _ReservationEditScreenState extends State<ReservationEditScreen> {
               ),
               const SizedBox(height: 12),
 
-              // ── description ──────────────────────────────────────────────
               _buildCard(
                 title: 'Napomena',
                 icon: Icons.notes,

@@ -77,8 +77,7 @@ class MessageProvider with ChangeNotifier {
   Future<Message> updateAsync(int? id, Message data) async {
     var url = "$_baseUrl$_endpoint/$id";
     var headers = createHeaders();
-    var requestBody =
-        jsonEncode(toJson(data)); // Make sure data has toJson() method
+    var requestBody = jsonEncode(toJson(data));
 
     var response = await http!.put(
       Uri.parse(url),
@@ -138,13 +137,10 @@ class MessageProvider with ChangeNotifier {
     final response = await http!.delete(Uri.parse(url), headers: headers);
     print(url);
     if (response.statusCode == 200) {
-      // Successful deletion
       print("Property deleted successfully");
     } else if (response.statusCode == 404) {
-      // Property not found, handle as needed
       throw Exception("Property not found");
     } else {
-      // Handle other error cases
       throw Exception(
           "Failed to delete property. Status code: ${response.statusCode}");
     }

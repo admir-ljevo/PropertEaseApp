@@ -49,6 +49,19 @@ namespace PropertEase.Services.Services.ConversationService
         {
             return await unitOfOfWork.ConversationRepository.GetLastByClient(clientId);        }
 
+        public void Update(ConversationDto entity)
+        {
+            unitOfOfWork.ConversationRepository.Update(entity);
+            unitOfOfWork.SaveChanges();
+        }
+
+        public async Task<ConversationDto> UpdateAsync(ConversationDto entity)
+        {
+            unitOfOfWork.ConversationRepository.Update(entity);
+            await unitOfOfWork.SaveChangesAsync();
+            return entity;
+        }
+
         public async Task RemoveByIdAsync(int id, bool isSoft = true)
         {
             await unitOfOfWork.ConversationRepository.RemoveByIdAsync(id, isSoft);

@@ -32,7 +32,7 @@ class ApplicationUser {
   String? phoneNumber;
   List<ApplicationUserRole>? userRoles;
 
-  @FileConverter() // Add the FileConverter annotation to the userFile property
+  @FileConverter() 
   File? file;
 
   ApplicationUser({

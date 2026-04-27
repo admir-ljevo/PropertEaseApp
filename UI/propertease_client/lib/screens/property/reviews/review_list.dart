@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:propertease_client/models/application_user.dart';
@@ -26,12 +27,13 @@ class ReviewListScreen extends StatefulWidget {
 class ReviewListScreenState extends State<ReviewListScreen> {
   late RatingProvider _ratingProvider;
   final List<PropertyRating> _ratings = [];
+  final _imgCache = <String, Uint8List>{};
   bool _isLoading = false;
   bool _loadingMore = false;
   bool _hasMore = true;
   int _page = 1;
   int _totalCount = 0;
-  String? _sortByRating; // null=newest, 'desc'=highest, 'asc'=lowest
+  String? _sortByRating;
   bool _submitting = false;
   PropertyRating? _existingRating;
   bool _checkingExisting = false;
@@ -184,14 +186,29 @@ class ReviewListScreenState extends State<ReviewListScreen> {
     }
   }
 
+  Uint8List? _cachedBytes(String? b64) {
+    if (b64 == null || b64.isEmpty) return null;
+    if (_imgCache.containsKey(b64)) {
+      final cached = _imgCache[b64]!;
+      return cached.isEmpty ? null : cached;
+    }
+    try {
+      final bytes = base64Decode(b64);
+      _imgCache[b64] = bytes;
+      return bytes;
+    } catch (_) {
+      _imgCache[b64] = Uint8List(0);
+      return null;
+    }
+  }
+
   Widget _buildReviewerAvatar(String? profilePhotoBytes, String? reviewerName) {
-    if (profilePhotoBytes != null && profilePhotoBytes.isNotEmpty) {
-      try {
-        return CircleAvatar(
-          radius: 20,
-          backgroundImage: MemoryImage(base64Decode(profilePhotoBytes)),
-        );
-      } catch (_) {}
+    final decoded = _cachedBytes(profilePhotoBytes);
+    if (decoded != null) {
+      return CircleAvatar(
+        radius: 20,
+        backgroundImage: MemoryImage(decoded),
+      );
     }
     final initials = _initials(reviewerName);
     return CircleAvatar(
@@ -222,7 +239,6 @@ class ReviewListScreenState extends State<ReviewListScreen> {
         controller: _scrollController,
         keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
         slivers: [
-          // ── Form section ────────────────────────────────────────────────
           SliverToBoxAdapter(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -422,7 +438,6 @@ class ReviewListScreenState extends State<ReviewListScreen> {
             ),
           ),
 
-          // ── Ratings list ─────────────────────────────────────────────────
           if (_isLoading)
             const SliverFillRemaining(
               child: Center(child: CircularProgressIndicator()),

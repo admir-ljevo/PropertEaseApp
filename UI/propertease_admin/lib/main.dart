@@ -159,7 +159,6 @@ class _LoginWidgetState extends State<LoginWidget> {
                     Image.asset('assets/images/OIP.jpg', height: 80, width: 80),
                     const SizedBox(height: 24),
 
-                    // Username
                     TextFormField(
                       controller: _usernameController,
                       decoration: const InputDecoration(
@@ -173,7 +172,6 @@ class _LoginWidgetState extends State<LoginWidget> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Password
                     TextFormField(
                       controller: _passwordController,
                       obscureText: _obscurePassword,
@@ -195,7 +193,6 @@ class _LoginWidgetState extends State<LoginWidget> {
                     ),
                     const SizedBox(height: 8),
 
-                    // API error message
                     if (auth.errorMessage != null)
                       Padding(
                         padding: const EdgeInsets.only(top: 4, bottom: 4),

@@ -56,8 +56,7 @@ abstract class BaseProvider<T> with ChangeNotifier {
   Future<T> updateAsync(int? id, T data) async {
     var url = "$_baseUrl$_endpoint/$id";
     var headers = createHeaders();
-    var requestBody =
-        jsonEncode(toJson(data)); // Make sure data has toJson() method
+    var requestBody = jsonEncode(toJson(data));
 
     var response = await http.put(
       Uri.parse(url),
@@ -83,7 +82,6 @@ abstract class BaseProvider<T> with ChangeNotifier {
     if (isValidResponse(response)) {
       return fromJson(jsonDecode(response.body));
     } else {
-      // ignore: prefer_interpolation_to_compose_strings
       throw Exception("Failed to insert item");
     }
   }
@@ -94,7 +92,7 @@ abstract class BaseProvider<T> with ChangeNotifier {
 
     if (response.statusCode == 200) return;
 
-    // Extract the server's reason from { "message": "..." } if present
+    
     String reason;
     try {
       final body = jsonDecode(response.body);

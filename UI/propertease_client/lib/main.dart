@@ -139,7 +139,6 @@ class LoginWidgetState extends State<LoginWidget> {
       if (!mounted) return;
 
       if (result != null) {
-        // Populate Authorization
         Authorization.token = result['token'] as String;
         Authorization.userId = result['userId'] is int
             ? result['userId'] as int
@@ -189,7 +188,6 @@ class LoginWidgetState extends State<LoginWidget> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // ── Logo / brand ────────────────────────────────────────────
                 Container(
                   width: 80,
                   height: 80,
@@ -223,7 +221,6 @@ class LoginWidgetState extends State<LoginWidget> {
                 ),
                 const SizedBox(height: 36),
 
-                // ── Login card ───────────────────────────────────────────────
                 Card(
                   elevation: 0,
                   shape: RoundedRectangleBorder(
@@ -246,7 +243,6 @@ class LoginWidgetState extends State<LoginWidget> {
                           ),
                           const SizedBox(height: 20),
 
-                          // Username
                           TextFormField(
                             controller: _usernameController,
                             decoration: const InputDecoration(
@@ -260,7 +256,6 @@ class LoginWidgetState extends State<LoginWidget> {
                           ),
                           const SizedBox(height: 16),
 
-                          // Password
                           TextFormField(
                             controller: _passwordController,
                             obscureText: _obscurePassword,
@@ -285,7 +280,6 @@ class LoginWidgetState extends State<LoginWidget> {
                           ),
                           const SizedBox(height: 8),
 
-                          // Forgot password link
                           Align(
                             alignment: Alignment.centerRight,
                             child: TextButton(
@@ -303,7 +297,6 @@ class LoginWidgetState extends State<LoginWidget> {
                           ),
                           const SizedBox(height: 16),
 
-                          // Login button
                           SizedBox(
                             height: 50,
                             child: _isLoading
@@ -316,7 +309,6 @@ class LoginWidgetState extends State<LoginWidget> {
                           ),
                           const SizedBox(height: 16),
 
-                          // Register link
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [

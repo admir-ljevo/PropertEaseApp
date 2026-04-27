@@ -124,7 +124,6 @@ class _RenterReservationReportScreenState
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Filters ────────────────────────────────────────────────────
             Card(
               elevation: 0,
               shape: RoundedRectangleBorder(
@@ -194,7 +193,6 @@ class _RenterReservationReportScreenState
             ),
             const SizedBox(height: 20),
 
-            // ── Report buttons ─────────────────────────────────────────────
             const Text('Generiši izvještaj',
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
             const SizedBox(height: 12),

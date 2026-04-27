@@ -11,11 +11,9 @@ class ForgotPasswordScreen extends StatefulWidget {
 }
 
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
-  // ── Step 1: email ────────────────────────────────────────────────────────────
   final _emailFormKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
 
-  // ── Step 2: OTP + new password ───────────────────────────────────────────────
   final _resetFormKey = GlobalKey<FormState>();
   final _otpController = TextEditingController();
   final _newPassController = TextEditingController();
@@ -23,7 +21,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   bool _obscureNew = true;
   bool _obscureConfirm = true;
 
-  bool _step2 = false; // false = email step, true = OTP + password step
+  bool _step2 = false;
   bool _loading = false;
 
   late UserProvider _userProvider;
@@ -43,7 +41,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     super.dispose();
   }
 
-  // ── Step 1: send OTP ─────────────────────────────────────────────────────────
   Future<void> _requestOtp() async {
     if (!_emailFormKey.currentState!.validate()) return;
     setState(() => _loading = true);
@@ -54,7 +51,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         _showError(error);
         return;
       }
-      // Always move to step 2 — server never reveals if email exists
       setState(() => _step2 = true);
       _showSnack('Kod je poslan na email ako je registrovan.', Colors.green);
     } finally {
@@ -62,7 +58,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     }
   }
 
-  // ── Step 2: verify OTP + set new password ────────────────────────────────────
   Future<void> _resetPassword() async {
     if (!_resetFormKey.currentState!.validate()) return;
     setState(() => _loading = true);
@@ -78,7 +73,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         return;
       }
       _showSnack('Lozinka je uspješno promijenjena.', Colors.green);
-      // Give user a moment to read the message, then pop back to login
       await Future.delayed(const Duration(seconds: 1));
       if (mounted) Navigator.of(context).pop();
     } finally {
@@ -94,7 +88,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   void _showError(String msg) => _showSnack(msg, Colors.red);
 
-  // ── Validators ───────────────────────────────────────────────────────────────
   static String? _validateEmail(String? v) {
     if (v == null || v.trim().isEmpty) return 'Unesite email adresu';
     final re = RegExp(r'^[\w\-.+]+@[\w\-]+\.[a-zA-Z]{2,}$');
@@ -122,7 +115,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     return null;
   }
 
-  // ── UI ───────────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -141,7 +133,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
             child: Column(
               children: [
-                // ── Header ─────────────────────────────────────────────────────
                 Container(
                   width: 72,
                   height: 72,
@@ -178,7 +169,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 ),
                 const SizedBox(height: 28),
 
-                // ── Card ───────────────────────────────────────────────────────
                 Card(
                   elevation: 0,
                   shape: RoundedRectangleBorder(
@@ -198,7 +188,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     );
   }
 
-  // ── Step 1 widget ─────────────────────────────────────────────────────────────
   Widget _buildStep1() {
     return Form(
       key: _emailFormKey,
@@ -231,14 +220,12 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     );
   }
 
-  // ── Step 2 widget ─────────────────────────────────────────────────────────────
   Widget _buildStep2() {
     return Form(
       key: _resetFormKey,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Show which email was used (read-only context)
           Container(
             padding:
                 const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -275,7 +262,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           ),
           const SizedBox(height: 20),
 
-          // OTP field
           TextFormField(
             controller: _otpController,
             keyboardType: TextInputType.number,
@@ -290,7 +276,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           ),
           const SizedBox(height: 16),
 
-          // New password
           TextFormField(
             controller: _newPassController,
             obscureText: _obscureNew,
@@ -310,7 +295,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           ),
           const SizedBox(height: 16),
 
-          // Confirm password
           TextFormField(
             controller: _confirmPassController,
             obscureText: _obscureConfirm,
@@ -342,7 +326,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           ),
           const SizedBox(height: 12),
 
-          // Resend OTP
           Center(
             child: TextButton(
               onPressed: _loading ? null : _requestOtp,

@@ -71,10 +71,8 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Hero image
             _buildHeroImage(n),
 
-            // Content card
             Padding(
               padding: const EdgeInsets.all(24),
               child: Center(
@@ -83,7 +81,6 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Title
                       Text(
                         n.name ?? '',
                         style: const TextStyle(
@@ -95,7 +92,6 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
                       ),
                       const SizedBox(height: 16),
 
-                      // Meta row
                       Row(
                         children: [
                           _MetaChip(
@@ -113,7 +109,6 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
                       const Divider(),
                       const SizedBox(height: 20),
 
-                      // Body text
                       Text(
                         n.text ?? '',
                         style: const TextStyle(

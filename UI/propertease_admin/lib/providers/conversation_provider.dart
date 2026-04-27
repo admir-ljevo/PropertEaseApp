@@ -45,8 +45,6 @@ class ConversationProvider with ChangeNotifier {
 
   Map<String, dynamic> toJson(Conversation data) => data.toJson();
 
-  // ── All property conversations (admin overview) ───────────────────────────
-
   Future<SearchResult<Conversation>> get({dynamic filter}) async {
     var url = "$_baseUrl$_endpoint";
     if (filter != null) {
@@ -63,8 +61,6 @@ class ConversationProvider with ChangeNotifier {
     }
     throw Exception("Something is wrong");
   }
-
-  // ── Property conversations for a renter ───────────────────────────────────
 
   Future<SearchResult<Conversation>> getByPropertyAndRenter(
       int? propertyId, int renterId) async {
@@ -87,8 +83,6 @@ class ConversationProvider with ChangeNotifier {
     throw Exception("Failed to fetch property conversations");
   }
 
-  // ── Admin conversations (no property attached) ────────────────────────────
-
   Future<SearchResult<Conversation>> getAdminConversations(int userId) async {
     final url = "$_baseUrl$_endpoint/GetAdminConversations/$userId";
     final response =
@@ -103,8 +97,6 @@ class ConversationProvider with ChangeNotifier {
     throw Exception("Failed to fetch admin conversations");
   }
 
-  // ── List of admin users (to start new admin conversation) ─────────────────
-
   Future<List<ApplicationUser>> getAdmins() async {
     final url = "$_baseUrl$_endpoint/GetAdmins";
     final response =
@@ -117,8 +109,6 @@ class ConversationProvider with ChangeNotifier {
     }
     throw Exception("Failed to fetch admins");
   }
-
-  // ── Client inbox ───────────────────────────────────────────────────────────
 
   Future<SearchResult<Conversation>> getByClient(int clientId) async {
     final url = "$_baseUrl$_endpoint/GetByClient/clientId/$clientId";
@@ -134,8 +124,6 @@ class ConversationProvider with ChangeNotifier {
     throw Exception("Failed to fetch client conversations");
   }
 
-  // ── Unread count (uses Message endpoint) ──────────────────────────────────
-
   Future<int> getUnreadCount(int recipientId) async {
     final url = "$_baseUrl" "Message/UnreadCount/$recipientId";
     final response =
@@ -146,14 +134,10 @@ class ConversationProvider with ChangeNotifier {
     return 0;
   }
 
-  // ── Mark conversation messages as read ────────────────────────────────────
-
   Future<void> markAsRead(int conversationId, int recipientId) async {
     final url = "$_baseUrl" "Message/MarkAsRead/$conversationId?recipientId=$recipientId";
     await http!.put(Uri.parse(url), headers: createHeaders());
   }
-
-  // ── CRUD helpers ───────────────────────────────────────────────────────────
 
   Future<Conversation> addAsync(Conversation data) async {
     final body = {

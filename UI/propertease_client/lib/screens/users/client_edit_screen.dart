@@ -129,7 +129,6 @@ class UserEditScreenState extends State<UserEditScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ── Avatar ────────────────────────────────────────────────────
               Center(
                 child: Column(
                   children: [
@@ -173,7 +172,6 @@ class UserEditScreenState extends State<UserEditScreen> {
               ),
               const SizedBox(height: 24),
 
-              // ── Personal details ──────────────────────────────────────────
               _SectionCard(
                 title: 'Personal Details',
                 child: Column(
@@ -252,7 +250,6 @@ class UserEditScreenState extends State<UserEditScreen> {
               ),
               const SizedBox(height: 16),
 
-              // ── Account details ───────────────────────────────────────────
               _SectionCard(
                 title: 'Account Details',
                 child: Column(

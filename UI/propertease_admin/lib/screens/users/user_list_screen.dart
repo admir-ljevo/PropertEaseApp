@@ -455,8 +455,10 @@ class UserListWidgetState extends State<UserListWidget> {
 
   Future<void> fetchData() async {
     try {
-      await fetchUsers();
-      fetchedCities = await _cityProvider.get();
+      final usersFuture = fetchUsers();
+      final citiesFuture = _cityProvider.get();
+      await usersFuture;
+      fetchedCities = await citiesFuture;
     } catch (error) {
       print("Error fetching data: $error");
     }

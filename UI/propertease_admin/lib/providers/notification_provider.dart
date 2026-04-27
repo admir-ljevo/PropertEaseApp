@@ -27,7 +27,6 @@ class NotificationProvider with ChangeNotifier {
   Map<String, String> createHeadersForUpload() {
     var headers = {
       'Content-Type': 'multipart/form-data',
-      // "Authorization": basicAuth,
     };
     return headers;
   }

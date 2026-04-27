@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:propertease_client/models/conversation.dart';
@@ -24,6 +25,7 @@ class ConvesrationListScreenState extends State<ConversationListScreen> {
   bool _isLoading = true;
   String? _error;
   late signalr.HubConnection signalR;
+  final _imgCache = <String, Uint8List>{};
 
   int get _totalUnread =>
       _conversations.fold(0, (sum, c) => sum + (c.unreadCount ?? 0));
@@ -120,21 +122,35 @@ class ConvesrationListScreenState extends State<ConversationListScreen> {
     );
   }
 
+  Uint8List? _cachedBytes(String? b64) {
+    if (b64 == null || b64.isEmpty) return null;
+    if (_imgCache.containsKey(b64)) {
+      final cached = _imgCache[b64]!;
+      return cached.isEmpty ? null : cached;
+    }
+    try {
+      final bytes = base64Decode(b64);
+      _imgCache[b64] = bytes;
+      return bytes;
+    } catch (_) {
+      _imgCache[b64] = Uint8List(0);
+      return null;
+    }
+  }
+
   Widget _buildRenterAvatar(String? photoBytes, {String? photoUrl}) {
-    if (photoBytes != null && photoBytes.isNotEmpty) {
-      try {
-        final bytes = base64Decode(photoBytes);
-        return ClipOval(
-          child: Image.memory(
-            bytes,
-            width: 60,
-            height: 60,
-            fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) =>
-                const CircleAvatar(radius: 30, child: Icon(Icons.person)),
-          ),
-        );
-      } catch (_) {}
+    final decoded = _cachedBytes(photoBytes);
+    if (decoded != null) {
+      return ClipOval(
+        child: Image.memory(
+          decoded,
+          width: 60,
+          height: 60,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) =>
+              const CircleAvatar(radius: 30, child: Icon(Icons.person)),
+        ),
+      );
     }
     if (photoUrl != null && photoUrl.isNotEmpty) {
       return ClipOval(

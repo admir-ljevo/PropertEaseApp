@@ -54,8 +54,10 @@ class PropertyListWidgetState extends State<PropertyListWidget> {
   }
 
   Future<void> _loadDropdowns() async {
-    final typeResult = await _propertyTypeProvider.get();
-    final cityResult = await _cityProvider.get();
+    final typesFuture = _propertyTypeProvider.get();
+    final citiesFuture = _cityProvider.get();
+    final typeResult = await typesFuture;
+    final cityResult = await citiesFuture;
     if (mounted) {
       setState(() {
         _propertyTypes = typeResult.result;
@@ -97,7 +99,6 @@ class PropertyListWidgetState extends State<PropertyListWidget> {
     }
   }
 
-  /// Debounced search — waits 400 ms after the last keystroke before fetching.
   void _onSearchChanged(String _) {
     _searchDebounce?.cancel();
     _searchDebounce = Timer(const Duration(milliseconds: 400), () {
@@ -333,7 +334,6 @@ class PropertyListWidgetState extends State<PropertyListWidget> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image — URL included in list payload; no extra API call per item
             ClipRRect(
               borderRadius:
                   const BorderRadius.vertical(top: Radius.circular(14)),
@@ -350,7 +350,6 @@ class PropertyListWidgetState extends State<PropertyListWidget> {
                   : _photoPlaceholder(),
             ),
 
-            // Name + availability badge
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
               child: Row(
@@ -372,7 +371,6 @@ class PropertyListWidgetState extends State<PropertyListWidget> {
               ),
             ),
 
-            // City & type
             Padding(
               padding:
                   const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
@@ -383,7 +381,6 @@ class PropertyListWidgetState extends State<PropertyListWidget> {
               ),
             ),
 
-            // Stats row
             Padding(
               padding:
                   const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -408,7 +405,6 @@ class PropertyListWidgetState extends State<PropertyListWidget> {
               ),
             ),
 
-            // Price chips
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
               child: Row(

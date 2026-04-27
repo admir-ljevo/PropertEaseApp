@@ -31,7 +31,6 @@ abstract class BaseProvider<T> with ChangeNotifier {
     if (isValidResponse(response)) {
       final result = SearchResult<T>();
       final data = jsonDecode(response.body);
-      // Support both array and paginated {result:[...], totalCount:N}
       final List items = data is List ? data : (data['result'] as List? ?? []);
       result.count = items.length;
       for (var item in items) {
@@ -51,7 +50,6 @@ abstract class BaseProvider<T> with ChangeNotifier {
     if (isValidResponse(response)) {
       final result = SearchResult<T>();
       final data = jsonDecode(response.body);
-      // API returns PagedResult: { "items": [...], "totalCount": N }
       final List items = data is List
           ? data
           : (data['items'] as List? ?? data['result'] as List? ?? []);

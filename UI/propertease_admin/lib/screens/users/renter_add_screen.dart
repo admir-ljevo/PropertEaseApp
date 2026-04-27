@@ -132,7 +132,6 @@ class RenterAddScreenState extends State<RenterAddScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ── Avatar ─────────────────────────────────────────────────────
               Center(
                 child: Column(
                   children: [
@@ -178,7 +177,6 @@ class RenterAddScreenState extends State<RenterAddScreen> {
               ),
               const SizedBox(height: 24),
 
-              // ── Lični podaci ────────────────────────────────────────────────
               _SectionCard(
                 title: 'Lični podaci',
                 child: Column(
@@ -263,7 +261,6 @@ class RenterAddScreenState extends State<RenterAddScreen> {
               ),
               const SizedBox(height: 16),
 
-              // ── Podaci naloga ───────────────────────────────────────────────
               _SectionCard(
                 title: 'Podaci naloga',
                 child: Column(

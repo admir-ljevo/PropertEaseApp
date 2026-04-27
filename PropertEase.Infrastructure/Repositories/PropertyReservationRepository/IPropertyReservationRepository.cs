@@ -13,19 +13,10 @@ namespace PropertEase.Infrastructure.Repositories.PropertyReservationRepository
         Task<PropertyReservationDto> GetByIdAsync(int id);
         Task<PropertEase.Core.Dto.PagedResult<PropertyReservationDto>> GetFiltered(PropertyReservationFilter filter);
         Task<List<PropertyReservationDto>> GetRenterBusinessReportData(ReportSearchObject search);
-        /// <summary>
-        /// Returns the minimal data needed by the recommendation engine:
-        /// total distinct client count, count of clients who reserved the target property,
-        /// and a co-occurrence map (otherPropertyId → distinct client count).
-        /// All computed in SQL — no full table load.
-        /// </summary>
         Task<(int TotalClientCount, int PropertyClientCount, Dictionary<int, int> CoOccurrences)>
             GetRecommendationDataAsync(int propertyId);
 
-        /// <summary>
-        /// Transitions Confirmed reservations whose end date has passed to Completed.
-        /// Executed as a single SQL UPDATE — no rows are loaded into memory.
-        /// </summary>
+    
         Task<int> DeactivateExpiredAsync();
 
         Task<List<PropertyReservationDto>> GetForReportAsync(int? ownerId, DateTime? from, DateTime? to);
@@ -33,9 +24,6 @@ namespace PropertEase.Infrastructure.Repositories.PropertyReservationRepository
         Task<PropertEase.Core.Dto.PagedResult<ReservationSummaryDto>> GetClientSummariesAsync(int clientId, int page = 1, int pageSize = 10);
         Task<PropertEase.Core.Dto.PagedResult<ReservationSummaryDto>> GetRenterSummariesAsync(int renterId, int page = 1, int pageSize = 10);
 
-        /// <summary>
-        /// Returns the count of non-deleted reservations whose end date is in the future (upcoming).
-        /// </summary>
         Task<int> GetUpcomingCountByPropertyAsync(int propertyId);
     }
 }

@@ -33,8 +33,7 @@ namespace PropertEase.Infrastructure
         {
             base.OnModelCreating(modelBuilder);
 
-            // These four Identity tables are never written to by this application.
-            // ExcludeFromMigrations prevents EF from recreating them after they are dropped.
+            //ExcludeFromMigrations becuase they are not used
             modelBuilder.Entity<ApplicationUserClaim>().ToTable("AspNetUserClaims", t => t.ExcludeFromMigrations());
             modelBuilder.Entity<ApplicationUserLogin>().ToTable("AspNetUserLogins", t => t.ExcludeFromMigrations());
             modelBuilder.Entity<ApplicationRoleClaim>().ToTable("AspNetRoleClaims", t => t.ExcludeFromMigrations());

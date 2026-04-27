@@ -22,8 +22,6 @@ class PhotoProvider with ChangeNotifier {
           .map((item) => Photo.fromJson(item))
           .toList();
     } else {
-      // Handle the case when the API request fails or returns a non-200 status code.
-      // You might want to return an empty list or handle the error as needed.
       return [];
     }
   }
@@ -33,13 +31,11 @@ class PhotoProvider with ChangeNotifier {
       final url = Uri.parse('$_baseUrl$_endpoint/Add');
       final request = http.MultipartRequest('POST', url);
 
-      // Attach JWT so the protected endpoint accepts the request
       final token = Authorization.token;
       if (token != null && token.isNotEmpty) {
         request.headers['Authorization'] = 'Bearer $token';
       }
 
-      // Add fields to the request
       request.fields['Id'] = photoDto.id.toString();
       request.fields['CreatedAt'] = photoDto.createdAt!.toIso8601String();
       request.fields['Url'] = photoDto.url ?? '';
@@ -50,20 +46,14 @@ class PhotoProvider with ChangeNotifier {
 
       request.files.add(
         await http.MultipartFile.fromPath('file', photoDto.file!.path,
-            contentType: http_parser.MediaType(
-                'image', 'jpeg')), // Set content type as needed
+            contentType: http_parser.MediaType('image', 'jpeg')),
       );
 
       final response = await request.send();
-      if (response.statusCode == 200) {
-        // Photo uploaded successfully, you can handle the response here
-        // You may also want to parse the response as needed
-      } else {
-        // Handle errors here
+      if (response.statusCode != 200) {
         print('Error: ${response.statusCode}');
       }
     } catch (error) {
-      // Handle other exceptions here
       print('Error: $error');
     }
   }
@@ -102,10 +92,8 @@ class PhotoProvider with ChangeNotifier {
   }
 
   Map<String, String> createHeadersForUpload() {
-    var headers = {
+    return {
       'Content-Type': 'multipart/form-data',
-      // "Authorization": basicAuth,
     };
-    return headers;
   }
 }

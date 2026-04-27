@@ -37,9 +37,6 @@ class UserProvider with ChangeNotifier {
     throw Exception('Server error ${response.statusCode}');
   }
 
-  // ── Auth ────────────────────────────────────────────────────────────────────
-
-  /// Returns a map with token + user info on success, or null on failure.
   Future<Map<String, dynamic>?> signIn(String userName, String password) async {
     try {
       final url = Uri.parse('${_baseUrl}Access/SignIn');
@@ -62,7 +59,6 @@ class UserProvider with ChangeNotifier {
 
       final roleId = data['roleId'] as int?;
       final role = data['role'] as String?;
-      // Allow role ID 3 (Client) or legacy role name check
       final isClient = roleId == 3 ||
           role?.toLowerCase() == 'client' ||
           role?.toLowerCase() == 'korisnik';
@@ -98,10 +94,9 @@ class UserProvider with ChangeNotifier {
         body: jsonEncode({
           'currentPassword': oldPassword,
           'newPassword': newPassword,
-          // userId is extracted from JWT on the server — never sent from client
         }),
       );
-      if (response.statusCode == 200) return null; // null = success
+      if (response.statusCode == 200) return null;
       final body = jsonDecode(response.body);
       if (body is List && body.isNotEmpty) {
         final code = body.first['code'] as String? ?? '';
@@ -114,7 +109,6 @@ class UserProvider with ChangeNotifier {
     }
   }
 
-  /// Returns null on success, or an error message string on failure.
   Future<String?> forgotPassword(String email) async {
     final url = Uri.parse('${_baseUrl}Access/ForgotPassword');
     try {
@@ -130,7 +124,6 @@ class UserProvider with ChangeNotifier {
     }
   }
 
-  /// Returns null on success, or an error message string on failure.
   Future<String?> resetPassword(
       String email, String otp, String newPassword) async {
     final url = Uri.parse('${_baseUrl}Access/ResetPassword');
@@ -160,8 +153,6 @@ class UserProvider with ChangeNotifier {
       return 'Greška mreže: $e';
     }
   }
-
-  // ── User CRUD ───────────────────────────────────────────────────────────────
 
   Future<ApplicationUser> getClientById(int id) async {
     final url = Uri.parse('${_baseUrl}Clients/$id');
@@ -236,13 +227,10 @@ class UserProvider with ChangeNotifier {
     req.fields['PhoneNumber'] = u.phoneNumber ?? '';
     if (password != null) req.fields['Password'] = password;
 
-    // Attach auth header
     if (Authorization.token != null && Authorization.token!.isNotEmpty) {
       req.headers['Authorization'] = 'Bearer ${Authorization.token}';
     }
   }
-
-  // ── Helpers ─────────────────────────────────────────────────────────────────
 
   Future<void> deleteById(int? id) async {
     final url = Uri.parse('${_baseUrl}$_endpoint/$id');

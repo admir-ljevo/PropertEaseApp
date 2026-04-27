@@ -69,7 +69,7 @@ namespace PropertEase.Services.AccessManager
         public async Task ForgotPasswordAsync(string email)
         {
             var user = await _userManager.FindByEmailAsync(email);
-            // Always return without error — do not reveal whether the email exists.
+            // always return without error, dont review if address exists
             if (user == null || !user.Active) return;
 
             var otpInt = Math.Abs(BitConverter.ToInt32(RandomNumberGenerator.GetBytes(4), 0)) % 900_000 + 100_000;
@@ -79,7 +79,6 @@ namespace PropertEase.Services.AccessManager
             _cache.Set(OtpCacheKey(email), new OtpEntry(HashOtp(otp, salt), salt, expiresAt), TimeSpan.FromMinutes(15));
 
             var fullName = user.UserName ?? email;
-            // Fetch person name if available
             var person = _unitOfWork.GetDatabaseContext().Persons
                 .FirstOrDefault(p => p.ApplicationUserId == user.Id);
             if (person != null)
@@ -132,7 +131,7 @@ namespace PropertEase.Services.AccessManager
 
             var addResult = await _userManager.AddPasswordAsync(user, newPassword);
             if (addResult.Succeeded)
-                _cache.Remove(OtpCacheKey(email)); // Invalidate OTP after use
+                _cache.Remove(OtpCacheKey(email));
 
             return addResult;
         }
@@ -191,7 +190,6 @@ namespace PropertEase.Services.AccessManager
 
         public async Task<LoginInformation> SignInAsync(string username, string password, bool rememberMe = false)
         {
-            // Get the actual tracked entity for password verification
             var actualUser = await _userManager.FindByNameAsync(username)
                           ?? await _userManager.FindByEmailAsync(username);
 
@@ -201,7 +199,6 @@ namespace PropertEase.Services.AccessManager
             if (!await _userManager.CheckPasswordAsync(actualUser, password))
                 throw new WrongCredentialsException(null);
 
-            // Get the full DTO (with Person, roles, etc.) for the response
             var user = await _applicationUsersService.FindByUserNameOrEmailAsync(username);
             if (user == null)
                 throw new UserNotFoundException();

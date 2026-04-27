@@ -14,6 +14,25 @@ namespace PropertEase.Infrastructure.Repositories.MessageRepository
         {
         }
 
+        public async Task<List<MessageDto>> GetAllAsync()
+        {
+            return await DatabaseContext.Messages
+                .AsNoTracking()
+                .Where(m => !m.IsDeleted)
+                .OrderByDescending(m => m.CreatedAt)
+                .Select(m => new MessageDto
+                {
+                    Id = m.Id,
+                    ConversationId = m.ConversationId,
+                    SenderId = m.SenderId,
+                    RecipientId = m.RecipientId,
+                    Content = m.Content,
+                    CreatedAt = m.CreatedAt,
+                    IsRead = m.IsRead,
+                })
+                .ToListAsync();
+        }
+
         public async Task<List<MessageDto>> GetByConversationId(int conversationId, int page = 1, int pageSize = 30)
         {
             pageSize = Math.Min(pageSize <= 0 ? 30 : pageSize, 50);

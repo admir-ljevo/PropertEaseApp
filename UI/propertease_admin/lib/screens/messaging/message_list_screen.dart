@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:propertease_admin/config/app_config.dart';
@@ -38,6 +39,7 @@ class MessageListScreenState extends State<MessageListScreen> {
   late MessageProvider _messageProvider;
   late ConversationProvider _conversationProvider;
   final ScrollController _scrollController = ScrollController();
+  final _imgCache = <String, Uint8List>{};
 
   Message message = Message();
   String? firstName;
@@ -55,7 +57,7 @@ class MessageListScreenState extends State<MessageListScreen> {
     _initSignalR();
     _loadUser();
     _fetchMessages();
-    _markAsReadSilent(); // mark existing unread on open
+    _markAsReadSilent();
   }
 
   void _initSignalR() async {
@@ -103,7 +105,6 @@ class MessageListScreenState extends State<MessageListScreen> {
     lastName = Authorization.lastName;
   }
 
-  /// Initial load — awaited so the list appears before the screen is interactive.
   Future<void> _fetchMessages() async {
     try {
       final result =
@@ -114,8 +115,6 @@ class MessageListScreenState extends State<MessageListScreen> {
     }
   }
 
-  /// Background sync — used after send and on SignalR events.
-  /// Updates the list without any loading indicator.
   void _syncMessages() {
     _messageProvider
         .getByConversationId(widget.conversationId!)
@@ -126,7 +125,6 @@ class MessageListScreenState extends State<MessageListScreen> {
     });
   }
 
-  /// Marks messages as read in the background and notifies the conversation list.
   void _markAsReadSilent() {
     if (userId == null) return;
     _conversationProvider
@@ -147,7 +145,6 @@ class MessageListScreenState extends State<MessageListScreen> {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
 
-    // ── Optimistic insert ──────────────────────────────────────────────────
     final optimistic = Message()
       ..content = text
       ..senderId = userId
@@ -159,13 +156,13 @@ class MessageListScreenState extends State<MessageListScreen> {
     _messageController.clear();
     setState(() {
       messages ??= SearchResult<Message>();
-      messages!.result.insert(0, optimistic); // list is reverse-sorted
+      messages!.result.insert(0, optimistic);
     });
     _scrollToBottom();
 
     try {
       await _messageProvider.addMessage(optimistic);
-      _syncMessages(); // replace optimistic entry with server response
+      _syncMessages();
       widget.onConversationListUpdated();
     } catch (e) {
       debugPrint('Send message error: $e');
@@ -344,14 +341,29 @@ class MessageListScreenState extends State<MessageListScreen> {
     );
   }
 
+  Uint8List? _cachedBytes(String? b64) {
+    if (b64 == null || b64.isEmpty) return null;
+    if (_imgCache.containsKey(b64)) {
+      final cached = _imgCache[b64]!;
+      return cached.isEmpty ? null : cached;
+    }
+    try {
+      final bytes = base64Decode(b64);
+      _imgCache[b64] = bytes;
+      return bytes;
+    } catch (_) {
+      _imgCache[b64] = Uint8List(0);
+      return null;
+    }
+  }
+
   Widget _buildAvatar(String? profilePhotoBytes, {String? photoUrl}) {
-    if (profilePhotoBytes != null && profilePhotoBytes.isNotEmpty) {
-      try {
-        return CircleAvatar(
-          radius: 16,
-          backgroundImage: MemoryImage(base64Decode(profilePhotoBytes)),
-        );
-      } catch (_) {}
+    final decoded = _cachedBytes(profilePhotoBytes);
+    if (decoded != null) {
+      return CircleAvatar(
+        radius: 16,
+        backgroundImage: MemoryImage(decoded),
+      );
     }
     if (photoUrl != null && photoUrl.isNotEmpty) {
       return CircleAvatar(
@@ -366,7 +378,6 @@ class MessageListScreenState extends State<MessageListScreen> {
   }
 
   Widget _buildMyAvatar() {
-    // Prefer in-memory bytes; fall back to network URL if bytes not loaded.
     if (Authorization.profilePhotoBytes != null &&
         Authorization.profilePhotoBytes!.isNotEmpty) {
       return _buildAvatar(Authorization.profilePhotoBytes);

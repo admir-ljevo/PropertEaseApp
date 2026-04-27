@@ -4,17 +4,7 @@ using PropertEase.Core.Exceptions;
 
 namespace PropertEase.Core.StateMachines
 {
-    /// <summary>
-    /// Enforces valid state transitions for <see cref="PropertyReservation"/>.
-    /// <para>
-    /// Valid transitions:
-    ///   Pending   → Confirmed | Cancelled
-    ///   Confirmed → Completed | Cancelled
-    ///   Completed → (terminal)
-    ///   Cancelled → (terminal)
-    /// </para>
-    /// Also writes the audit trail (who acted, when, cancellation reason).
-    /// </summary>
+ 
     public static class ReservationStateMachine
     {
         private static readonly Dictionary<ReservationStatus, HashSet<ReservationStatus>> ValidTransitions = new()
@@ -25,13 +15,6 @@ namespace PropertEase.Core.StateMachines
             [ReservationStatus.Cancelled] = new(),
         };
 
-        /// <summary>
-        /// Transitions <paramref name="reservation"/> to <paramref name="target"/>, writing the audit trail.
-        /// No-op when already in target state.
-        /// Throws <see cref="InvalidOperationException"/> for any other invalid transition.
-        /// </summary>
-        /// <param name="actorId">UserId of the person triggering the transition (null = system).</param>
-        /// <param name="reason">Cancellation reason — required when <paramref name="target"/> is Cancelled.</param>
         public static void Transition(
             PropertyReservation reservation,
             ReservationStatus target,
@@ -63,10 +46,6 @@ namespace PropertEase.Core.StateMachines
             }
         }
 
-        /// <summary>
-        /// Validates that the transition from <paramref name="from"/> to <paramref name="to"/> is allowed
-        /// without modifying any entity. Throws <see cref="InvalidOperationException"/> if invalid.
-        /// </summary>
         public static void ValidateTransition(ReservationStatus from, ReservationStatus to)
         {
             if (from != to && !ValidTransitions[from].Contains(to))
@@ -74,7 +53,6 @@ namespace PropertEase.Core.StateMachines
                     $"Cannot transition reservation from '{from}' to '{to}'.");
         }
 
-        /// <summary>Returns <c>true</c> if the transition from <paramref name="from"/> to <paramref name="to"/> is allowed.</summary>
         public static bool CanTransition(ReservationStatus from, ReservationStatus to)
             => from == to || ValidTransitions[from].Contains(to);
     }

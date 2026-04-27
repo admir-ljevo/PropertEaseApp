@@ -101,7 +101,6 @@ class Property {
   factory Property.fromJson(Map<String, dynamic> json) =>
       _$PropertyFromJson(json);
 
-  /// Connect the generated [_$PropertyToJson] function to the `toJson` method.
   Map<String, dynamic> toJson() => _$PropertyToJson(this);
   // Map<String, dynamic> toJson(Property data) => _$PropertyToJson(this);
 }

@@ -23,19 +23,15 @@ namespace PropertEase.Core.Dto.PropertyReservation
         public bool IsMonthly { get; set; }
         public bool IsDaily { get; set; }
 
-        /// <summary>Full lifecycle status: Pending → Confirmed → Completed / Cancelled.</summary>
         public ReservationStatus Status { get; set; }
 
-        /// <summary>Backwards-compatible helper derived from Status.</summary>
         public bool IsActive => Status == ReservationStatus.Confirmed || Status == ReservationStatus.Completed;
 
-        /// <summary>True once a completed payment record exists for this reservation.</summary>
         public bool IsPaid { get; set; }
 
-        /// <summary>Populated in report projections. True when the payment was refunded.</summary>
         public bool IsRefunded { get; set; }
 
-        // ── Audit trail ──────────────────────────────────────────────────────────
+        // Audit  
         public int? ConfirmedById { get; set; }
         public DateTime? ConfirmedAt { get; set; }
         public int? CancelledById { get; set; }

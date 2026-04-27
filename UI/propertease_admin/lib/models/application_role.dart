@@ -12,7 +12,7 @@ class ApplicationRole {
   DateTime? modifiedAt;
   bool? isDeleted;
   String? name;
-  List<ApplicationUserRole>? roles; // Add the Roles property
+  List<ApplicationUserRole>? roles; 
 
   ApplicationRole({
     this.id,
@@ -21,7 +21,7 @@ class ApplicationRole {
     this.modifiedAt,
     this.isDeleted,
     this.roles,
-    this.name, // Initialize the Roles property
+    this.name, 
   });
 
   factory ApplicationRole.fromJson(Map<String, dynamic> json) =>

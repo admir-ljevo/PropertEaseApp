@@ -22,6 +22,5 @@ class PropertyType {
   @override
   int get hashCode => id.hashCode;
 
-  /// Connect the generated [_$PropertyToJson] function to the `toJson` method.
   Map<String, dynamic> toJson() => _$PropertyTypeToJson(this);
 }

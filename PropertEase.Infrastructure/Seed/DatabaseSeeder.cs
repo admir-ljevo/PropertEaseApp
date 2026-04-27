@@ -354,7 +354,6 @@ public static class DatabaseSeeder
         var renter = await userManager.FindByNameAsync("izdavac");
         if (mobile == null || admin == null || renter == null) return;
 
-        // Properties ordered by Id: [0-4] = admin's, [5-9] = renter's
         var props = await db.Properties.Where(p => !p.IsDeleted).OrderBy(p => p.Id).ToListAsync();
         if (props.Count < 10) return;
 
@@ -622,16 +621,15 @@ public static class DatabaseSeeder
 
         if (reservations.Count < 8) return;
 
-        // Index by seed number
-        var r1 = reservations[0]; // Confirmed
-        var r2 = reservations[1]; // Confirmed
-        var r3 = reservations[2]; // Completed
-        var r4 = reservations[3]; // Completed
-        var r5 = reservations[4]; // Cancelled (refunded)
-        var r6 = reservations[5]; // Cancelled (refunded)
-        var r7  = reservations[6]; // Pending
-        var r9  = reservations.Count > 7 ? reservations[7] : null;  // Confirmed – started yesterday
-        var r10 = reservations.Count > 8 ? reservations[8] : null;  // Confirmed – started yesterday
+        var r1 = reservations[0];
+        var r2 = reservations[1];
+        var r3 = reservations[2];
+        var r4 = reservations[3];
+        var r5 = reservations[4];
+        var r6 = reservations[5];
+        var r7  = reservations[6];
+        var r9  = reservations.Count > 7 ? reservations[7] : null;
+        var r10 = reservations.Count > 8 ? reservations[8] : null;
 
         var payments = new List<Payment>
         {
@@ -1123,7 +1121,6 @@ public static class DatabaseSeeder
 
         var now = DateTime.UtcNow;
 
-        // Download a few notification images
         async Task<(string? url, byte[]? bytes)> NotifImage(int seed)
         {
             var imgUrl  = $"https://picsum.photos/seed/{seed}/400/300";

@@ -2,12 +2,10 @@ namespace PropertEase.Core.Dto.Payment
 {
     public class CompleteReservationPaymentDto
     {
-        // PayPal info
         public string PayPalPaymentId { get; set; }
         public string PayPalPayerId { get; set; }
         public double Amount { get; set; }
 
-        // Reservation info
         public int PropertyId { get; set; }
         public int ClientId { get; set; }
         public int RenterId { get; set; }

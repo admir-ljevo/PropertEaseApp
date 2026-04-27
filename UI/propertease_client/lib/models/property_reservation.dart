@@ -69,6 +69,5 @@ class PropertyReservation {
   factory PropertyReservation.fromJson(Map<String, dynamic> json) =>
       _$PropertyReservationFromJson(json);
 
-  /// Connect the generated [_$PropertyReservationToJson] function to the `toJson` method.
   Map<String, dynamic> toJson() => _$PropertyReservationToJson(this);
 }

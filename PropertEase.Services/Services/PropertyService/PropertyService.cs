@@ -60,18 +60,17 @@ namespace PropertEase.Services.Services.PropertyService
             if (hasActiveReservations)
                 throw new InvalidOperationException("Cannot delete a property that has active or pending reservations.");
 
-            // Cascade: Messages → Conversations (FK order, meaningless without the property)
+            // cascade: Messages → Conversations 
             var conversationIds = db.Conversations
                 .Where(c => c.PropertyId == id && !c.IsDeleted)
                 .Select(c => c.Id).ToList();
             SoftDeleteRange(db.Messages.Where(m => conversationIds.Contains(m.ConversationId) && !m.IsDeleted));
             SoftDeleteRange(db.Conversations.Where(c => conversationIds.Contains(c.Id) && !c.IsDeleted));
 
-            // Cascade: PropertyRatings and Photos (owned by this property)
             SoftDeleteRange(db.PropertyRatings.Where(r => r.PropertyId == id && !r.IsDeleted));
             SoftDeleteRange(db.Photos.Where(p => p.PropertyId == id && !p.IsDeleted));
 
-            // Completed/cancelled reservations and their payments/ratings are preserved for history.
+            // completed/cancelled reservations and their payments and ratings are preserved for history
 
             var property = await db.Properties.FindAsync(id);
             if (property != null) property.IsDeleted = true;

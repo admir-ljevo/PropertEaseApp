@@ -3,10 +3,7 @@ using Microsoft.EntityFrameworkCore.Design;
 
 namespace PropertEase.Infrastructure;
 
-/// <summary>
-/// Used by EF Core design-time tools (migrations) only.
-/// Update the connection string below to match your local SQL Server instance.
-/// </summary>
+
 public class DatabaseContextFactory : IDesignTimeDbContextFactory<DatabaseContext>
 {
     public DatabaseContext CreateDbContext(string[] args)

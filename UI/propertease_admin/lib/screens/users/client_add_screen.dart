@@ -145,7 +145,6 @@ class _UserAddScreenState extends State<UserAddScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ── Avatar ─────────────────────────────────────────────────────
               Center(
                 child: Column(
                   children: [
@@ -191,7 +190,6 @@ class _UserAddScreenState extends State<UserAddScreen> {
               ),
               const SizedBox(height: 24),
 
-              // ── Lični podaci ────────────────────────────────────────────────
               _SectionCard(
                 title: 'Lični podaci',
                 child: Column(
@@ -273,7 +271,6 @@ class _UserAddScreenState extends State<UserAddScreen> {
               ),
               const SizedBox(height: 16),
 
-              // ── Podaci naloga ───────────────────────────────────────────────
               _SectionCard(
                 title: 'Podaci naloga',
                 child: Column(

@@ -59,9 +59,8 @@ class _ReservationNotificationListScreenState
 
       _hub!.on('NewNotification', (_) => _load());
       await _hub!.start();
-    } catch (_) {
-      // polling continues as fallback
-    }
+    } catch (_) {}
+
   }
 
   Future<void> _load() async {

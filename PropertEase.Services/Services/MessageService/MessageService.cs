@@ -23,12 +23,9 @@ namespace PropertEase.Services.Services.MessageService
 
         public async Task<MessageDto> AddAsyncSignalR(MessageDto entityDto, IHubContext<MessageHub> hubContext)
         {
-            // 1. Persist the message
             await unitOfWork.MessageRepository.AddAsync(entityDto);
             await unitOfWork.SaveChangesAsync();
 
-            // 2. Update conversation metadata + broadcast SignalR in parallel
-            //    (direct UPDATE — no extra SELECT round-trip)
             await Task.WhenAll(
                 unitOfWork.ConversationRepository.UpdateLastMessageAsync(
                     entityDto.ConversationId, entityDto.Content),
@@ -50,6 +47,11 @@ namespace PropertEase.Services.Services.MessageService
         public async Task<List<MessageDto>> GetByConversationId(int conversationId, int page = 1, int pageSize = 30)
         {
             return await unitOfWork.MessageRepository.GetByConversationId(conversationId, page, pageSize);
+        }
+
+        public async Task<List<MessageDto>> GetAllAsync()
+        {
+            return await unitOfWork.MessageRepository.GetAllAsync();
         }
 
         public async Task<MessageDto> GetByIdAsync(int id)

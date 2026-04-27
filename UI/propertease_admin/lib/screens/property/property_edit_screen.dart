@@ -61,7 +61,6 @@ class _PropertyEditScreenState extends State<PropertyEditScreen> {
   }
 
   Future<void> _initForm() async {
-    // Fire all three requests in parallel.
     final ptFuture = _propertyTypeProvider.get();
     final propFuture = widget.property?.id != null
         ? _propertyProvider.getById(widget.property!.id!)
@@ -72,7 +71,6 @@ class _PropertyEditScreenState extends State<PropertyEditScreen> {
 
     if (!mounted) return;
 
-    // Populate controllers from the full (getById) property data.
     _nameController.text = full?.name ?? '';
     _addressController.text = full?.address ?? '';
     _squareMetersController.text = full?.squareMeters?.toString() ?? '';
@@ -810,8 +808,6 @@ class _AmenityToggle {
   final void Function(bool) onChanged;
   _AmenityToggle(this.label, this.icon, this.value, this.onChanged);
 }
-
-// ─── Fullscreen image viewer (network photos) ─────────────────────────────────
 
 class _NetworkFullscreenViewer extends StatefulWidget {
   final List<Photo> images;

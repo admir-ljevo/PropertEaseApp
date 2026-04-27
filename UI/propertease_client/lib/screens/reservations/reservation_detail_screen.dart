@@ -155,7 +155,7 @@ class _ReservationDetailScreenState extends State<ReservationDetailsScreen> {
           backgroundColor: Colors.green,
         ),
       );
-      _load(); // refresh
+      _load();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -178,7 +178,6 @@ class _ReservationDetailScreenState extends State<ReservationDetailsScreen> {
         _reservation = r;
         _loading = false;
       });
-      // If completed and has a renter, check for an existing user rating
       if (r.status == 2 && r.renterId != null) {
         _loadExistingUserRating(r.renterId!);
       }
@@ -224,7 +223,6 @@ class _ReservationDetailScreenState extends State<ReservationDetailsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header image
           photoUrl != null
               ? Image.network(
                   photoUrl,
@@ -240,7 +238,6 @@ class _ReservationDetailScreenState extends State<ReservationDetailsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Reservation number + status
                 Row(
                   children: [
                     Expanded(
@@ -297,7 +294,6 @@ class _ReservationDetailScreenState extends State<ReservationDetailsScreen> {
                       style: const TextStyle(fontSize: 15, height: 1.5)),
                 ],
 
-                // ── Confirmation audit trail ───────────────────────────────
                 if (r.confirmedAt != null) ...[
                   const SizedBox(height: 16),
                   _sectionTitle('Historija potvrde'),
@@ -307,7 +303,6 @@ class _ReservationDetailScreenState extends State<ReservationDetailsScreen> {
                       DateFormat('dd.MM.yyyy HH:mm').format(r.confirmedAt!)),
                 ],
 
-                // ── Cancellation details ───────────────────────────────────
                 if (r.status == 3) ...[
                   const SizedBox(height: 16),
                   _sectionTitle('Detalji otkazivanja'),
@@ -320,7 +315,6 @@ class _ReservationDetailScreenState extends State<ReservationDetailsScreen> {
                     _row('Razlog', r.cancellationReason),
                 ],
 
-                // ── Pending: awaiting renter confirmation ─────────────────
                 if (_isPending) ...[
                   const SizedBox(height: 24),
                   Container(
@@ -359,7 +353,6 @@ class _ReservationDetailScreenState extends State<ReservationDetailsScreen> {
                   ),
                 ],
 
-                // ── Confirmed + unpaid: prompt client to pay ──────────────
                 if (_canPay) ...[
                   const SizedBox(height: 24),
                   Container(
@@ -402,7 +395,6 @@ class _ReservationDetailScreenState extends State<ReservationDetailsScreen> {
                   ),
                 ],
 
-                // ── Confirmed + paid: allow cancel with refund ────────────
                 if (_canCancel)
                   Padding(
                     padding: const EdgeInsets.only(top: 24, bottom: 8),
@@ -592,8 +584,6 @@ class _ReservationDetailScreenState extends State<ReservationDetailsScreen> {
         ),
       ),
     );
-    // Delay disposal until after the dismiss animation so focus events
-    // that fire during sheet close don't hit an already-disposed controller.
     WidgetsBinding.instance.addPostFrameCallback((_) => commentCtrl.dispose());
   }
 

@@ -4,11 +4,9 @@ using PropertEase.Infrastructure.UnitOfWork;
 
 namespace PropertEase.Services.Recommendations;
 
-/// <summary>
 /// Apriori-based association rules recommendation engine.
 /// Finds properties frequently booked together and recommends
 /// co-booked properties to users based on their booking history.
-/// </summary>
 public class AssociationRulesEngine : IRecommendationEngine
 {
     private readonly UnitOfWork _uow;
@@ -27,10 +25,8 @@ public class AssociationRulesEngine : IRecommendationEngine
 
     public async Task<IReadOnlyList<int>> GetRecommendationsAsync(int userId)
     {
-        // 1. Load all reservations (transaction = all properties a single client booked)
         var allReservations = await _uow.PropertyReservationRepository.GetAllAsync();
 
-        // Build transactions: one transaction per client = set of propertyIds they booked
         var transactions = allReservations
             .GroupBy(r => r.ClientId)
             .Select(g => g.Select(r => r.PropertyId).Distinct().ToHashSet())
@@ -40,7 +36,6 @@ public class AssociationRulesEngine : IRecommendationEngine
         if (totalTransactions == 0)
             return Array.Empty<int>();
 
-        // 2. Get the set of properties the current user has already booked
         var userPropertyIds = allReservations
             .Where(r => r.ClientId == userId)
             .Select(r => r.PropertyId)
@@ -58,7 +53,6 @@ public class AssociationRulesEngine : IRecommendationEngine
                 .ToList();
         }
 
-        // 3. Compute item support (frequency of each property across transactions)
         var itemSupport = new Dictionary<int, double>();
         foreach (var transaction in transactions)
         {
@@ -71,8 +65,6 @@ public class AssociationRulesEngine : IRecommendationEngine
         foreach (var key in itemSupport.Keys.ToList())
             itemSupport[key] /= totalTransactions;
 
-        // 4. Compute pairwise co-occurrence for {antecedent → candidate} rules
-        //    where antecedent ∈ userPropertyIds and candidate ∉ userPropertyIds
         var candidateScores = new Dictionary<int, double>();
 
         foreach (var userPropertyId in userPropertyIds)
@@ -99,7 +91,6 @@ public class AssociationRulesEngine : IRecommendationEngine
             }
         }
 
-        // Normalise to confidence
         var recommendations = candidateScores
             .Select(kv =>
             {

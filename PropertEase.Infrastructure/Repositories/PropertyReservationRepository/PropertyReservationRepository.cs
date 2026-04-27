@@ -172,8 +172,6 @@ namespace PropertEase.Infrastructure.Repositories.PropertyReservationRepository
 
             var totalCount = await reservationsQuery.CountAsync();
 
-            // Project entirely in SQL — same pattern as PropertyRepository.GetFilteredData.
-            // No entity graphs are loaded into C# memory; EF Core generates a single query.
             var reservationsDto = await reservationsQuery
                 .OrderBy(pr => pr.DateOfOccupancyStart)
                 .Skip((filter.Page - 1) * filter.PageSize)
@@ -243,14 +241,12 @@ namespace PropertEase.Infrastructure.Repositories.PropertyReservationRepository
         public async Task<(int TotalClientCount, int PropertyClientCount, Dictionary<int, int> CoOccurrences)>
             GetRecommendationDataAsync(int propertyId)
         {
-            // 1. Total distinct clients across all reservations (denominator for support)
             var totalClientCount = await DatabaseContext.PropertyReservations
                 .Where(r => !r.IsDeleted)
                 .Select(r => r.ClientId)
                 .Distinct()
                 .CountAsync();
 
-            // 2. Distinct clients who reserved the target property
             var propertyClientIds = await DatabaseContext.PropertyReservations
                 .Where(r => r.PropertyId == propertyId && !r.IsDeleted)
                 .Select(r => r.ClientId)
@@ -260,8 +256,7 @@ namespace PropertEase.Infrastructure.Repositories.PropertyReservationRepository
             if (propertyClientIds.Count == 0)
                 return (totalClientCount, 0, new Dictionary<int, int>());
 
-            // 3. Fetch distinct (PropertyId, ClientId) pairs for co-reserving clients.
-            //    SELECT DISTINCT on two int columns is universally translatable to SQL.
+          
             var coOccurrencePairs = await DatabaseContext.PropertyReservations
                 .Where(r => propertyClientIds.Contains(r.ClientId)
                             && r.PropertyId != propertyId
@@ -270,7 +265,6 @@ namespace PropertEase.Infrastructure.Repositories.PropertyReservationRepository
                 .Distinct()
                 .ToListAsync();
 
-            // Group in memory — the result set is a small list of integer pairs
             var coOccurrences = coOccurrencePairs
                 .GroupBy(p => p.PropertyId)
                 .ToDictionary(g => g.Key, g => g.Count());

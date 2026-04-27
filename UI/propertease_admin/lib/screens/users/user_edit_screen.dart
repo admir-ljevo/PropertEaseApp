@@ -46,7 +46,6 @@ class UserEditScreenState extends State<UserEditScreen> {
   final _jmbgController = TextEditingController();
   DateTime selectedDate = DateTime.now();
 
-  // Password change (admin-initiated — no old password required)
   bool _changePassword = false;
   final _newPwController = TextEditingController();
   final _confirmPwController = TextEditingController();
@@ -191,7 +190,6 @@ class UserEditScreenState extends State<UserEditScreen> {
         await _userProvider.updateEmployee(editedUser, editedUser.id!);
       }
 
-      // Admin password reset (no old password required)
       if (_changePassword) {
         await _userProvider.adminResetPassword(
             widget.user!.id!, _newPwController.text);
@@ -239,7 +237,6 @@ class UserEditScreenState extends State<UserEditScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Avatar ───────────────────────────────────────────────────────
             Center(
               child: Column(
                 children: [
@@ -287,12 +284,10 @@ class UserEditScreenState extends State<UserEditScreen> {
             ),
             const SizedBox(height: 24),
 
-            // ── Profile form ─────────────────────────────────────────────────
             Form(
               key: _formKey,
               child: Column(
                 children: [
-                  // ── Lični podaci ──────────────────────────────────────────
                   _SectionCard(
                     title: 'Lični podaci',
                     child: Column(
@@ -382,7 +377,6 @@ class UserEditScreenState extends State<UserEditScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // ── Podaci naloga ─────────────────────────────────────────
                   _SectionCard(
                     title: 'Podaci naloga',
                     child: Column(
@@ -420,7 +414,6 @@ class UserEditScreenState extends State<UserEditScreen> {
             ),
             const SizedBox(height: 16),
 
-            // ── Uloge ────────────────────────────────────────────────────────
             if (widget.user?.userRoles?.isEmpty != false ||
                 widget.user?.userRoles?[0].role?.roleLevel != 1)
               _SectionCard(
@@ -477,7 +470,6 @@ class UserEditScreenState extends State<UserEditScreen> {
               ),
             const SizedBox(height: 16),
 
-            // ── Promjena lozinke (admin — bez stare lozinke) ─────────────────
             _SectionCard(
               title: 'Lozinka',
               child: Column(

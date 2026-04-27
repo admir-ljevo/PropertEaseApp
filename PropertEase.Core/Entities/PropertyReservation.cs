@@ -24,33 +24,18 @@ namespace PropertEase.Core.Entities
         public bool IsDaily { get; set; }
         public string? Description { get; set; }
 
-        /// <summary>
-        /// Full lifecycle: Pending → Confirmed → Completed / Cancelled.
-        /// </summary>
+        // Pending Confirmed Completed / Cancelled.
         public ReservationStatus Status { get; set; } = ReservationStatus.Pending;
 
-        // ── Audit trail ──────────────────────────────────────────────────────────
+        // Audit trail 
 
-        /// <summary>UserId of the actor who confirmed (transitioned to Confirmed).</summary>
         public int? ConfirmedById { get; set; }
-
-        /// <summary>Timestamp when the reservation was confirmed.</summary>
         public DateTime? ConfirmedAt { get; set; }
-
-        /// <summary>UserId of the actor who cancelled the reservation.</summary>
         public int? CancelledById { get; set; }
-
-        /// <summary>Timestamp when the reservation was cancelled.</summary>
         public DateTime? CancelledAt { get; set; }
-
-        /// <summary>Reason provided when the reservation was cancelled.</summary>
         public string? CancellationReason { get; set; }
 
-        // ── Backwards-compat ─────────────────────────────────────────────────────
 
-        /// <summary>
-        /// Helper: a reservation is "active" when Confirmed or Completed (i.e. was/is paid).
-        /// </summary>
         [System.ComponentModel.DataAnnotations.Schema.NotMapped]
         public bool IsActive
         {

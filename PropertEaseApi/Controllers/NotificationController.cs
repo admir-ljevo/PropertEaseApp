@@ -28,6 +28,10 @@ namespace PropertEase.Controllers
             this.fileManager = fileManager;
         }
 
+        [NonAction] public override Task<NotificationDto> Get(int id) => throw new NotSupportedException();
+        [NonAction] public override Task<NotificationDto> Post(NotificationUpsertDto insertEntity) => throw new NotSupportedException();
+        [NonAction] public override Task<NotificationDto> Put(int id, NotificationUpsertDto updateEntity) => throw new NotSupportedException();
+
         [Authorize(Roles = AppRoles.Admin)]
         [HttpPost("Add")]
         public async Task<NotificationDto> Add([FromForm] NotificationUpsertDto notification)
@@ -61,7 +65,6 @@ namespace PropertEase.Controllers
                 existing.Image = await fileManager.UploadFile(file);
                 existing.ImageBytes = await fileManager.UploadFileAsBase64String(file);
             }
-            // When no new file: existing.Image, existing.ImageBytes, and existing.CreatedAt are preserved.
 
             return await notificationService.UpdateAsync(existing);
         }

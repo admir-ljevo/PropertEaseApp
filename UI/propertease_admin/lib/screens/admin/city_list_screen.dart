@@ -97,7 +97,7 @@ class _CityListScreenState extends State<CityListScreen> {
         builder: (ctx, setDlg) => AlertDialog(
           title: Text(isEdit ? 'Edit City' : 'Add City'),
           content: Form(
-            key: formKey, // 
+            key: formKey,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -105,7 +105,6 @@ class _CityListScreenState extends State<CityListScreen> {
                   controller: nameCtrl,
                   decoration: const InputDecoration(labelText: 'Name'),
                   autofocus: true,
-                  // OVAJ DIO PRIKAZUJE GREŠKU ISPOD KONTROLE
                   validator: (v) => (v == null || v.isEmpty) ? 'Name is required' : null,
                 ),
                 const SizedBox(height: 16),
@@ -114,7 +113,6 @@ class _CityListScreenState extends State<CityListScreen> {
                   decoration: const InputDecoration(labelText: 'Country'),
                   items: _countries.map((c) => DropdownMenuItem(value: c, child: Text(c.name ?? ''))).toList(),
                   onChanged: (v) => setDlg(() => selectedCountry = v),
-                  // OVAJ DIO PRIKAZUJE GREŠKU ISPOD DROPDOWNA
                   validator: (v) => v == null ? 'Country is required' : null,
                 ),
               ],

@@ -53,7 +53,7 @@ public class ClientUpsertValidator : AbstractValidator<ClientInsertDto>
                 .Matches("[0-9]").WithMessage("Lozinka mora sadržavati najmanje jedan broj.");
         });
 
-        // Password optional on edit – validate only if provided
+        // Password optional on edit, validate only if provided
         When(_ => !_isCreate, () =>
         {
             RuleFor(x => x.Password)

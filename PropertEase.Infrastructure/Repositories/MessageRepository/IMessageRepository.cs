@@ -6,6 +6,7 @@ namespace PropertEase.Infrastructure.Repositories.MessageRepository
 {
     public interface IMessageRepository: IBaseRepository<Message, int>
     {
+        new Task<List<MessageDto>> GetAllAsync();
         Task<MessageDto> GetByIdAsync(int id);
         Task<List<MessageDto>> GetByConversationId(int conversationId, int page = 1, int pageSize = 30);
         Task MarkConversationAsRead(int conversationId, int recipientId);

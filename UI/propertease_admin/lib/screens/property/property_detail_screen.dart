@@ -127,7 +127,6 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
     } catch (_) {}
   }
 
-  // Called after the edit screen returns so the carousel stays fresh.
   Future<void> _refreshImages() async {
     if (widget.property?.id == null) return;
     try {
@@ -224,8 +223,6 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
       builder: (_) => _FullscreenViewer(images: _images, initialIndex: startIndex),
     );
   }
-
-  // ── Image carousel ─────────────────────────────────────────────────────────
 
   Widget _buildCarousel() {
     if (_images.isEmpty) {
@@ -362,8 +359,6 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
       ),
     );
   }
-
-  // ── Content sections ───────────────────────────────────────────────────────
 
   Widget _buildHeader(Property property) {
     return Column(
@@ -743,8 +738,6 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
   }
 }
 
-// ─── Fullscreen image viewer ──────────────────────────────────────────────────
-
 class _FullscreenViewer extends StatefulWidget {
   final List<Photo> images;
   final int initialIndex;
@@ -774,12 +767,10 @@ class _FullscreenViewerState extends State<_FullscreenViewer> {
         height: size.height,
         child: Stack(
           children: [
-            // Tap background to close
             GestureDetector(
               onTap: () => Navigator.pop(context),
               child: Container(color: Colors.transparent, width: size.width, height: size.height),
             ),
-            // Image (centered, contain)
             Center(
               child: InteractiveViewer(
                 child: Image.network(
@@ -796,7 +787,6 @@ class _FullscreenViewerState extends State<_FullscreenViewer> {
                 ),
               ),
             ),
-            // Close button
             Positioned(
               top: 12,
               right: 12,
@@ -813,7 +803,6 @@ class _FullscreenViewerState extends State<_FullscreenViewer> {
                 ),
               ),
             ),
-            // Navigation arrows
             if (widget.images.length > 1) ...[
               Positioned(
                 left: 12,
@@ -839,7 +828,6 @@ class _FullscreenViewerState extends State<_FullscreenViewer> {
                   ),
                 ),
               ),
-              // Counter
               Positioned(
                 bottom: 20,
                 left: 0,
@@ -880,8 +868,6 @@ class _FullscreenViewerState extends State<_FullscreenViewer> {
     );
   }
 }
-
-// ─── Reusable helper widgets ──────────────────────────────────────────────────
 
 class _SectionCard extends StatelessWidget {
   final String title;

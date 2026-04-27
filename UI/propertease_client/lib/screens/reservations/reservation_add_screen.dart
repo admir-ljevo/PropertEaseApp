@@ -10,7 +10,6 @@ import 'package:propertease_client/utils/authorization.dart';
 import 'package:propertease_client/models/property.dart';
 import 'reservation_detail_screen.dart';
 
-// ── Colours consistent with the rest of the client app ───────────────────────
 const _kPrimary = Color(0xFF115892);
 
 class ReservationAddScreen extends StatefulWidget {
@@ -256,8 +255,6 @@ class ReservationAddScreenState extends State<ReservationAddScreen> {
     }
   }
 
-  // ── helpers ────────────────────────────────────────────────────────────────
-
   String _fmt(DateTime? d) =>
       d != null ? '${d.day.toString().padLeft(2, '0')}.${d.month.toString().padLeft(2, '0')}.${d.year}' : 'Odaberite datum';
 
@@ -267,8 +264,6 @@ class ReservationAddScreenState extends State<ReservationAddScreen> {
     if (isDaily) return '$numberOfDays dana';
     return '—';
   }
-
-  // ── build ──────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -311,7 +306,6 @@ class ReservationAddScreenState extends State<ReservationAddScreen> {
                 ],
               ),
             ),
-          // Loading overlay shown while backend creates the reservation
           if (_isSubmitting)
             Container(
               color: Colors.black54,
@@ -347,8 +341,6 @@ class ReservationAddScreenState extends State<ReservationAddScreen> {
       ),
     );
   }
-
-  // ── Property summary card ──────────────────────────────────────────────────
 
   Widget _buildPropertyCard(Property p, String? photoUrl) {
     return _SectionCard(
@@ -427,8 +419,6 @@ class ReservationAddScreenState extends State<ReservationAddScreen> {
         ),
       );
 
-  // ── Date selection card ────────────────────────────────────────────────────
-
   Widget _buildDatesCard() {
     return _SectionCard(
       title: 'Period boravka',
@@ -475,8 +465,6 @@ class ReservationAddScreenState extends State<ReservationAddScreen> {
     );
   }
 
-  // ── Guests card ────────────────────────────────────────────────────────────
-
   Widget _buildGuestsCard(Property p) {
     final capacity = p.capacity ?? 1;
     return _SectionCard(
@@ -516,8 +504,6 @@ class ReservationAddScreenState extends State<ReservationAddScreen> {
       ),
     );
   }
-
-  // ── Price summary card ─────────────────────────────────────────────────────
 
   Widget _buildPriceCard(Property p) {
     return _SectionCard(
@@ -564,8 +550,6 @@ class ReservationAddScreenState extends State<ReservationAddScreen> {
     );
   }
 
-  // ── Notes card ─────────────────────────────────────────────────────────────
-
   Widget _buildNotesCard() {
     return _SectionCard(
       title: 'Napomena',
@@ -601,8 +585,6 @@ class ReservationAddScreenState extends State<ReservationAddScreen> {
     );
   }
 
-  // ── Confirm button ─────────────────────────────────────────────────────────
-
   Widget _buildConfirmButton() {
     final canSubmit = startDate != null && endDate != null;
     return SizedBox(
@@ -626,8 +608,6 @@ class ReservationAddScreenState extends State<ReservationAddScreen> {
     );
   }
 }
-
-// ── Reusable widgets ───────────────────────────────────────────────────────────
 
 class _SectionCard extends StatelessWidget {
   final String? title;

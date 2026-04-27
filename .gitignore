@@ -4,6 +4,9 @@ appsettings.Development.json
 
 # Visual Studio local files
 .vs/
+*.csproj.user
+*.suo
+build-log.txt
 
 # Build output
 **/bin/

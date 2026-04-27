@@ -13,8 +13,6 @@ class AuthProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
-  /// Sends credentials to /api/Access/SignIn and stores the JWT token.
-  /// Returns true on success, false on failure.
   Future<bool> login(String username, String password) async {
     _isLoading = true;
     _errorMessage = null;

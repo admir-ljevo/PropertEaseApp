@@ -517,13 +517,13 @@ class ReservationListWidgetState extends State<ReservationListWidget> {
               )),
             ]);
           }).toList(),
-                    ),    // DataTable
-                  ),      // horizontal scroll
-                ),        // vertical scroll
-              ),          // ClipRRect
-            ),            // Card
-          ),              // Padding
-        ),                // Expanded
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 8),
           child: Row(

@@ -118,7 +118,6 @@ class NewsListWidgetState extends State<NewsListWidget> {
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       child: Row(
         children: [
-          // Search
           Expanded(
             flex: 3,
             child: TextField(
@@ -145,7 +144,6 @@ class NewsListWidgetState extends State<NewsListWidget> {
             ),
           ),
           const SizedBox(width: 12),
-          // Date from
           _DateFilterChip(
             label: _formattedStartDate != null
                 ? 'Od: $_formattedStartDate'
@@ -154,7 +152,6 @@ class NewsListWidgetState extends State<NewsListWidget> {
             onTap: () => _pickDate(isStart: true),
           ),
           const SizedBox(width: 8),
-          // Date to
           _DateFilterChip(
             label: _formattedEndDate != null
                 ? 'Do: $_formattedEndDate'
@@ -258,8 +255,6 @@ class NewsListWidgetState extends State<NewsListWidget> {
   }
 }
 
-// ── News card (horizontal) ─────────────────────────────────────────────────────
-
 class _NewsCard extends StatefulWidget {
   final New item;
   final VoidCallback onTap;
@@ -342,7 +337,6 @@ class _NewsCardState extends State<_NewsCard> {
           ),
           child: Row(
             children: [
-              // Image
               ClipRRect(
                 borderRadius: const BorderRadius.horizontal(
                     left: Radius.circular(14)),
@@ -352,7 +346,6 @@ class _NewsCardState extends State<_NewsCard> {
                   child: _buildImage(n),
                 ),
               ),
-              // Content
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
@@ -445,8 +438,6 @@ class _NewsCardState extends State<_NewsCard> {
             child: Icon(Icons.newspaper, size: 40, color: Colors.grey)),
       );
 }
-
-// ── Date filter chip ───────────────────────────────────────────────────────────
 
 class _DateFilterChip extends StatelessWidget {
   final String label;

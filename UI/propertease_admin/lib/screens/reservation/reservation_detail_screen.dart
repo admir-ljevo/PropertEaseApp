@@ -279,7 +279,6 @@ class _ReservationDetailsScreenState extends State<ReservationDetailsScreen> {
                 ],
               ),
             ],
-            // ── Confirmed-by audit trail ────────────────────────────────
             if (r.confirmedAt != null) ...[
               const SizedBox(height: 12),
               _buildCard(
@@ -294,7 +293,6 @@ class _ReservationDetailsScreenState extends State<ReservationDetailsScreen> {
                 ],
               ),
             ],
-            // ── Cancellation details ────────────────────────────────────
             if (r.status == 3) ...[
               const SizedBox(height: 12),
               _buildCard(
@@ -312,7 +310,6 @@ class _ReservationDetailsScreenState extends State<ReservationDetailsScreen> {
                 ],
               ),
             ],
-            // ── Pending: confirm or reject ──────────────────────────────
             if (r.status == 0) ...[
               const SizedBox(height: 24),
               Container(
@@ -374,7 +371,6 @@ class _ReservationDetailsScreenState extends State<ReservationDetailsScreen> {
                 ),
             ],
 
-            // ── Confirmed: allow cancel with refund ─────────────────────
             if (r.status == 1) ...[
               const SizedBox(height: 24),
               SizedBox(

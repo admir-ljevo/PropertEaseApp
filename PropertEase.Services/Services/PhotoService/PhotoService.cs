@@ -61,5 +61,12 @@ namespace PropertEase.Services.Services.PhotoService
             unitOfWork.PhotoRepository.Update(entity);
             unitOfWork.SaveChanges();
         }
+
+        public async Task<PhotoDto> UpdateAsync(PhotoDto entity)
+        {
+            unitOfWork.PhotoRepository.Update(entity);
+            await unitOfWork.SaveChangesAsync();
+            return entity;
+        }
     }
 }

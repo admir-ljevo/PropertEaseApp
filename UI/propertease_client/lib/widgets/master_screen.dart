@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:signalr_core/signalr_core.dart';
@@ -43,16 +44,25 @@ class _MasterScreenWidgetState extends State<MasterScreenWidget> {
   int _unreadCount = 0;
   int _unseenNotifCount = 0;
   HubConnection? _hub;
+  Uint8List? _profilePhotoCache;
 
   static const _kPrimary = Color(0xFF115892);
 
   @override
   void initState() {
     super.initState();
+    _cacheProfilePhoto();
     _loadUser();
     _fetchUnreadCount();
     _fetchUnseenNotifCount();
     _connectSignalR();
+  }
+
+  void _cacheProfilePhoto() {
+    final b = Authorization.profilePhotoBytes;
+    if (b != null && b.isNotEmpty) {
+      try { _profilePhotoCache = base64Decode(b); } catch (_) {}
+    }
   }
 
   @override
@@ -179,9 +189,6 @@ class _MasterScreenWidgetState extends State<MasterScreenWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final photoBytes = Authorization.profilePhotoBytes;
-    final hasPhoto = photoBytes != null && photoBytes.isNotEmpty;
-
     return Scaffold(
       appBar: AppBar(
         title: widget.titleWidget ?? Text(widget.title ?? ''),
@@ -190,7 +197,6 @@ class _MasterScreenWidgetState extends State<MasterScreenWidget> {
         elevation: 0,
         automaticallyImplyLeading: false,
         actions: [
-          // Notification bell
           IconButton(
             tooltip: 'Obavijesti',
             icon: Badge(
@@ -206,7 +212,6 @@ class _MasterScreenWidgetState extends State<MasterScreenWidget> {
                   .then((_) => _fetchUnseenNotifCount());
             },
           ),
-          // Profile avatar button
           Padding(
             padding: const EdgeInsets.only(right: 4),
             child: InkWell(
@@ -218,15 +223,15 @@ class _MasterScreenWidgetState extends State<MasterScreenWidget> {
                   radius: 16,
                   backgroundColor: Colors.white24,
                   backgroundImage:
-                      hasPhoto ? MemoryImage(base64Decode(photoBytes)) : null,
-                  child: !hasPhoto
+                      _profilePhotoCache != null ? MemoryImage(_profilePhotoCache!) : null,
+                  child: _profilePhotoCache == null
                       ? const Icon(Icons.person, size: 18, color: Colors.white)
                       : null,
                 ),
               ),
             ),
           ),
-          // Logout
+
           IconButton(
             icon: const Icon(Icons.logout),
             tooltip: 'Odjava',

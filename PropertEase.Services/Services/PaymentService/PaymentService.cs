@@ -55,7 +55,7 @@ namespace PropertEase.Services.Services.PaymentService
             _payPalSecret   = configuration["PayPal:Secret"]   ?? string.Empty;
         }
 
-        // ── Public API ────────────────────────────────────────────────────────────
+        
 
         public PayPalConfigDto GetPayPalConfig() => new PayPalConfigDto
         {
@@ -125,7 +125,7 @@ namespace PropertEase.Services.Services.PaymentService
         {
             var db = _unitOfWork.GetDatabaseContext();
 
-            // Idempotency: if this PayPal payment was already processed, return existing reservation
+            //  if this PayPal payment was already processed return existing reservation
             var existingPayment = await db.Payments
                 .FirstOrDefaultAsync(p => p.PayPalPaymentId == dto.PayPalPaymentId && !p.IsDeleted);
             if (existingPayment?.ReservationId != null)
@@ -135,7 +135,7 @@ namespace PropertEase.Services.Services.PaymentService
                 if (existing != null) return existing;
             }
 
-            // Server-side: execute (capture) the approved payment — client never records success
+           
             await ExecutePayPalPaymentAsync(dto.PayPalPaymentId, dto.PayPalPayerId, dto.Amount);
 
             var payment = new Payment
@@ -178,7 +178,7 @@ namespace PropertEase.Services.Services.PaymentService
             _unitOfWork.PaymentRepository.Update(payment);
             await _unitOfWork.SaveChangesAsync();
 
-            // Payment already captured — promote from Pending to Confirmed immediately
+            // Payment already captured
             var created2 = await _reservationService.ConfirmReservationAsync(created.Id, dto.ClientId);
 
             try
@@ -237,13 +237,13 @@ namespace PropertEase.Services.Services.PaymentService
             if (reservation.ClientId != callerId)
                 throw new BusinessException("Nije moguće platiti rezervaciju drugog korisnika.");
 
-            // Idempotency: if this PayPal payment was already processed, return existing reservation
+            // if this PayPal payment is already processed,return existing reservation
             var existingPayment = await db.Payments
                 .FirstOrDefaultAsync(p => p.PayPalPaymentId == dto.PayPalPaymentId && !p.IsDeleted);
             if (existingPayment?.ReservationId == dto.ReservationId)
                 return await _unitOfWork.PropertyReservationRepository.GetByIdAsync(dto.ReservationId);
 
-            // Also guard against double-payment for the same reservation
+            // guard against double payment
             var alreadyPaid = await db.Payments
                 .AnyAsync(p => p.ReservationId == dto.ReservationId
                                && p.Status == PaymentStatus.Completed
@@ -352,8 +352,7 @@ namespace PropertEase.Services.Services.PaymentService
                 }
                 catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
                 {
-                    // Payment ID not found in PayPal (e.g. seeded/test data) — skip PayPal refund
-                    // but still cancel the reservation and mark payment as refunded in the DB.
+                    // payment ID not found in PayPal (e.g. seeded/test data) — skip PayPal refund. still cancel resrevation
                     _logger.LogWarning(
                         "PayPal payment {PaymentId} not found (404) — skipping PayPal refund for reservation {ReservationId}.",
                         payment.PayPalPaymentId, reservationId);
@@ -428,7 +427,7 @@ namespace PropertEase.Services.Services.PaymentService
             }
         }
 
-        // ── Private helpers ───────────────────────────────────────────────────────
+        // helpers
 
         private bool IsPlaceholderCredentials()
             => string.IsNullOrEmpty(_payPalClientId) || _payPalClientId.StartsWith("REPLACE") ||

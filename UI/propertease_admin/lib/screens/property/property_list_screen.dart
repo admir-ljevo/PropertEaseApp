@@ -23,13 +23,11 @@ class PropertyListWidget extends StatefulWidget {
 }
 
 class PropertyListWidgetState extends State<PropertyListWidget> {
-  // Providers resolved once in initState
   late final PropertyProvider _propertyProvider;
   late final PropertyTypeProvider _propertyTypeProvider;
   late final CityProvider _cityProvider;
 
   SearchResult<Property>? _result;
-  // Reference data loaded ONCE per screen lifetime, not on every search call
   List<PropertyType> _propertyTypes = [];
   List<City> _cities = [];
 
@@ -41,16 +39,13 @@ class PropertyListWidgetState extends State<PropertyListWidget> {
   bool? _isAvailable;
   bool _isLoading = false;
   String? _error;
-  final _debounce = Debounce(); // 400 ms — prevents firing on every keystroke
+  final _debounce = Debounce();
   int _currentPage = 1;
   final int _pageSize = 10;
-
-  // ── lifecycle ─────────────────────────────────────────────────────────────
 
   @override
   void initState() {
     super.initState();
-    // Resolved here once — no didChangeDependencies needed (removed double-init)
     _propertyProvider = context.read<PropertyProvider>();
     _propertyTypeProvider = context.read<PropertyTypeProvider>();
     _cityProvider = context.read<CityProvider>();
@@ -66,12 +61,12 @@ class PropertyListWidgetState extends State<PropertyListWidget> {
     super.dispose();
   }
 
-  // ── data loading ───────────────────────────────────────────────────────────
-
   Future<void> _loadReferenceDataThenProperties() async {
     try {
-      final typesResult = await _propertyTypeProvider.get();
-      final citiesResult = await _cityProvider.get();
+      final typesFuture = _propertyTypeProvider.get();
+      final citiesFuture = _cityProvider.get();
+      final typesResult = await typesFuture;
+      final citiesResult = await citiesFuture;
       if (!mounted) return;
       setState(() {
         _propertyTypes = typesResult.result;
@@ -139,8 +134,6 @@ class PropertyListWidgetState extends State<PropertyListWidget> {
           backgroundColor: Colors.red));
     }
   }
-
-  // ── build ──────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -379,13 +372,13 @@ class PropertyListWidgetState extends State<PropertyListWidget> {
                     DataCell(_buildActions(e)),
                   ]);
                 }).toList(),
-                    ),      // DataTable
-                  ),        // SingleChildScrollView horizontal
-                ),          // SingleChildScrollView vertical
-              ),            // ClipRRect
-            ),              // Card
-          ),                // Padding
-        ),                  // Expanded
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 8),
           child: Row(
@@ -425,7 +418,7 @@ class PropertyListWidgetState extends State<PropertyListWidget> {
           onPressed: () async {
             await Navigator.of(context).push(MaterialPageRoute(
                 builder: (_) => PropertyEditScreen(property: e)));
-            await _fetchProperties(); // auto-refresh after edit
+            await _fetchProperties();
           }),
       IconButton(
           icon: const Icon(Icons.delete, size: 20, color: Colors.red),

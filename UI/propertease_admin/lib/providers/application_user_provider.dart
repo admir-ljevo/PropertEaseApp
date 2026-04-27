@@ -46,7 +46,6 @@ class UserProvider with ChangeNotifier {
     } else if (response.statusCode == 404) {
       throw Exception("User not found");
     } else {
-      // Handle other error cases
       throw Exception(
           "Failed to delete user. Status code: ${response.statusCode}");
     }
@@ -174,7 +173,6 @@ class UserProvider with ChangeNotifier {
         },
       );
       if (response.statusCode == 200) {
-        // Successful login
         final Map<String, dynamic> data = jsonDecode(response.body);
         final String accessToken = data['token'];
         final List<dynamic> userRoles = data['user']['userRoles'];
@@ -184,7 +182,6 @@ class UserProvider with ChangeNotifier {
         final String profilePhoto = data['user']['person']['profilePhoto'];
         late int roleId;
 
-        // Check if there is a userRole with role['id'] equal to 3
         bool hasAdminRole =
             userRoles.any((userRole) => userRole['role']['id'] == 1);
 
@@ -399,7 +396,6 @@ class UserProvider with ChangeNotifier {
     }
   }
 
-  /// Fetches a single user by ID via the Employee endpoint (works for all roles).
   Future<ApplicationUser> getById(int id) async {
     final url = Uri.parse('${AppConfig.apiBase}Employee/$id');
     final response = await http.get(url, headers: createHeaders());
@@ -410,7 +406,6 @@ class UserProvider with ChangeNotifier {
     throw Exception('Failed to load user $id');
   }
 
-  /// Updates the logged-in user's own profile and refreshes Authorization cache.
   Future<void> updateProfile(ApplicationUser user) async {
     if (Authorization.roleId == 3 || Authorization.role == 'Client') {
       await updateClient(user, user.id!);

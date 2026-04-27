@@ -20,6 +20,11 @@ namespace PropertEase.Controllers
             propertyRatingService = baseService;
         }
 
+        [NonAction] public override Task<List<PropertyRatingDto>> Get([FromQuery] int page = 1, [FromQuery] int pageSize = 20) => throw new NotSupportedException();
+        [NonAction] public override Task<PropertyRatingDto> Get(int id) => throw new NotSupportedException();
+        [NonAction] public override Task<PropertyRatingDto> Put(int id, PropertyRatingUpsertDto updateEntity) => throw new NotSupportedException();
+        [NonAction] public override Task<IActionResult> Delete(int id) => throw new NotSupportedException();
+
         [HttpGet("GetFilteredData")]
         [SwaggerOperation(OperationId = "GetFilteredData")]
         public async Task<IActionResult> GetDataByFilter([FromQuery] RatingsFilter filter)

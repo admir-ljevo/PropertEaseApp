@@ -37,12 +37,6 @@ namespace PropertEase.Controllers
             return await BaseService.GetByIdAsync(id);
         }
 
-        [HttpGet("{page:int}/{pageSize:int}")]
-        public virtual async Task<List<dtoEntity>> Get(int page, int pageSize, [FromQuery] dtoSearchObject search)
-        {
-            return await ((IPaginationBaseService<dtoEntity>)BaseService).GetForPaginationAsync(search as BaseSearchObject, pageSize, (page - 1) * pageSize);
-        }
-
         [Authorize]
         [HttpPost]
         public virtual async Task<dtoEntity> Post(dtoInsertEntity insertEntity)

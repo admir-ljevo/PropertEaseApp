@@ -192,7 +192,6 @@ class UserDetailScreenState extends State<UserDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Profile header card ─────────────────────────────────────────
             Card(
               elevation: 0,
               shape: RoundedRectangleBorder(
@@ -272,7 +271,6 @@ class UserDetailScreenState extends State<UserDetailScreen> {
             ),
             const SizedBox(height: 16),
 
-            // ── Lični podaci ────────────────────────────────────────────────
             _SectionCard(
               title: 'Lični podaci',
               child: Column(
@@ -319,7 +317,6 @@ class UserDetailScreenState extends State<UserDetailScreen> {
             ),
             const SizedBox(height: 16),
 
-            // ── Podaci naloga ───────────────────────────────────────────────
             _SectionCard(
               title: 'Podaci naloga',
               child: Column(
@@ -352,7 +349,6 @@ class UserDetailScreenState extends State<UserDetailScreen> {
             ),
             const SizedBox(height: 16),
 
-            // ── Roles ───────────────────────────────────────────────────────
             _SectionCard(
               title: 'Roles',
               child: Column(

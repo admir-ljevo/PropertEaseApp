@@ -33,7 +33,6 @@ class _PropertyAddScreenState extends State<PropertyAddScreen> {
 
   LatLng? _pickedLocation;
 
-  // Pending images – collected before the property is created
   final List<File> _pendingImages = [];
   int _currentPage = 0;
 
@@ -92,14 +91,10 @@ class _PropertyAddScreenState extends State<PropertyAddScreen> {
       _property.dailyPrice = 0;
     }
 
-    // Ensure capacity is at least 1 (dropdown visually defaults to 1 but
-    // the model stays 0 until the user interacts with it)
     if ((_property.capacity ?? 0) == 0) _property.capacity = 1;
 
-    // Create the property first to get its ID
     final created = await _propertyProvider.addAsync(_property);
 
-    // Now upload all pending images using the real property ID
     for (final file in _pendingImages) {
       final photo = Photo(0, 'a', created.id, file);
       photo.file = file;
@@ -672,8 +667,6 @@ class _AmenityToggle {
   final void Function(bool) onChanged;
   _AmenityToggle(this.label, this.icon, this.value, this.onChanged);
 }
-
-// ─── Fullscreen image viewer (local File images) ──────────────────────────────
 
 class _FileFullscreenViewer extends StatefulWidget {
   final List<File> images;

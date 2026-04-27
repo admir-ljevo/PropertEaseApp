@@ -33,7 +33,7 @@ namespace PropertEase.Services.Services.PropertyReservationService
 
             Property property = await unitOfWork.PropertyRepository.GetById(entityDto.PropertyId);
 
-            // ── Server-side price calculation with ceiling for partial days ───────────
+            // server side price calculation
             var totalHours = (entityDto.DateOfOccupancyEnd - entityDto.DateOfOccupancyStart).TotalHours;
             var totalDays   = (int)Math.Ceiling(totalHours / 24.0);
             var totalMonths = (int)Math.Ceiling(totalDays  / 30.0);
@@ -46,7 +46,7 @@ namespace PropertEase.Services.Services.PropertyReservationService
             if (property.IsMonthly)
                 entityDto.TotalPrice = (double)(property.MonthlyPrice  * entityDto.NumberOfMonths);
 
-            // ── Overlap check: reject if dates conflict with an already-Confirmed reservation ─
+            // overlap check
             var db = unitOfWork.GetDatabaseContext();
             var hasOverlap = await db.PropertyReservations
                 .AnyAsync(r => r.PropertyId == entityDto.PropertyId
@@ -61,7 +61,6 @@ namespace PropertEase.Services.Services.PropertyReservationService
             var inserted = await unitOfWork.PropertyReservationRepository.AddAsync(entityDto);
             await unitOfWork.SaveChangesAsync();
 
-            // ── Assign reservation number ─────────────────────────────────────────────
             var reservationNumber = $"#{inserted.Id:D4}";
             await db.PropertyReservations
                 .Where(r => r.Id == inserted.Id)
@@ -70,7 +69,7 @@ namespace PropertEase.Services.Services.PropertyReservationService
             entityDto.Id                = inserted.Id;
             entityDto.ReservationNumber = reservationNumber;
 
-            // ── Publish notifications via RabbitMQ ───────────────────────────────────
+            // send notifications
             try
             {
                 var photoUrl = await db.Photos
@@ -118,7 +117,7 @@ namespace PropertEase.Services.Services.PropertyReservationService
             if (entity.Status != ReservationStatus.Pending)
                 throw new BusinessException("Samo rezervacije na čekanju mogu biti potvrđene.");
 
-            // ── Overlap check at confirm time (first-confirm-wins) ───────────────────
+            // overlap check at confirm time 
             var hasOverlap = await db.PropertyReservations
                 .AnyAsync(r => r.Id != id
                                && r.PropertyId == entity.PropertyId
@@ -141,7 +140,7 @@ namespace PropertEase.Services.Services.PropertyReservationService
 
             await SyncPropertyAvailabilityAsync(entity.PropertyId);
 
-            // ── Notify client + renter: reservation confirmed ────────────────────────
+            // send notifications
             try
             {
                 var prop = await db.Properties
@@ -260,7 +259,7 @@ namespace PropertEase.Services.Services.PropertyReservationService
 
             var db = unitOfWork.GetDatabaseContext();
 
-            // ── Guard: cancelling a paid reservation must go through the refund endpoint ──
+            // cancelling a paid reservation must go through the refund endpoint
             if (dto.Status == ReservationStatus.Cancelled && entity.Status != ReservationStatus.Cancelled)
             {
                 var hasPaidPayment = await db.Payments
@@ -272,7 +271,7 @@ namespace PropertEase.Services.Services.PropertyReservationService
                         "Rezervacija ima izvršenu uplatu. Za otkazanje koristite endpoint za povrat sredstava (refund).");
             }
 
-            // ── Overlap check when dates are being changed ───────────────────────────
+            // overlap check when dates are being changed
             if (entity.DateOfOccupancyStart != dto.DateOfOccupancyStart ||
                 entity.DateOfOccupancyEnd   != dto.DateOfOccupancyEnd)
             {
@@ -296,23 +295,22 @@ namespace PropertEase.Services.Services.PropertyReservationService
             entity.IsMonthly            = dto.IsMonthly;
             entity.IsDaily              = dto.IsDaily;
 
-            // ── Server-side price recalculation (ceiling for edge cases) ─────────────
+            // server side calculation
             var totalHours = (entity.DateOfOccupancyEnd - entity.DateOfOccupancyStart).TotalHours;
             var days   = (int)Math.Ceiling(totalHours / 24.0);
             var months = (int)Math.Ceiling(days / 30.0);
             entity.NumberOfDays   = Math.Max(days, 1);
             entity.NumberOfMonths = Math.Max(months, 1);
 
-            // ── State machine — throws on illegal transitions ─────────────────────────
+            // state machine
             if (entity.Status != dto.Status)
                 ReservationStateMachine.Transition(entity, dto.Status, actorId, dto.CancellationReason);
 
             await unitOfWork.SaveChangesAsync();
 
-            // ── Keep property availability in sync ───────────────────────────────────
             await SyncPropertyAvailabilityAsync(entity.PropertyId);
 
-            // ── Publish notification ─────────────────────────────────────────────────
+            // send notification
             try
             {
                 var prop = await db.Properties
@@ -393,7 +391,6 @@ namespace PropertEase.Services.Services.PropertyReservationService
             return await unitOfWork.PropertyReservationRepository.GetByIdAsync(id);
         }
 
-        /// <inheritdoc/>
         public async Task SyncPropertyAvailabilityAsync(int propertyId)
         {
             var db = unitOfWork.GetDatabaseContext();
@@ -422,8 +419,6 @@ namespace PropertEase.Services.Services.PropertyReservationService
         {
             var db = unitOfWork.GetDatabaseContext();
 
-            // Snapshot the reservations that are about to be completed so we can
-            // notify the client after the bulk update.
             var toComplete = await db.PropertyReservations
                 .Where(r => r.Status == ReservationStatus.Confirmed
                          && r.DateOfOccupancyEnd <= DateTime.Now

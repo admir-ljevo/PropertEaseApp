@@ -29,7 +29,6 @@ class NotificationDetailScreen extends StatelessWidget {
       backgroundColor: Colors.grey.shade100,
       body: CustomScrollView(
         slivers: [
-          // Collapsible app bar with hero image
           SliverAppBar(
             expandedHeight: 260,
             pinned: true,
@@ -40,14 +39,12 @@ class NotificationDetailScreen extends StatelessWidget {
             ),
           ),
 
-          // Content
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.all(20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Title
                   Text(
                     n.name ?? '',
                     style: const TextStyle(
@@ -59,7 +56,6 @@ class NotificationDetailScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 14),
 
-                  // Meta chips
                   Wrap(
                     spacing: 10,
                     runSpacing: 8,
@@ -77,7 +73,6 @@ class NotificationDetailScreen extends StatelessWidget {
                   const Divider(),
                   const SizedBox(height: 16),
 
-                  // Body text
                   Text(
                     n.text ?? '',
                     style: const TextStyle(

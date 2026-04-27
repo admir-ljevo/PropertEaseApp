@@ -47,8 +47,6 @@ class PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
   List<Photo> images = [];
   List<Property> recommendedProperties = [];
 
-  // ── lifecycle ────────────────────────────────────────────────────────────
-
   @override
   void initState() {
     super.initState();
@@ -64,8 +62,6 @@ class PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
     _descriptionController.dispose();
     super.dispose();
   }
-
-  // ── data loading ──────────────────────────────────────────────────────────
 
   Future<void> _loadFullProperty() async {
     final id = widget.property?.id;
@@ -139,8 +135,6 @@ class PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
     }
   }
 
-  // ── build ─────────────────────────────────────────────────────────────────
-
   @override
   Widget build(BuildContext context) {
     if (_loading) {
@@ -200,8 +194,6 @@ class PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
     );
   }
 
-  // ── Photo carousel ────────────────────────────────────────────────────────
-
   Widget _buildPhotoCarousel() {
     return Column(
       children: [
@@ -220,7 +212,6 @@ class PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
             ),
           ),
         ),
-        // Dots + counter row
         Container(
           color: Colors.black87,
           padding: const EdgeInsets.symmetric(vertical: 8),
@@ -265,14 +256,11 @@ class PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
             size: 72, color: Colors.grey),
       );
 
-  // ── Header card ───────────────────────────────────────────────────────────
-
   Widget _buildHeaderCard(Property p) {
     return _DetailCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Name + availability
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -290,7 +278,6 @@ class PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
             ],
           ),
           const SizedBox(height: 10),
-          // Location row
           _InfoRow(
               icon: Icons.location_city,
               text:
@@ -311,7 +298,6 @@ class PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
                       'Izdavač: ${p.applicationUser!.userName ?? ''}  ›'),
             ),
           const SizedBox(height: 12),
-          // Price chips
           Wrap(
             spacing: 8,
             children: [
@@ -329,8 +315,6 @@ class PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
       ),
     );
   }
-
-  // ── Stats card ────────────────────────────────────────────────────────────
 
   Widget _buildStatsCard(Property p) {
     final stats = <_StatItem>[
@@ -362,8 +346,6 @@ class PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
     );
   }
 
-  // ── Amenities card ────────────────────────────────────────────────────────
-
   Widget _buildAmenitiesCard(Property p) {
     final amenities = <_AmenityItem>[
       _AmenityItem(Icons.wifi, 'Wi-Fi', p.hasWiFi == true),
@@ -392,8 +374,6 @@ class PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
       ),
     );
   }
-
-  // ── Map section ───────────────────────────────────────────────────────────
 
   Widget _buildMapSection(Property p) {
     final point = LatLng(p.latitude!, p.longitude!);
@@ -436,8 +416,6 @@ class PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
     );
   }
 
-  // ── Description card ──────────────────────────────────────────────────────
-
   Widget _buildDescriptionCard() {
     if (_descriptionController.text.isEmpty) return const SizedBox.shrink();
     return _DetailCard(
@@ -467,14 +445,11 @@ class PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
     );
   }
 
-  // ── Action buttons ────────────────────────────────────────────────────────
-
   Widget _buildActions(Property p) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 0, 12, 0),
       child: Column(
         children: [
-          // Top row: Reserve + Chat
           Row(
             children: [
               Expanded(
@@ -534,7 +509,6 @@ class PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
             ],
           ),
           const SizedBox(height: 10),
-          // Bottom row: Compare + Reviews
           Row(
             children: [
               Expanded(
@@ -569,8 +543,6 @@ class PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
       ),
     );
   }
-
-  // ── Recommended ───────────────────────────────────────────────────────────
 
   Widget _buildRecommended() {
     return Column(
@@ -699,8 +671,6 @@ class PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
   }
 }
 
-// ── Small data classes ─────────────────────────────────────────────────────────
-
 class _StatItem {
   final IconData icon;
   final String value;
@@ -714,8 +684,6 @@ class _AmenityItem {
   final bool available;
   const _AmenityItem(this.icon, this.label, this.available);
 }
-
-// ── Reusable widgets ───────────────────────────────────────────────────────────
 
 class _DetailCard extends StatelessWidget {
   final String? title;

@@ -27,7 +27,6 @@ class ReservationListScreenState extends State<ReservationListScreen> {
   int _currentPage = 1;
   static const int _pageSize = 5;
 
-  // filters
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _minPriceController = TextEditingController();
   final TextEditingController _maxPriceController = TextEditingController();
@@ -256,7 +255,6 @@ class ReservationListScreenState extends State<ReservationListScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Property image
             ClipRRect(
               borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
               child: photoUrl != null

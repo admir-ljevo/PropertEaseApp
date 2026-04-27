@@ -135,7 +135,7 @@ class _MasterScreenWidgetState extends State<MasterScreenWidget> {
         .push(MaterialPageRoute(builder: (_) => const ProfileEditScreen()))
         .then((changed) {
       if (changed == true && mounted) {
-        setState(() {}); // refresh sidebar display name / photo
+        setState(() {});
       }
     });
   }
@@ -151,7 +151,6 @@ class _MasterScreenWidgetState extends State<MasterScreenWidget> {
       ),
       drawer: Drawer(
         child: Column(children: [
-          // ── User profile header ───────────────────────────────────────────
           InkWell(
             onTap: _openProfile,
             child: Container(
@@ -210,7 +209,6 @@ class _MasterScreenWidgetState extends State<MasterScreenWidget> {
               ),
             ),
           ),
-          // ── Nav items ─────────────────────────────────────────────────────
           Expanded(
             child: ListView(padding: const EdgeInsets.symmetric(vertical: 8), children: [
               _navLabel('Glavno'),

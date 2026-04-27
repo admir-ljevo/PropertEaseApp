@@ -84,20 +84,20 @@ if (File.Exists(envFile))
 var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddEnvironmentVariables();
 
-// ─── DATABASE ────────────────────────────────────────────────────────────────
+// DATABASE
 builder.Services.AddDbContext<DatabaseContext>(options =>
     options.UseSqlServer(
         builder.Configuration.GetConnectionString("DefaultConnection"),
         sql => sql.CommandTimeout(60)));
 
-// ─── AUTOMAPPER ──────────────────────────────────────────────────────────────
+// AUTOMAPPER 
 builder.Services.AddAutoMapper(typeof(Program), typeof(Profiles));
 
-// ─── FLUENTVALIDATION ────────────────────────────────────────────────────────
+// FLUENTVALIDATION 
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddValidatorsFromAssemblyContaining<PropertyReservationValidator>();
 
-// ─── HTTP / API ──────────────────────────────────────────────────────────────
+//  API 
 builder.Services.AddSession();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddHttpClient();
@@ -115,11 +115,11 @@ builder.Services.Configure<FormOptions>(o =>
     o.MemoryBufferThreshold = int.MaxValue;
 });
 
-// ─── RABBITMQ ────────────────────────────────────────────────────────────────
+// RABBITMQ 
 builder.Services.Configure<RabbitMQSettings>(builder.Configuration.GetSection("RabbitMQ"));
 builder.Services.AddSingleton<IRabbitMQPublisher, RabbitMQPublisher>();
 
-// ─── CUSTOM SERVICES ─────────────────────────────────────────────────────────
+//  CUSTOM SERVICES 
 builder.Services.AddScoped<ILoggedUserData, LoggedUserData>();
 builder.Services.AddSingleton<ITokenBlacklistService, TokenBlacklistService>();
 builder.Services.AddScoped<IAccessManager, AccessManager>();
@@ -128,12 +128,12 @@ builder.Services.AddScoped<IFileManager, FileManager>();
 builder.Services.AddScoped<IEnumManager, EnumManager>();
 builder.Services.AddScoped<IReportService, ReportService>();
 
-// ─── RECOMMENDATION ENGINE ───────────────────────────────────────────────────
+//  RECOMMENDATION ENGINE 
 builder.Services.Configure<RecommendationConfig>(
     builder.Configuration.GetSection("RecommendationEngine"));
 builder.Services.AddScoped<IRecommendationEngine, AssociationRulesEngine>();
 
-// ─── REPOSITORIES ────────────────────────────────────────────────────────────
+//  REPOSITORIES 
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IApplicationUsersRepository, ApplicationUsersRepository>();
 builder.Services.AddScoped<IApplicationRolesRepository, ApplicationRolesRepository>();
@@ -153,7 +153,7 @@ builder.Services.AddScoped<ICountryRepository, CountryRepository>();
 builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 builder.Services.AddScoped<IReservationNotificationRepository, ReservationNotificationRepository>();
 
-// ─── SERVICES ────────────────────────────────────────────────────────────────
+//  SERVICES 
 builder.Services.AddScoped<IApplicationUsersService, ApplicationUsersService>();
 builder.Services.AddScoped<IApplicationUserRolesService, ApplicationUserRolesService>();
 builder.Services.AddScoped<IApplicationRolesService, ApplicationRolesService>();
@@ -172,7 +172,7 @@ builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddScoped<IReservationNotificationService, ReservationNotificationService>();
 builder.Services.AddHostedService<PropertyReservationBackgroundService>();
 
-// ─── DATA PROTECTION ─────────────────────────────────────────────────────────
+//  DATA PROTECTION 
 builder.Services.AddDataProtection()
     .UseCryptographicAlgorithms(new AuthenticatedEncryptorConfiguration
     {
@@ -181,7 +181,7 @@ builder.Services.AddDataProtection()
     })
     .SetApplicationName("PropertEase");
 
-// ─── IDENTITY ────────────────────────────────────────────────────────────────
+//  IDENTITY 
 builder.Services.Configure<JWTConfig>(builder.Configuration.GetSection("JWTConfig"));
 builder.Services.Configure<CookiePolicyOptions>(options =>
 {
@@ -208,7 +208,7 @@ builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
 .AddEntityFrameworkStores<DatabaseContext>()
 .AddDefaultTokenProviders();
 
-// ─── JWT AUTHENTICATION ───────────────────────────────────────────────────────
+//  JWT AUTHENTICATION 
 builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new OpenApiInfo { Title = "PropertEase API", Version = "v1" });
@@ -240,7 +240,7 @@ builder.Services.AddAuthentication(x =>
         ValidateAudience = false,
         ValidateLifetime = true
     };
-    // SignalR passes the token as ?access_token= in the query string, not in the header
+    
     options.Events = new JwtBearerEvents
     {
         OnMessageReceived = context =>
@@ -266,7 +266,7 @@ builder.Services.AddAuthentication(x =>
     };
 });
 
-// ─── CORS ────────────────────────────────────────────────────────────────────
+//  CORS 
 var allowedOrigins = builder.Configuration
     .GetSection("Cors:AllowedOrigins").Get<string[]>()
     ?? new[] { "https://localhost:44340" };
@@ -278,11 +278,11 @@ builder.Services.AddCors(opt =>
               .AllowAnyHeader()
               .AllowCredentials()));
 
-// ─── LOGGING ─────────────────────────────────────────────────────────────────
+//  LOGGING 
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 
-// ─── BUILD ───────────────────────────────────────────────────────────────────
+// BUILD 
 var app = builder.Build();
 
 // ─── MIGRATE + SEED DATABASE ─────────────────────────────────────────────────
@@ -307,7 +307,7 @@ var app = builder.Build();
 }
 await DatabaseSeeder.SeedAsync(app.Services);
 
-// ─── MIDDLEWARE PIPELINE ─────────────────────────────────────────────────────
+//  MIDDLEWARE PIPELINE 
 app.UseSwagger();
 app.UseSwaggerUI(c =>
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "PropertEase API V1"));

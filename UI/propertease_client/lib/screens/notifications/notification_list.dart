@@ -134,7 +134,6 @@ class _NewsListWidgetState extends State<NewsListWidget> {
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       child: Column(
         children: [
-          // Search
           TextField(
             controller: _searchController,
             onChanged: (_) => _fetchData(reset: true),
@@ -160,7 +159,6 @@ class _NewsListWidgetState extends State<NewsListWidget> {
             ),
           ),
           const SizedBox(height: 10),
-          // Date chips row
           Row(
             children: [
               _DateChip(
@@ -250,8 +248,6 @@ class _NewsListWidgetState extends State<NewsListWidget> {
   }
 }
 
-// ── News card ──────────────────────────────────────────────────────────────────
-
 class _NewsCard extends StatelessWidget {
   final New item;
   final VoidCallback onTap;
@@ -288,7 +284,6 @@ class _NewsCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image
             ClipRRect(
               borderRadius:
                   const BorderRadius.vertical(top: Radius.circular(16)),
@@ -298,7 +293,6 @@ class _NewsCard extends StatelessWidget {
                 child: _buildImage(n),
               ),
             ),
-            // Content
             Padding(
               padding: const EdgeInsets.all(14),
               child: Column(
@@ -377,8 +371,6 @@ class _NewsCard extends StatelessWidget {
             child: Icon(Icons.newspaper, size: 48, color: Colors.grey)),
       );
 }
-
-// ── Date chip ──────────────────────────────────────────────────────────────────
 
 class _DateChip extends StatelessWidget {
   final String label;

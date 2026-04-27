@@ -301,20 +301,18 @@ namespace PropertEase.Services.Services.ApplicationUsersService
             if (hasActiveReservations)
                 throw new InvalidOperationException("Cannot delete a user that has active or pending reservations.");
 
-            // Cascade: Notifications (ephemeral, owned by user)
             foreach (var n in db.Notifications.Where(n => n.UserId == id && !n.IsDeleted).ToList())
                 n.IsDeleted = true;
             foreach (var n in db.ReservationNotifications.Where(n => n.UserId == id && !n.IsDeleted).ToList())
                 n.IsDeleted = true;
 
-            // UserRoles junction table has no IsDeleted — hard-remove the rows
+           
             db.UserRoles.RemoveRange(db.UserRoles.Where(ur => ur.UserId == id).ToList());
 
-            // Person is 1:1 owned by the user
             var person = db.Persons.FirstOrDefault(p => p.ApplicationUserId == id && !p.IsDeleted);
             if (person != null) person.IsDeleted = true;
 
-            // Reservations, payments, messages and ratings are preserved for history.
+            // reservations payments messages and ratings are preserved 
 
             var user = await db.Users.FindAsync(id);
             if (user != null) user.IsDeleted = true;

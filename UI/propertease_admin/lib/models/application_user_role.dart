@@ -8,8 +8,8 @@ part 'application_user_role.g.dart';
 @JsonSerializable()
 class ApplicationUserRole {
   int? id;
-  ApplicationUser? user; // Use the ApplicationUser class
-  ApplicationRole? role; // Use the ApplicationRole class
+  ApplicationUser? user; 
+  ApplicationRole? role; 
   DateTime? createdAt;
   DateTime? modifiedAt;
   bool? isDeleted;

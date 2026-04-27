@@ -18,6 +18,9 @@ namespace PropertEase.Controllers
             this.conversationService = conversationService;
         }
 
+        [NonAction] public override Task<ConversationDto> Get(int id) => throw new NotSupportedException();
+        [NonAction] public override Task<ConversationDto> Put(int id, ConversationUpsertDto updateEntity) => throw new NotSupportedException();
+
         [HttpGet("GetByPropertyId/propertyId/{propertyId}")]
         public async Task<IActionResult> GetByPropertyId(int propertyId)
         {

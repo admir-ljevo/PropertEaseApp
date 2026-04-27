@@ -90,11 +90,9 @@ class _NotificationAddScreenState extends State<NotificationAddScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Image picker
                   _buildImagePicker(),
                   const SizedBox(height: 24),
 
-                  // Title
                   _SectionLabel(label: 'Naslov'),
                   const SizedBox(height: 8),
                   TextFormField(
@@ -105,7 +103,6 @@ class _NotificationAddScreenState extends State<NotificationAddScreen> {
                   ),
                   const SizedBox(height: 20),
 
-                  // Content
                   _SectionLabel(label: 'Sadržaj'),
                   const SizedBox(height: 8),
                   TextFormField(
@@ -119,7 +116,6 @@ class _NotificationAddScreenState extends State<NotificationAddScreen> {
                   ),
                   const SizedBox(height: 32),
 
-                  // Save
                   SizedBox(
                     height: 48,
                     child: FilledButton.icon(

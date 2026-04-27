@@ -30,6 +30,11 @@ namespace PropertEase.Controllers
             _propertyService = propertyService;
         }
 
+        [NonAction] public override Task<List<PhotoDto>> Get([FromQuery] int page = 1, [FromQuery] int pageSize = 20) => throw new NotSupportedException();
+        [NonAction] public override Task<PhotoDto> Get(int id) => throw new NotSupportedException();
+        [NonAction] public override Task<PhotoDto> Post(PhotoUpsertDto insertEntity) => throw new NotSupportedException();
+        [NonAction] public override Task<PhotoDto> Put(int id, PhotoUpsertDto updateEntity) => throw new NotSupportedException();
+
         [Authorize]
         [HttpPost("Add")]
         public async Task<IActionResult> Add([FromForm] PhotoUpsertDto photoDto)
@@ -53,8 +58,8 @@ namespace PropertEase.Controllers
 
 
         [Authorize]
-        [HttpDelete("{id:int}")]
-        public async Task<IActionResult> Delete(int id)
+        [HttpDelete("{id}")]
+        public override async Task<IActionResult> Delete(int id)
         {
             var callerId = int.TryParse(User.FindFirstValue("Id"), out var parsed) ? parsed : 0;
             var isAdmin = User.IsInRole(AppRoles.Admin);

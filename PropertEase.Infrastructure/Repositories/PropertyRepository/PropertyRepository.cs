@@ -158,13 +158,9 @@ namespace PropertEase.Infrastructure.Repositories.PropertyRepository
             var page = filter.Page <= 0 ? 1 : filter.Page;
             var pageSize = Math.Min(filter.PageSize <= 0 ? 10 : filter.PageSize, 100);
 
-            // DbContext is not thread-safe — run count and data fetch sequentially.
             var totalCount = await query.CountAsync();
 
-            // Single lean projection — no AutoMapper, no loading of ApplicationUser /
-            // PropertyReservations / full Ratings / full Photos.
-            // AverageRating and FirstPhotoUrl are computed with correlated sub-queries
-            // that SQL Server turns into efficient LEFT JOINs / scalar sub-selects.
+            // use select instead of include for perfromance
             var items = await query
                 .OrderBy(p => p.Id)
                 .Skip((page - 1) * pageSize)

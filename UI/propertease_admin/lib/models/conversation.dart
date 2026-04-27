@@ -21,7 +21,6 @@ class Conversation {
   int? renterId;
   int? unreadCount;
 
-  // Constructor
   Conversation({
     this.id = 0,
     this.isDeleted = false,

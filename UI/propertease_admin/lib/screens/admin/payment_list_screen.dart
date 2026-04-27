@@ -119,7 +119,6 @@ class _PaymentListScreenState extends State<PaymentListScreen> {
       title: 'Payments',
       child: Column(
         children: [
-          // ── Header ──────────────────────────────────────────────────────────
           Container(
             width: double.infinity,
             padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
@@ -147,7 +146,6 @@ class _PaymentListScreenState extends State<PaymentListScreen> {
               ],
             ),
           ),
-          // ── Filters ─────────────────────────────────────────────────────────
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
             child: Wrap(
@@ -211,7 +209,6 @@ class _PaymentListScreenState extends State<PaymentListScreen> {
             ),
           ),
           const Divider(height: 1),
-          // ── Table ───────────────────────────────────────────────────────────
           Expanded(child: _buildTable()),
         ],
       ),

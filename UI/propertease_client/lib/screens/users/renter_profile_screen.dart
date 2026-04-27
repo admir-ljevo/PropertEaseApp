@@ -27,19 +27,16 @@ class RenterProfileScreen extends StatefulWidget {
 class _RenterProfileScreenState extends State<RenterProfileScreen> {
   ApplicationUser? _fetchedRenter;
 
-  // Properties
   List<Property> _properties = [];
   bool _propsLoading = true;
   int _propsPage = 1;
   int _propsTotalCount = 0;
 
-  // Reservations
   List<ReservationSummary> _reservations = [];
   bool _resLoading = true;
   int _resPage = 1;
   int _resTotalCount = 0;
 
-  // Ratings
   List<UserRating> _ratings = [];
   bool _ratingsLoading = true;
   int _ratingsPage = 1;
@@ -135,10 +132,12 @@ class _RenterProfileScreenState extends State<RenterProfileScreen> {
     if (mounted) setState(() => _ratingsLoading = true);
     try {
       final provider = context.read<UserRatingProvider>();
-      final ratings =
-          await provider.getByRenter(id, page: page, pageSize: _kPageSize);
-      final avg = page == 1 ? await provider.getAverageRating(id) : _averageRating;
-      final total = page == 1 ? await provider.getTotalCount(id) : _ratingsTotalCount;
+      final ratingsFuture = provider.getByRenter(id, page: page, pageSize: _kPageSize);
+      final avgFuture = page == 1 ? provider.getAverageRating(id) : null;
+      final totalFuture = page == 1 ? provider.getTotalCount(id) : null;
+      final ratings = await ratingsFuture;
+      final avg = avgFuture != null ? await avgFuture : _averageRating;
+      final total = totalFuture != null ? await totalFuture : _ratingsTotalCount;
       if (mounted) {
         setState(() {
           _ratings = ratings;
@@ -258,7 +257,6 @@ class _RenterProfileScreenState extends State<RenterProfileScreen> {
                   style:
                       TextStyle(fontSize: 13, color: Colors.grey.shade600)),
             const SizedBox(height: 8),
-            // Average rating badge
             if (!_ratingsLoading && _averageRating > 0)
               _buildAverageBadge(),
             const Divider(height: 24),
@@ -568,8 +566,6 @@ class _RenterProfileScreenState extends State<RenterProfileScreen> {
       child: const Icon(Icons.home, color: _kPrimary));
 }
 
-// ── Reusable section card ──────────────────────────────────────────────────────
-
 class _SectionCard extends StatelessWidget {
   final IconData icon;
   final String title;
@@ -639,8 +635,6 @@ class _SectionCard extends StatelessWidget {
     );
   }
 }
-
-// ── Pagination row ─────────────────────────────────────────────────────────────
 
 class _PaginationRow extends StatelessWidget {
   final int page;

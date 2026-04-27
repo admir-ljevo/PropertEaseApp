@@ -3,11 +3,6 @@ using PropertEase.Core.Dto.PropertyType;
 
 namespace PropertEase.Core.Dto.Property;
 
-/// <summary>
-/// Lean DTO for property list/search results.
-/// Only includes fields displayed on the list card — avoids loading heavy
-/// navigation properties (ApplicationUser, Reservations, full Ratings/Photos).
-/// </summary>
 public class PropertyListDto
 {
     public int Id { get; set; }
@@ -28,7 +23,6 @@ public class PropertyListDto
     public bool IsAvailable { get; set; }
     public DateTime? AvailableFrom { get; set; }
     public double AverageRating { get; set; }
-    /// <summary>Relative URL of the first property image, e.g. /uploads/images/xyz.jpg</summary>
     public string? FirstPhotoUrl { get; set; }
     public string? Description {  get; set; }   
 

@@ -39,14 +39,14 @@ public class ReportService : IReportService
                 {
                     table.ColumnsDefinition(cols =>
                     {
-                        cols.ConstantColumn(90);  // Br. rezervacije
-                        cols.RelativeColumn(2);   // Nekretnina
-                        cols.RelativeColumn(2);   // Klijent
-                        cols.ConstantColumn(75);  // Datum od
-                        cols.ConstantColumn(75);  // Datum do
-                        cols.ConstantColumn(70);  // Cijena
-                        cols.ConstantColumn(70);  // Povrat
-                        cols.ConstantColumn(70);  // Saldo
+                        cols.ConstantColumn(90);
+                        cols.RelativeColumn(2);
+                        cols.RelativeColumn(2);
+                        cols.ConstantColumn(75);
+                        cols.ConstantColumn(75);
+                        cols.ConstantColumn(70);
+                        cols.ConstantColumn(70);
+                        cols.ConstantColumn(70);
                     });
 
                     static IContainer HeaderCell(IContainer c) =>
@@ -89,7 +89,6 @@ public class ReportService : IReportService
                             .FontColor(saldo > 0 ? Colors.Green.Darken1 : Colors.Grey.Medium);
                     }
 
-                    // Totals row
                     var totalCijena = reservations.Sum(r => r.TotalPrice);
                     var totalPovrat = reservations.Where(r => r.IsRefunded).Sum(r => r.TotalPrice);
                     var totalSaldo = totalCijena - totalPovrat;
@@ -199,7 +198,6 @@ public class ReportService : IReportService
                                 .FontColor(saldo > 0 ? Colors.Green.Darken1 : Colors.Grey.Medium);
                         }
 
-                        // Totals row
                         static IContainer Tot(IContainer c) =>
                             c.Background(Colors.Blue.Lighten4).Padding(4);
 

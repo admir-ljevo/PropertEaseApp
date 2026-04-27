@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/io_client.dart';
@@ -47,7 +48,6 @@ class _ConversationListScreenState extends State<ConversationListScreen> {
             ),
           )
           .build();
-      // Silent refresh on new message — no full-screen spinner
       _signalR.on('newMessage', (_) => _fetchAll(silent: true));
       await _signalR.start();
     } catch (e) {
@@ -62,8 +62,6 @@ class _ConversationListScreenState extends State<ConversationListScreen> {
     super.dispose();
   }
 
-  /// [silent] = true → refresh data in the background without showing a spinner.
-  /// Used by SignalR so the list doesn't flicker on every incoming message.
   Future<void> _fetchAll({bool silent = false}) async {
     if (!mounted) return;
     if (!silent) {
@@ -123,7 +121,6 @@ class _ConversationListScreenState extends State<ConversationListScreen> {
     return ListView(
       padding: const EdgeInsets.symmetric(vertical: 8),
       children: [
-        // ── Section 1: Property conversations ─────────────────────────────
         if (showPropertySection) ...[
           _sectionHeader(
             icon: Icons.home_work_outlined,
@@ -145,7 +142,6 @@ class _ConversationListScreenState extends State<ConversationListScreen> {
                     )),
         ],
 
-        // ── Section 2: Admin conversations ────────────────────────────────
         _sectionHeader(
           icon: Icons.support_agent_outlined,
           label: Authorization.isAdmin
@@ -306,9 +302,9 @@ class _ConversationListScreenState extends State<ConversationListScreen> {
   }
 }
 
-// ── Conversation card ──────────────────────────────────────────────────────────
-
 class _ConversationCard extends StatelessWidget {
+  static final _imgCache = <String, Uint8List>{};
+
   final Conversation conversation;
   final int? currentUserId;
   final bool isAdminConv;
@@ -352,16 +348,13 @@ class _ConversationCard extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Avatar with unread badge
               _buildAvatar(other?.person?.profilePhotoBytes, unread,
                   photoUrl: other?.person?.profilePhoto),
               const SizedBox(width: 12),
-              // Content
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Name + timestamp
                     Row(
                       children: [
                         Expanded(
@@ -392,7 +385,6 @@ class _ConversationCard extends StatelessWidget {
                         ),
                       ],
                     ),
-                    // Property chip (for property convs)
                     if (!isAdminConv &&
                         conversation.property?.name != null) ...[
                       const SizedBox(height: 3),
@@ -414,7 +406,6 @@ class _ConversationCard extends StatelessWidget {
                         ),
                       ),
                     ],
-                    // Last message
                     if (conversation.lastMessage != null) ...[
                       const SizedBox(height: 3),
                       Text(
@@ -444,16 +435,27 @@ class _ConversationCard extends StatelessWidget {
     );
   }
 
+  Uint8List? _cachedBytes(String? b64) {
+    if (b64 == null || b64.isEmpty) return null;
+    if (_imgCache.containsKey(b64)) {
+      final cached = _imgCache[b64]!;
+      return cached.isEmpty ? null : cached;
+    }
+    try {
+      final bytes = base64Decode(b64);
+      _imgCache[b64] = bytes;
+      return bytes;
+    } catch (_) {
+      _imgCache[b64] = Uint8List(0);
+      return null;
+    }
+  }
+
   Widget _buildAvatar(String? photoBytes, int unread, {String? photoUrl}) {
     Widget avatar;
-    if (photoBytes != null && photoBytes.isNotEmpty) {
-      try {
-        avatar = CircleAvatar(
-            radius: 24,
-            backgroundImage: MemoryImage(base64Decode(photoBytes)));
-      } catch (_) {
-        avatar = const CircleAvatar(radius: 24, child: Icon(Icons.person));
-      }
+    final decoded = _cachedBytes(photoBytes);
+    if (decoded != null) {
+      avatar = CircleAvatar(radius: 24, backgroundImage: MemoryImage(decoded));
     } else if (photoUrl != null && photoUrl.isNotEmpty) {
       avatar = CircleAvatar(
           radius: 24,
@@ -504,8 +506,6 @@ class _ConversationCard extends StatelessWidget {
   }
 }
 
-// ── Admin picker sheet ─────────────────────────────────────────────────────────
-
 class _AdminPickerSheet extends StatelessWidget {
   final List<ApplicationUser> admins;
   final ValueChanged<ApplicationUser> onSelected;
@@ -525,17 +525,13 @@ class _AdminPickerSheet extends StatelessWidget {
         ...admins.map((a) {
           final name =
               '${a.person?.firstName ?? ''} ${a.person?.lastName ?? ''}'.trim();
-          Widget avatar;
-          if (a.person?.profilePhotoBytes != null) {
+          Widget avatar = const CircleAvatar(child: Icon(Icons.person));
+          final b64 = a.person?.profilePhotoBytes;
+          if (b64 != null && b64.isNotEmpty) {
             try {
               avatar = CircleAvatar(
-                  backgroundImage:
-                      MemoryImage(base64Decode(a.person!.profilePhotoBytes!)));
-            } catch (_) {
-              avatar = const CircleAvatar(child: Icon(Icons.person));
-            }
-          } else {
-            avatar = const CircleAvatar(child: Icon(Icons.person));
+                  backgroundImage: MemoryImage(base64Decode(b64)));
+            } catch (_) {}
           }
           return ListTile(
             leading: avatar,

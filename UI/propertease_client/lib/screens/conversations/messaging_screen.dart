@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:propertease_client/models/application_user.dart';
@@ -16,8 +17,6 @@ class MessageListScreen extends StatefulWidget {
   final int? recipientId;
   final VoidCallback? onConversationListUpdated;
   final String? chatTitle;
-  // Photo bytes for the two participants — already loaded in the conversations list,
-  // so we don't need to re-fetch them with every message.
   final String? otherUserPhotoBytes;
   final String? otherUserPhotoUrl;
   final String? myPhotoBytes;
@@ -43,6 +42,7 @@ class MessageListScreenState extends State<MessageListScreen> {
   late TextEditingController _messageController;
   late MessageProvider _messageProvider;
   final ScrollController _scrollController = ScrollController();
+  final _imgCache = <String, Uint8List>{};
   Message message = Message();
   String? firstName;
   String? lastName;
@@ -74,8 +74,6 @@ class MessageListScreenState extends State<MessageListScreen> {
     final uid = Authorization.userId;
     if (uid == null || widget.conversationId == null) return;
     _messageProvider.markAsRead(widget.conversationId!, uid).then((_) {
-      // Notify the conversation list to refresh its unread counts once
-      // the server has confirmed the messages are marked as read.
       widget.onConversationListUpdated?.call();
     }).catchError((_) {});
   }
@@ -165,7 +163,6 @@ class MessageListScreenState extends State<MessageListScreen> {
     }
   }
 
-  /// Syncs newest messages without discarding older loaded pages.
   void _syncMessages() {
     if (_page != 1) return;
     _messageProvider
@@ -280,8 +277,6 @@ class MessageListScreenState extends State<MessageListScreen> {
       return;
     }
 
-    // ── Optimistic insert ─────────────────────────────────────────────────
-    // Show the message immediately without waiting for the server.
     final optimistic = Message()
       ..content = content
       ..senderId = userId
@@ -299,10 +294,8 @@ class MessageListScreenState extends State<MessageListScreen> {
     try {
       await _messageProvider.addMessage(optimistic);
 
-      // Sync list in background (gets real server-assigned ID, etc.)
       _syncMessages();
     } catch (e) {
-      // Roll back the optimistic insert and restore text
       if (!mounted) return;
       setState(() {
         messages?.result.remove(optimistic);
@@ -317,8 +310,6 @@ class MessageListScreenState extends State<MessageListScreen> {
   }
 
   Widget buildMessageItem(Message message) {
-    // isMine = true  → I sent this message → show on RIGHT (blue)
-    // isMine = false → they sent this to me → show on LEFT (grey)
     final isMine = message.senderId == userId;
 
     return Padding(
@@ -401,12 +392,26 @@ class MessageListScreenState extends State<MessageListScreen> {
     );
   }
 
+  Uint8List? _cachedBytes(String? b64) {
+    if (b64 == null || b64.isEmpty) return null;
+    if (_imgCache.containsKey(b64)) {
+      final cached = _imgCache[b64]!;
+      return cached.isEmpty ? null : cached;
+    }
+    try {
+      final bytes = base64Decode(b64);
+      _imgCache[b64] = bytes;
+      return bytes;
+    } catch (_) {
+      _imgCache[b64] = Uint8List(0);
+      return null;
+    }
+  }
+
   Widget _buildSenderAvatar(String? profilePhotoBytes, {String? photoUrl}) {
-    if (profilePhotoBytes != null && profilePhotoBytes.isNotEmpty) {
-      try {
-        return CircleAvatar(
-            backgroundImage: MemoryImage(base64Decode(profilePhotoBytes)));
-      } catch (_) {}
+    final decoded = _cachedBytes(profilePhotoBytes);
+    if (decoded != null) {
+      return CircleAvatar(backgroundImage: MemoryImage(decoded));
     }
     if (photoUrl != null && photoUrl.isNotEmpty) {
       return CircleAvatar(backgroundImage: NetworkImage(photoUrl));

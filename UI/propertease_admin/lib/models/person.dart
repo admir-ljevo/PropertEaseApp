@@ -14,7 +14,7 @@ class Person {
   String? firstName;
   String? lastName;
   DateTime? birthDate;
-  int? gender; // Enum values are stored as integers
+  int? gender; 
   String? genderName;
   String? profilePhoto;
   String? profilePhotoThumbnail;
@@ -23,7 +23,7 @@ class Person {
   String? jmbg;
   int? placeOfResidenceId;
   City? placeOfResidence;
-  int? marriageStatus; // Enum values are stored as integers
+  int? marriageStatus; 
   String? marriageStatusName;
   String? nationality;
   String? citizenship;

@@ -15,7 +15,6 @@ namespace PropertEase.Core.Filters
         public DateTime? CreatedTo { get; set; }
         public int Page { get; set; } = 1;
         public int PageSize { get; set; } = 10;
-        /// <summary>"asc" = lowest first, "desc" = highest first, null = newest first</summary>
         public string? SortByRating { get; set; }
     }
 }

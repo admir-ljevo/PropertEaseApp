@@ -6,7 +6,6 @@ class Authorization {
   static int? roleId;
   static String? firstName;
   static String? lastName;
-  /// Base64-encoded profile photo bytes (may be null/empty).
   static String? profilePhotoBytes;
 
   static bool get isLoggedIn => token != null && token!.isNotEmpty;

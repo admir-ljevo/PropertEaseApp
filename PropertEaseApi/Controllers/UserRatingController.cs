@@ -19,6 +19,11 @@ namespace PropertEase.Controllers
             _userRatingService = userRatingService;
         }
 
+        [NonAction] public override Task<List<UserRatingDto>> Get([FromQuery] int page = 1, [FromQuery] int pageSize = 20) => throw new NotSupportedException();
+        [NonAction] public override Task<UserRatingDto> Get(int id) => throw new NotSupportedException();
+        [NonAction] public override Task<UserRatingDto> Put(int id, UserRatingUpsertDto updateEntity) => throw new NotSupportedException();
+        [NonAction] public override Task<IActionResult> Delete(int id) => throw new NotSupportedException();
+
         [HttpGet("GetFilteredData")]
         public async Task<IActionResult> GetFilteredData([FromQuery] UserRatingFilter filter)
         {

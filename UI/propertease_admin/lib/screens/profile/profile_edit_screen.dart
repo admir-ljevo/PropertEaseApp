@@ -43,7 +43,6 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   final _postalCodeController = TextEditingController();
   final _jmbgController = TextEditingController();
 
-  // password change
   final _pwFormKey = GlobalKey<FormState>();
   final _currentPwController = TextEditingController();
   final _newPwController = TextEditingController();
@@ -242,7 +241,6 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // ── Avatar ─────────────────────────────────────────────
                         Center(
                           child: Column(
                             children: [
@@ -296,7 +294,6 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                         ),
                         const SizedBox(height: 24),
 
-                        // ── Lični podaci ───────────────────────────────────────
                         _buildCard(
                           title: 'Lični podaci',
                           icon: Icons.person,
@@ -374,7 +371,6 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                         ),
                         const SizedBox(height: 12),
 
-                        // ── Kontakt i lokacija ─────────────────────────────────
                         _buildCard(
                           title: 'Kontakt i lokacija',
                           icon: Icons.contact_phone,
@@ -424,7 +420,6 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                         ),
                         const SizedBox(height: 12),
 
-                        // ── Podaci naloga ──────────────────────────────────────
                         _buildCard(
                           title: 'Podaci naloga',
                           icon: Icons.manage_accounts,
@@ -456,7 +451,6 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                         ),
                         const SizedBox(height: 24),
 
-                        // ── Promjena lozinke ───────────────────────────────────
                         Form(
                           key: _pwFormKey,
                           child: _buildCard(

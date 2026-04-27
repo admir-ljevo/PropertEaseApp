@@ -32,8 +32,6 @@ class PhotoProvider with ChangeNotifier {
           .map((item) => Photo.fromJson(item))
           .toList();
     } else {
-      // Handle the case when the API request fails or returns a non-200 status code.
-      // You might want to return an empty list or handle the error as needed.
       return [];
     }
   }
