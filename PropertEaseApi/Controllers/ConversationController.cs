@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PropertEase.Core.Dto.Conversation;
 using PropertEase.Core.SearchObjects;
@@ -6,6 +7,7 @@ using PropertEase.Services.Services.ConversationService;
 
 namespace PropertEase.Controllers
 {
+    [Authorize]
     public class ConversationController : BaseController<ConversationDto, ConversationUpsertDto, ConversationUpsertDto, BaseSearchObject>
     {
 

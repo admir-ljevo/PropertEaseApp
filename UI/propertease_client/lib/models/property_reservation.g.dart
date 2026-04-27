@@ -29,6 +29,8 @@ PropertyReservation _$PropertyReservationFromJson(Map<String, dynamic> json) =>
       isMonthly: json['isMonthly'] as bool? ?? true,
       isDaily: json['isDaily'] as bool? ?? false,
       isActive: json['isActive'] as bool? ?? true,
+      isPaid: json['isPaid'] as bool? ?? false,
+      status: json['status'] as int?,
       reservationNumber: json['reservationNumber'] as String? ?? '',
       client: json['client'] == null
           ? null
@@ -37,6 +39,15 @@ PropertyReservation _$PropertyReservationFromJson(Map<String, dynamic> json) =>
           ? null
           : ApplicationUser.fromJson(json['renter'] as Map<String, dynamic>),
       description: json['description'] as String?,
+      cancellationReason: json['cancellationReason'] as String?,
+      cancelledAt: json['cancelledAt'] == null
+          ? null
+          : DateTime.parse(json['cancelledAt'] as String),
+      cancelledByName: json['cancelledByName'] as String?,
+      confirmedAt: json['confirmedAt'] == null
+          ? null
+          : DateTime.parse(json['confirmedAt'] as String),
+      confirmedByName: json['confirmedByName'] as String?,
     )
       ..createdAt = json['createdAt'] == null
           ? null
@@ -67,8 +78,15 @@ Map<String, dynamic> _$PropertyReservationToJson(
       'isMonthly': instance.isMonthly,
       'isDaily': instance.isDaily,
       'isActive': instance.isActive,
+      'isPaid': instance.isPaid,
+      'status': instance.status,
       'reservationNumber': instance.reservationNumber,
       'client': instance.client,
       'renter': instance.renter,
       'description': instance.description,
+      'cancellationReason': instance.cancellationReason,
+      'cancelledAt': instance.cancelledAt?.toIso8601String(),
+      'cancelledByName': instance.cancelledByName,
+      'confirmedAt': instance.confirmedAt?.toIso8601String(),
+      'confirmedByName': instance.confirmedByName,
     };

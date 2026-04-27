@@ -7,6 +7,7 @@ using PropertEase.Core.Dto.Person;
 using PropertEase.Core.Dto.Property;
 using PropertEase.Core.Dto.PropertyReservation;
 using PropertEase.Core.Entities;
+using PropertEase.Core.Enumerations;
 using PropertEase.Infrastructure.Repositories.BaseRepository;
 using PropertEase.Core.Filters;
 using PropertEase.Core.SearchObjects;
@@ -33,9 +34,34 @@ namespace PropertEase.Infrastructure.Repositories.PropertyReservationRepository
 
             if (pr == null) return null!;
 
+            var isPaid = pr.Status == Core.Enumerations.ReservationStatus.Completed
+                || await DatabaseContext.Payments
+                    .AnyAsync(p => p.ReservationId == id && p.Status == Core.Enumerations.PaymentStatus.Completed && !p.IsDeleted);;
+
+            string? cancelledByName = null;
+            if (pr.CancelledById.HasValue)
+            {
+                cancelledByName = await DatabaseContext.Persons
+                    .AsNoTracking()
+                    .Where(p => p.ApplicationUserId == pr.CancelledById.Value)
+                    .Select(p => p.FirstName + " " + p.LastName)
+                    .FirstOrDefaultAsync();
+            }
+
+            string? confirmedByName = null;
+            if (pr.ConfirmedById.HasValue)
+            {
+                confirmedByName = await DatabaseContext.Persons
+                    .AsNoTracking()
+                    .Where(p => p.ApplicationUserId == pr.ConfirmedById.Value)
+                    .Select(p => p.FirstName + " " + p.LastName)
+                    .FirstOrDefaultAsync();
+            }
+
             return new PropertyReservationDto
             {
                 Id = pr.Id,
+                IsPaid = isPaid,
                 ReservationNumber = pr.ReservationNumber,
                 Description = pr.Description,
                 PropertyId = pr.PropertyId,
@@ -49,7 +75,14 @@ namespace PropertEase.Infrastructure.Repositories.PropertyReservationRepository
                 TotalPrice = pr.TotalPrice,
                 IsMonthly = pr.IsMonthly,
                 IsDaily = pr.IsDaily,
-                IsActive = pr.IsActive,
+                Status = pr.Status,
+                CancellationReason = pr.CancellationReason,
+                CancelledById = pr.CancelledById,
+                CancelledAt = pr.CancelledAt,
+                CancelledByName = cancelledByName,
+                ConfirmedById = pr.ConfirmedById,
+                ConfirmedAt = pr.ConfirmedAt,
+                ConfirmedByName = confirmedByName,
                 Client = new ApplicationUserDto
                 {
                     Person = new PersonDto
@@ -106,25 +139,11 @@ namespace PropertEase.Infrastructure.Repositories.PropertyReservationRepository
             };
         }
 
-        public Task<List<PropertyReservationDto>> GetByNameAsync(string name)
-        {
-            throw new NotImplementedException();
-        }
-
         public async Task<List<PropertyReservationDto>> GetAllAsync()
         {
             return await ProjectToListAsync<PropertyReservationDto>(
                 DatabaseContext.PropertyReservations
                     .AsNoTracking());
-        }
-
-        public async Task<List<PropertyReservationDto>> GetForPaginationAsync(string searchFilter, int pageSize, int offset)
-        {
-            return await ProjectToListAsync<PropertyReservationDto>(
-                DatabaseContext.PropertyReservations
-                    .AsNoTracking()
-                    .Skip(offset)
-                    .Take(pageSize));
         }
 
         public async Task<PropertEase.Core.Dto.PagedResult<PropertyReservationDto>> GetFiltered(PropertyReservationFilter filter)
@@ -139,7 +158,10 @@ namespace PropertEase.Infrastructure.Repositories.PropertyReservationRepository
                     (!filter.clientId.HasValue || pr.ClientId == filter.clientId) &&
                     (!filter.propertyId.HasValue || pr.PropertyId == filter.propertyId) &&
                     (!filter.renterId.HasValue || pr.RenterId == filter.renterId) &&
-                    (!filter.isActive.HasValue || pr.IsActive == filter.isActive.Value) &&
+                    (!filter.status.HasValue || (int)pr.Status == filter.status.Value) &&
+                    (!filter.isActive.HasValue || (filter.isActive.Value
+                        ? pr.Status == Core.Enumerations.ReservationStatus.Confirmed
+                        : pr.Status != Core.Enumerations.ReservationStatus.Confirmed)) &&
                     (filter.propertyTypeId == null || filter.propertyTypeId == pr.Property.PropertyTypeId) &&
                     !pr.IsDeleted);
 
@@ -172,7 +194,7 @@ namespace PropertEase.Infrastructure.Repositories.PropertyReservationRepository
                     TotalPrice = pr.TotalPrice,
                     IsMonthly = pr.IsMonthly,
                     IsDaily = pr.IsDaily,
-                    IsActive = pr.IsActive,
+                    Status = pr.Status,
                     Client = new ApplicationUserDto
                     {
                         Person = new PersonDto
@@ -279,7 +301,7 @@ namespace PropertEase.Infrastructure.Repositories.PropertyReservationRepository
                     DateOfOccupancyEnd = pr.DateOfOccupancyEnd,
                     TotalPrice = pr.TotalPrice,
                     IsRefunded = DatabaseContext.Payments
-                        .Any(p => p.ReservationId == pr.Id && !p.IsDeleted && p.Status == "Refunded"),
+                        .Any(p => p.ReservationId == pr.Id && !p.IsDeleted && p.Status == PaymentStatus.Refunded),
                     Client = new ApplicationUserDto { UserName = pr.Client.UserName },
                     Property = new PropertyDto
                     {
@@ -291,14 +313,19 @@ namespace PropertEase.Infrastructure.Repositories.PropertyReservationRepository
                 .ToListAsync();
         }
 
-        public async Task<PropertEase.Core.Dto.PagedResult<ReservationSummaryDto>> GetClientSummariesAsync(int clientId, int page = 1, int pageSize = 10)
+        public Task<PropertEase.Core.Dto.PagedResult<ReservationSummaryDto>> GetClientSummariesAsync(int clientId, int page = 1, int pageSize = 10)
+            => GetSummariesAsync(pr => pr.ClientId == clientId && !pr.IsDeleted, page, pageSize);
+
+        public Task<PropertEase.Core.Dto.PagedResult<ReservationSummaryDto>> GetRenterSummariesAsync(int renterId, int page = 1, int pageSize = 10)
+            => GetSummariesAsync(pr => pr.RenterId == renterId && !pr.IsDeleted, page, pageSize);
+
+        private async Task<PropertEase.Core.Dto.PagedResult<ReservationSummaryDto>> GetSummariesAsync(
+            System.Linq.Expressions.Expression<Func<PropertyReservation, bool>> predicate,
+            int page,
+            int pageSize)
         {
-            var query = DatabaseContext.PropertyReservations
-                .AsNoTracking()
-                .Where(pr => pr.ClientId == clientId && !pr.IsDeleted);
-
+            var query = DatabaseContext.PropertyReservations.AsNoTracking().Where(predicate);
             var totalCount = await query.CountAsync();
-
             var items = await query
                 .OrderByDescending(pr => pr.DateOfOccupancyStart)
                 .Skip((page - 1) * pageSize)
@@ -310,38 +337,11 @@ namespace PropertEase.Infrastructure.Repositories.PropertyReservationRepository
                     DateOfOccupancyStart = pr.DateOfOccupancyStart,
                     DateOfOccupancyEnd = pr.DateOfOccupancyEnd,
                     TotalPrice = pr.TotalPrice,
-                    IsActive = pr.IsActive,
+                    Status = pr.Status,
                     PropertyName = pr.Property.Name,
+                    CancellationReason = pr.CancellationReason,
                 })
                 .ToListAsync();
-
-            return new PropertEase.Core.Dto.PagedResult<ReservationSummaryDto> { Items = items, TotalCount = totalCount };
-        }
-
-        public async Task<PropertEase.Core.Dto.PagedResult<ReservationSummaryDto>> GetRenterSummariesAsync(int renterId, int page = 1, int pageSize = 10)
-        {
-            var query = DatabaseContext.PropertyReservations
-                .AsNoTracking()
-                .Where(pr => pr.RenterId == renterId && !pr.IsDeleted);
-
-            var totalCount = await query.CountAsync();
-
-            var items = await query
-                .OrderByDescending(pr => pr.DateOfOccupancyStart)
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .Select(pr => new ReservationSummaryDto
-                {
-                    Id = pr.Id,
-                    ReservationNumber = pr.ReservationNumber,
-                    DateOfOccupancyStart = pr.DateOfOccupancyStart,
-                    DateOfOccupancyEnd = pr.DateOfOccupancyEnd,
-                    TotalPrice = pr.TotalPrice,
-                    IsActive = pr.IsActive,
-                    PropertyName = pr.Property.Name,
-                })
-                .ToListAsync();
-
             return new PropertEase.Core.Dto.PagedResult<ReservationSummaryDto> { Items = items, TotalCount = totalCount };
         }
 
@@ -356,8 +356,10 @@ namespace PropertEase.Infrastructure.Repositories.PropertyReservationRepository
         public async Task<int> DeactivateExpiredAsync()
         {
             return await DatabaseContext.PropertyReservations
-                .Where(r => r.IsActive && r.DateOfOccupancyEnd <= DateTime.Now && !r.IsDeleted)
-                .ExecuteUpdateAsync(s => s.SetProperty(r => r.IsActive, false));
+                .Where(r => r.Status == PropertEase.Core.Enumerations.ReservationStatus.Confirmed
+                         && r.DateOfOccupancyEnd <= DateTime.Now
+                         && !r.IsDeleted)
+                .ExecuteUpdateAsync(s => s.SetProperty(r => r.Status, PropertEase.Core.Enumerations.ReservationStatus.Completed));
         }
 
         public async new Task<List<PropertyReservationDto>> GetRenterBusinessReportData(ReportSearchObject search)

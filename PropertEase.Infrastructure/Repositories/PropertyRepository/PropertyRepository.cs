@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using PropertEase.Core.Dto;
 using PropertEase.Core.Dto.Property;
 using PropertEase.Core.Entities;
+using PropertEase.Core.Enumerations;
 using PropertEase.Core.Filters;
 using PropertEase.Infrastructure.Repositories.BaseRepository;
 
@@ -24,7 +25,7 @@ namespace PropertEase.Infrastructure.Repositories.PropertyRepository
                 .Include(p => p.PropertyType)
                 .Include(p => p.ApplicationUser).ThenInclude(u => u.Person)
                 .Include(p => p.Images.Where(img => !img.IsDeleted))
-                .Include(p => p.PropertyReservations.Where(r => !r.IsDeleted && r.IsActive))
+                .Include(p => p.PropertyReservations.Where(r => !r.IsDeleted && (r.Status == ReservationStatus.Confirmed || r.Status == ReservationStatus.Completed)))
                 .Where(p => !p.IsDeleted && p.Id == id)
                 .FirstOrDefaultAsync();
 
@@ -136,11 +137,11 @@ namespace PropertEase.Infrastructure.Repositories.PropertyRepository
             {
                 if (filter.IsAvailable.Value)
                     query = query.Where(p => !p.PropertyReservations.Any(r =>
-                        !r.IsDeleted && r.IsActive &&
+                        !r.IsDeleted && (r.Status == ReservationStatus.Confirmed || r.Status == ReservationStatus.Completed) &&
                         r.DateOfOccupancyStart <= today && r.DateOfOccupancyEnd >= today));
                 else
                     query = query.Where(p => p.PropertyReservations.Any(r =>
-                        !r.IsDeleted && r.IsActive &&
+                        !r.IsDeleted && (r.Status == ReservationStatus.Confirmed || r.Status == ReservationStatus.Completed) &&
                         r.DateOfOccupancyStart <= today && r.DateOfOccupancyEnd >= today));
             }
 
@@ -155,7 +156,7 @@ namespace PropertEase.Infrastructure.Repositories.PropertyRepository
                     (p.IsDaily && p.DailyPrice <= filter.PriceTo.Value));
 
             var page = filter.Page <= 0 ? 1 : filter.Page;
-            var pageSize = filter.PageSize <= 0 ? 10 : filter.PageSize;
+            var pageSize = Math.Min(filter.PageSize <= 0 ? 10 : filter.PageSize, 100);
 
             // DbContext is not thread-safe — run count and data fetch sequentially.
             var totalCount = await query.CountAsync();
@@ -194,10 +195,10 @@ namespace PropertEase.Infrastructure.Repositories.PropertyRepository
                     IsMonthly = p.IsMonthly,
                     IsDaily = p.IsDaily,
                     IsAvailable = !p.PropertyReservations.Any(r =>
-                        !r.IsDeleted && r.IsActive &&
+                        !r.IsDeleted && (r.Status == ReservationStatus.Confirmed || r.Status == ReservationStatus.Completed) &&
                         r.DateOfOccupancyStart <= today && r.DateOfOccupancyEnd >= today),
                     AvailableFrom = p.PropertyReservations
-                        .Where(r => !r.IsDeleted && r.IsActive &&
+                        .Where(r => !r.IsDeleted && (r.Status == ReservationStatus.Confirmed || r.Status == ReservationStatus.Completed) &&
                             r.DateOfOccupancyStart <= today && r.DateOfOccupancyEnd >= today)
                         .OrderByDescending(r => r.DateOfOccupancyEnd)
                         .Select(r => (DateTime?)r.DateOfOccupancyEnd)

@@ -20,6 +20,9 @@ namespace PropertEase.Core.Filters
 
         public int? renterId { get; set; }
         public int? clientId { get; set; }
+        public int? status { get; set; }
+
+        /// <summary>When true, returns only Confirmed reservations (i.e. those that block availability).</summary>
         public bool? isActive { get; set; }
 
         public int Page { get; set; } = 1;

@@ -604,8 +604,8 @@ class _PropertyAddScreenState extends State<PropertyAddScreen> {
             borderRadius: BorderRadius.circular(12),
             child: FlutterMap(
               options: MapOptions(
-                center: _pickedLocation ?? LatLng(44.0, 17.5),
-                zoom: _pickedLocation != null ? 13.0 : 7.0,
+                initialCenter: _pickedLocation ?? LatLng(44.0, 17.5),
+                initialZoom: _pickedLocation != null ? 13.0 : 7.0,
                 onTap: (tapPosition, point) {
                   setState(() {
                     _pickedLocation = point;
@@ -626,7 +626,7 @@ class _PropertyAddScreenState extends State<PropertyAddScreen> {
                         point: _pickedLocation!,
                         width: 40,
                         height: 40,
-                        builder: (ctx) => const Icon(
+                        child: const Icon(
                           Icons.location_pin,
                           color: Colors.red,
                           size: 40,

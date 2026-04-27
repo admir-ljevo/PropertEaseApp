@@ -10,10 +10,10 @@ import 'package:propertease_client/screens/reservations/reservation_add_screen.d
 import 'package:propertease_client/utils/authorization.dart';
 import 'package:provider/provider.dart';
 
-import '../../models/conversation.dart';
-import '../../models/photo.dart';
-import '../../models/property.dart';
-import '../users/renter_profile_screen.dart';
+import 'package:propertease_client/models/conversation.dart';
+import 'package:propertease_client/models/photo.dart';
+import 'package:propertease_client/models/property.dart';
+import 'package:propertease_client/screens/users/renter_profile_screen.dart';
 import 'property_compare_screen.dart';
 
 const _kPrimary = Color(0xFF115892);
@@ -406,10 +406,11 @@ class PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
           height: 220,
           child: FlutterMap(
             options: MapOptions(
-              center: point,
-              zoom: 14.0,
-              interactiveFlags:
-                  InteractiveFlag.pinchZoom | InteractiveFlag.drag,
+              initialCenter: point,
+              initialZoom: 14.0,
+              interactionOptions: const InteractionOptions(
+                flags: InteractiveFlag.pinchZoom | InteractiveFlag.drag,
+              ),
             ),
             children: [
               TileLayer(
@@ -423,7 +424,7 @@ class PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
                     point: point,
                     width: 40,
                     height: 40,
-                    builder: (_) => const Icon(Icons.location_pin,
+                    child: const Icon(Icons.location_pin,
                         color: Colors.red, size: 40),
                   ),
                 ],
@@ -588,7 +589,7 @@ class PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
           ),
         ),
         SizedBox(
-          height: 170,
+          height: 200,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -670,6 +671,18 @@ class PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
                                   color: _kPrimary,
                                   fontWeight: FontWeight.w600),
                             ),
+                            if (rec.reason != null) ...[
+                              const SizedBox(height: 3),
+                              Text(
+                                rec.reason!,
+                                style: TextStyle(
+                                    fontSize: 10,
+                                    color: Colors.grey.shade500,
+                                    fontStyle: FontStyle.italic),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
                           ],
                         ),
                       ),

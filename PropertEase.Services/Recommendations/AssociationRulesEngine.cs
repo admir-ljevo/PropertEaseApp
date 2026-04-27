@@ -120,14 +120,14 @@ public class AssociationRulesEngine : IRecommendationEngine
         return recommendations;
     }
 
-    public async Task<IReadOnlyList<int>> GetRecommendationsByPropertyAsync(int propertyId)
+    public async Task<IReadOnlyList<RecommendationItem>> GetRecommendationsByPropertyAsync(int propertyId)
     {
         // All heavy work is pushed to SQL — no full table load
         var (totalClientCount, propertyClientCount, coOccurrences) =
             await _uow.PropertyReservationRepository.GetRecommendationDataAsync(propertyId);
 
         if (totalClientCount == 0 || propertyClientCount == 0 || coOccurrences.Count == 0)
-            return Array.Empty<int>();
+            return Array.Empty<RecommendationItem>();
 
         double antecedentSupport = (double)propertyClientCount / totalClientCount;
 
@@ -141,14 +141,14 @@ public class AssociationRulesEngine : IRecommendationEngine
             .ToList();
 
         // Apply thresholds when the antecedent has enough support
-        IReadOnlyList<int> recommendations = Array.Empty<int>();
+        IReadOnlyList<RecommendationItem> recommendations = Array.Empty<RecommendationItem>();
         if (antecedentSupport >= _config.MinSupport)
         {
             recommendations = scored
                 .Where(x => x.Support >= _config.MinSupport && x.Confidence >= _config.MinConfidence)
                 .OrderByDescending(x => x.Confidence)
                 .Take(_config.MaxRecommendations)
-                .Select(x => x.PropertyId)
+                .Select(x => new RecommendationItem(x.PropertyId, x.Confidence))
                 .ToList();
         }
 
@@ -158,7 +158,7 @@ public class AssociationRulesEngine : IRecommendationEngine
             recommendations = scored
                 .OrderByDescending(x => x.Confidence)
                 .Take(_config.MaxRecommendations)
-                .Select(x => x.PropertyId)
+                .Select(x => new RecommendationItem(x.PropertyId, x.Confidence))
                 .ToList();
         }
 

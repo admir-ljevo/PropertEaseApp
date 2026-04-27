@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:propertease_client/utils/app_navigator.dart';
 import 'package:propertease_client/providers/conversation_provider.dart';
 import 'package:propertease_client/providers/message_provider.dart';
 import 'package:propertease_client/providers/payment_provider.dart';
@@ -6,6 +7,7 @@ import 'package:propertease_client/providers/property_provider.dart';
 import 'package:propertease_client/providers/property_reservation_provider.dart';
 import 'package:propertease_client/providers/rating_provider.dart';
 import 'package:propertease_client/screens/users/client_add_screen.dart';
+import 'package:propertease_client/screens/users/forgot_password_screen.dart';
 import 'package:propertease_client/utils/authorization.dart';
 import 'package:provider/provider.dart';
 
@@ -20,6 +22,12 @@ import 'providers/user_rating_provider.dart';
 import 'screens/property/property_list.dart';
 
 void main() {
+  onUnauthorized = () {
+    appNavigatorKey.currentState?.pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginWidget()),
+      (_) => false,
+    );
+  };
   runApp(MultiProvider(
     providers: [
       ChangeNotifierProvider(create: (_) => UserProvider()),
@@ -84,6 +92,7 @@ class MyApp extends StatelessWidget {
           ),
         ),
       ),
+      navigatorKey: appNavigatorKey,
       home: const LoginWidget(),
     );
   }
@@ -274,7 +283,25 @@ class LoginWidgetState extends State<LoginWidget> {
                                 ? 'Unesite lozinku'
                                 : null,
                           ),
-                          const SizedBox(height: 24),
+                          const SizedBox(height: 8),
+
+                          // Forgot password link
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton(
+                              onPressed: () => Navigator.of(context).push(
+                                MaterialPageRoute(
+                                    builder: (_) =>
+                                        const ForgotPasswordScreen()),
+                              ),
+                              child: const Text(
+                                'Zaboravili ste lozinku?',
+                                style: TextStyle(
+                                    color: Color(0xFF115892), fontSize: 13),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
 
                           // Login button
                           SizedBox(

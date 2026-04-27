@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using PropertEase.Core.Entities.Base;
+using PropertEase.Core.Exceptions;
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
@@ -78,7 +79,7 @@ namespace PropertEase.Infrastructure.Repositories.BaseRepository
         {
             var entity = await _dbSet.FindAsync(id);
             if (entity == null)
-                throw new NullReferenceException();
+                throw new NotFoundException(typeof(TEntity).Name, id);
 
             if (isSoft)
             {

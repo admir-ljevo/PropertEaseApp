@@ -35,25 +35,21 @@ namespace PropertEase.Services.Services.ApplicationRolesService
             return await _unitOfWork.ApplicationRolesRepository.GetAllAsync();
 
         }
-        public Task<ApplicationRoleDto> GetByIdAsync(int id)
-        {
-            throw new NotImplementedException();
-        }
-
         public Task<ApplicationRoleDto> GetByRoleLevelIdOrName(int roleLeveleId, string roleName)
         {
             return _unitOfWork.ApplicationRolesRepository.GetByRoleLevelOrName(roleLeveleId, roleName);
         }
 
-        public Task RemoveByIdAsync(int id, bool isSoft = true)
+        public async Task RemoveByIdAsync(int id, bool isSoft = true)
         {
-            return _unitOfWork.ApplicationRolesRepository.RemoveByIdAsync(id);
+            var db = _unitOfWork.GetDatabaseContext();
+
+            if (db.UserRoles.Any(ur => ur.RoleId == id))
+                throw new InvalidOperationException("Cannot delete a role that is assigned to one or more users.");
+
+            await _unitOfWork.ApplicationRolesRepository.RemoveByIdAsync(id);
         }
 
-        public void Update(ApplicationRoleDto entity)
-        {
-            throw new NotImplementedException();
-        }
         public void UpdateRange(IEnumerable<ApplicationRoleDto> entitiesDto)
         {
             _unitOfWork.ApplicationUserRolesRepository.UpdateRange(entitiesDto);

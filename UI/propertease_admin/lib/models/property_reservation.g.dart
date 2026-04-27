@@ -16,6 +16,7 @@ PropertyReservation _$PropertyReservationFromJson(Map<String, dynamic> json) =>
           : Property.fromJson(json['property'] as Map<String, dynamic>),
       propertyId: json['propertyId'] as int? ?? 0,
       clientId: json['clientId'] as int? ?? 1,
+      renterId: json['renterId'] as int?,
       numberOfGuests: json['numberOfGuests'] as int? ?? 0,
       dateOfOccupancyStart: json['dateOfOccupancyStart'] == null
           ? null
@@ -29,11 +30,21 @@ PropertyReservation _$PropertyReservationFromJson(Map<String, dynamic> json) =>
       isMonthly: json['isMonthly'] as bool? ?? true,
       isDaily: json['isDaily'] as bool? ?? false,
       isActive: json['isActive'] as bool? ?? true,
+      status: json['status'] as int?,
       reservationNumber: json['reservationNumber'] as String? ?? '',
       client: json['client'] == null
           ? null
           : ApplicationUser.fromJson(json['client'] as Map<String, dynamic>),
       description: json['description'] as String?,
+      cancellationReason: json['cancellationReason'] as String?,
+      cancelledAt: json['cancelledAt'] == null
+          ? null
+          : DateTime.parse(json['cancelledAt'] as String),
+      cancelledByName: json['cancelledByName'] as String?,
+      confirmedAt: json['confirmedAt'] == null
+          ? null
+          : DateTime.parse(json['confirmedAt'] as String),
+      confirmedByName: json['confirmedByName'] as String?,
     )
       ..createdAt = json['createdAt'] == null
           ? null
@@ -53,6 +64,7 @@ Map<String, dynamic> _$PropertyReservationToJson(
       'property': instance.property,
       'propertyId': instance.propertyId,
       'clientId': instance.clientId,
+      'renterId': instance.renterId,
       'numberOfGuests': instance.numberOfGuests,
       'dateOfOccupancyStart': instance.dateOfOccupancyStart?.toIso8601String(),
       'dateOfOccupancyEnd': instance.dateOfOccupancyEnd?.toIso8601String(),
@@ -62,7 +74,13 @@ Map<String, dynamic> _$PropertyReservationToJson(
       'isMonthly': instance.isMonthly,
       'isDaily': instance.isDaily,
       'isActive': instance.isActive,
+      'status': instance.status,
       'reservationNumber': instance.reservationNumber,
       'client': instance.client,
       'description': instance.description,
+      'cancellationReason': instance.cancellationReason,
+      'cancelledAt': instance.cancelledAt?.toIso8601String(),
+      'cancelledByName': instance.cancelledByName,
+      'confirmedAt': instance.confirmedAt?.toIso8601String(),
+      'confirmedByName': instance.confirmedByName,
     };

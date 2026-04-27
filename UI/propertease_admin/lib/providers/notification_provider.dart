@@ -96,6 +96,14 @@ class NotificationProvider with ChangeNotifier {
     }
   }
 
+  Future<void> deleteNews(int id) async {
+    final url = Uri.parse('$_baseUrl$_endpoint/$id');
+    final response = await http.delete(url, headers: createHeaders());
+    if (!isValidResponse(response)) {
+      throw Exception('Failed to delete news ($id)');
+    }
+  }
+
   Future<List<New>> getAllNews() async {
     var url = "$_baseUrl$_endpoint";
     var uri = Uri.parse(url);

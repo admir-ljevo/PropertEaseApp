@@ -43,6 +43,21 @@ class UserRatingProvider extends BaseProvider<UserRating> {
     return (jsonDecode(response.body) as num).toDouble();
   }
 
+  Future<UserRating?> getByReservation({
+    required int renterId,
+    required int reviewerId,
+    required int reservationId,
+  }) async {
+    final url = Uri.parse(
+        '${BaseProvider.baseUrl}UserRating/GetFilteredData?RenterId=$renterId&ReviewerId=$reviewerId&ReservationId=$reservationId&Page=1&PageSize=1');
+    final response = await http!.get(url, headers: createHeaders());
+    if (!isValidResponse(response)) return null;
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final items = (data['items'] as List? ?? []);
+    if (items.isEmpty) return null;
+    return UserRating.fromJson(items.first as Map<String, dynamic>);
+  }
+
   Future<void> addRating(UserRating rating) async {
     final url = Uri.parse('${BaseProvider.baseUrl}UserRating');
     final body = {
@@ -58,4 +73,5 @@ class UserRatingProvider extends BaseProvider<UserRating> {
       throw Exception('Failed to submit rating');
     }
   }
+
 }

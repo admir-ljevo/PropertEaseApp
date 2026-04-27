@@ -20,5 +20,7 @@ namespace PropertEase.Services.Services.ReservationNotificationService
         public Task<int> GetUnseenCountAsync(int userId) => _repo.GetUnseenCountAsync(userId);
 
         public Task MarkAllSeenAsync(int userId) => _repo.MarkAllSeenAsync(userId);
+
+        public Task MarkSeenAsync(int notificationId) => _repo.MarkSeenAsync(notificationId);
     }
 }

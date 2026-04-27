@@ -9,8 +9,8 @@ public interface IRecommendationEngine
     Task<IReadOnlyList<int>> GetRecommendationsAsync(int userId);
 
     /// <summary>
-    /// Returns IDs of properties most frequently co-reserved by clients who
-    /// also reserved the specified property (item-based association rules).
+    /// Returns properties most frequently co-reserved by clients who also reserved
+    /// the specified property, together with the association-rule confidence score.
     /// </summary>
-    Task<IReadOnlyList<int>> GetRecommendationsByPropertyAsync(int propertyId);
+    Task<IReadOnlyList<RecommendationItem>> GetRecommendationsByPropertyAsync(int propertyId);
 }

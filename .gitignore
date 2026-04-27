@@ -1,5 +1,6 @@
-# Environment secrets
+# Environment secrets — never commit real values
 .env
+appsettings.Development.json
 
 # Visual Studio local files
 .vs/

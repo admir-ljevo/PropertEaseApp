@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using PropertEase.Core.Entities;
 using PropertEase.Core.Entities.Identity;
+using PropertEase.Core.Enumerations;
 
 namespace PropertEase.Infrastructure.Seed;
 
@@ -28,10 +29,12 @@ public static class DatabaseSeeder
             await SeedUsersAsync(userManager, hasher, db, logger);
             await SeedPropertiesAsync(db, userManager, logger, env.WebRootPath);
             await SeedReservationsAsync(db, userManager, logger);
+            await SeedPaymentsAsync(db, userManager, logger);
+            await SeedReservationNotificationsAsync(db, userManager, logger);
             await SeedRatingsAsync(db, userManager, logger);
-            await SeedProfilePhotosAsync(db, userManager, logger);
+            await SeedProfilePhotosAsync(db, userManager, logger, env.WebRootPath);
             await SeedConversationsAsync(db, userManager, logger);
-            await SeedNotificationsAsync(db, userManager, logger);
+            await SeedNotificationsAsync(db, userManager, logger, env.WebRootPath);
             logger.LogInformation("Database seeding completed.");
         }
         catch (Exception ex)
@@ -114,7 +117,9 @@ public static class DatabaseSeeder
             Email          = "desktop@propertease.test",
             EmailConfirmed = true,
             Active         = true,
-        }, password: "test", roles: new[] { "Admin", "Renter" }, firstName: "Admin", lastName: "Korisnik", city: city);
+            PhoneNumber    = "+38761100001",
+        }, password: "test", roles: new[] { "Admin", "Renter" }, firstName: "Admin", lastName: "Korisnik", city: city,
+           jmbg: "0101990171001");
 
         await EnsureUser(userManager, hasher, db, logger, new ApplicationUser
         {
@@ -122,7 +127,9 @@ public static class DatabaseSeeder
             Email          = "mobile@propertease.test",
             EmailConfirmed = true,
             Active         = true,
-        }, password: "test", roles: new[] { "Client" }, firstName: "Mobilni", lastName: "Korisnik", city: city);
+            PhoneNumber    = "+38761100002",
+        }, password: "test", roles: new[] { "Client" }, firstName: "Mobilni", lastName: "Korisnik", city: city,
+           jmbg: "1501991171002");
 
         await EnsureUser(userManager, hasher, db, logger, new ApplicationUser
         {
@@ -130,7 +137,9 @@ public static class DatabaseSeeder
             Email          = "izdavac@propertease.test",
             EmailConfirmed = true,
             Active         = true,
-        }, password: "test", roles: new[] { "Renter" }, firstName: "Marko", lastName: "Izdavač", city: city);
+            PhoneNumber    = "+38762100003",
+        }, password: "test", roles: new[] { "Renter" }, firstName: "Marko", lastName: "Izdavač", city: city,
+           jmbg: "2003990171003");
     }
 
     private static async Task EnsureUser(
@@ -143,13 +152,15 @@ public static class DatabaseSeeder
         string[] roles,
         string firstName,
         string lastName,
-        City? city)
+        City? city,
+        string? jmbg = null)
     {
         var existing = await userManager.FindByNameAsync(user.UserName!);
         if (existing != null)
         {
             existing.PasswordHash = hasher.HashPassword(existing, password);
             existing.Active       = true;
+            existing.PhoneNumber  = user.PhoneNumber;
             await userManager.UpdateAsync(existing);
 
             foreach (var role in roles)
@@ -158,8 +169,13 @@ public static class DatabaseSeeder
 
             if (!await db.Persons.AnyAsync(p => p.ApplicationUserId == existing.Id))
             {
-                db.Persons.Add(MakePerson(firstName, lastName, existing.Id, city));
+                db.Persons.Add(MakePerson(firstName, lastName, existing.Id, city, jmbg));
                 await db.SaveChangesAsync();
+            }
+            else
+            {
+                var person = await db.Persons.FirstAsync(p => p.ApplicationUserId == existing.Id);
+                if (person.JMBG == null && jmbg != null) { person.JMBG = jmbg; await db.SaveChangesAsync(); }
             }
             return;
         }
@@ -178,23 +194,24 @@ public static class DatabaseSeeder
         foreach (var role in roles)
             await userManager.AddToRoleAsync(user, role);
 
-        db.Persons.Add(MakePerson(firstName, lastName, user.Id, city));
+        db.Persons.Add(MakePerson(firstName, lastName, user.Id, city, jmbg));
         await db.SaveChangesAsync();
 
         logger.LogInformation("Seeded user '{Username}' with roles '{Roles}'.", user.UserName, string.Join(", ", roles));
     }
 
-    private static Person MakePerson(string firstName, string lastName, int userId, City? city) =>
+    private static Person MakePerson(string firstName, string lastName, int userId, City? city, string? jmbg = null) =>
         new Person
         {
-            FirstName          = firstName,
-            LastName           = lastName,
-            BirthDate          = new DateTime(1990, 1, 1),
-            BirthPlaceId       = city?.Id,
-            ApplicationUserId  = userId,
-            Address            = "Testna ulica 1",
-            PostCode           = "71000",
-            CreatedAt          = DateTime.UtcNow,
+            FirstName         = firstName,
+            LastName          = lastName,
+            BirthDate         = new DateTime(1990, 1, 1),
+            BirthPlaceId      = city?.Id,
+            ApplicationUserId = userId,
+            Address           = "Testna ulica 1",
+            PostCode          = "71000",
+            JMBG              = jmbg,
+            CreatedAt         = DateTime.UtcNow,
         };
 
     // ─── PROPERTIES ───────────────────────────────────────────────────────────
@@ -207,24 +224,21 @@ public static class DatabaseSeeder
     {
         if (await db.Properties.AnyAsync()) return;
 
-        var admin   = await userManager.FindByNameAsync("desktop");
-        var renter  = await userManager.FindByNameAsync("izdavac");
+        var admin  = await userManager.FindByNameAsync("desktop");
+        var renter = await userManager.FindByNameAsync("izdavac");
         if (admin == null || renter == null) return;
 
-        var sarajevo   = await db.Cities.FirstOrDefaultAsync(c => c.Name == "Sarajevo");
-        var mostar     = await db.Cities.FirstOrDefaultAsync(c => c.Name == "Mostar");
-        var banjaLuka  = await db.Cities.FirstOrDefaultAsync(c => c.Name == "Banja Luka");
-        var tuzla      = await db.Cities.FirstOrDefaultAsync(c => c.Name == "Tuzla");
-        var zenica     = await db.Cities.FirstOrDefaultAsync(c => c.Name == "Zenica");
+        var sarajevo  = await db.Cities.FirstOrDefaultAsync(c => c.Name == "Sarajevo");
+        var mostar    = await db.Cities.FirstOrDefaultAsync(c => c.Name == "Mostar");
+        var banjaLuka = await db.Cities.FirstOrDefaultAsync(c => c.Name == "Banja Luka");
+        var tuzla     = await db.Cities.FirstOrDefaultAsync(c => c.Name == "Tuzla");
+        var zenica    = await db.Cities.FirstOrDefaultAsync(c => c.Name == "Zenica");
 
-        var stan       = await db.PropertyTypes.FirstOrDefaultAsync(t => t.Name == "Stan");
-        var kuca       = await db.PropertyTypes.FirstOrDefaultAsync(t => t.Name == "Kuća");
-        var villa      = await db.PropertyTypes.FirstOrDefaultAsync(t => t.Name == "Villa");
-        var studio     = await db.PropertyTypes.FirstOrDefaultAsync(t => t.Name == "Studio");
+        var stan   = await db.PropertyTypes.FirstOrDefaultAsync(t => t.Name == "Stan");
+        var kuca   = await db.PropertyTypes.FirstOrDefaultAsync(t => t.Name == "Kuća");
+        var villa  = await db.PropertyTypes.FirstOrDefaultAsync(t => t.Name == "Villa");
+        var studio = await db.PropertyTypes.FirstOrDefaultAsync(t => t.Name == "Studio");
 
-        // PropertyDef positional order:
-        // Name, OwnerId, TypeId, CityId, Description, Rooms, Baths, Sqm, Cap,
-        // Monthly, Daily, IsMonthlyRental, WiFi, Furnished, Balcony, Pool, AC, Lat, Lng
         var propertyDefs = new[]
         {
             // ── 5 belong to desktop (admin) ──────────────────────────────────
@@ -245,16 +259,16 @@ public static class DatabaseSeeder
                 4, 3, 150, 6, 1500f, 0f,    true,  true,  true,  true,  false, true,  44.2031, 17.9078),
 
             // ── 5 belong to izdavac (renter) ─────────────────────────────────
-            new PropertyDef("Vila Blagaj",                   renter.Id, villa!.Id,  mostar!.Id,
+            new PropertyDef("Vila Blagaj",                    renter.Id, villa!.Id,  mostar!.Id,
                 "Autentična vila u srcu Blagaja, uz izvor Bune.",
                 4, 2, 140, 8, 0f,    90f,   false, true,  true,  true,  true,  true,  43.2625, 17.9057),
-            new PropertyDef("Apartman Mostar Stari Grad",    renter.Id, stan.Id,    mostar.Id,
+            new PropertyDef("Apartman Mostar Stari Grad",     renter.Id, stan.Id,    mostar.Id,
                 "Tradicionalni apartman uz Stari most, pogled na Neretvu.",
                 2, 1, 70,  4, 850f,  0f,    true,  true,  true,  true,  false, false, 43.3372, 17.8138),
-            new PropertyDef("Kuća Radobolja",                renter.Id, kuca.Id,    mostar.Id,
+            new PropertyDef("Kuća Radobolja",                 renter.Id, kuca.Id,    mostar.Id,
                 "Mirna seoska kuća uz rijeku Radobolju, idealna za odmor.",
                 3, 2, 120, 6, 0f,    55f,   false, false, false, false, false, false, 43.3100, 17.8200),
-            new PropertyDef("Studio Neretva",                renter.Id, studio.Id,  mostar.Id,
+            new PropertyDef("Studio Neretva",                 renter.Id, studio.Id,  mostar.Id,
                 "Kompaktan studio s pogledom na rijeku Neretvu.",
                 1, 1, 40,  2, 0f,    40f,   false, true,  true,  false, false, true,  43.3464, 17.8077),
             new PropertyDef("Luksuzna villa Sarajevo Ilidža", renter.Id, villa.Id,   sarajevo.Id,
@@ -262,7 +276,6 @@ public static class DatabaseSeeder
                 6, 4, 280, 10, 0f,   180f,  false, true,  true,  true,  true,  true,  43.8270, 18.3100),
         };
 
-        // Picsum seeds – one per property, each property gets 3 images (seed, seed+1, seed+2)
         int[] picsumSeeds = { 10, 20, 30, 40, 50, 60, 70, 80, 90, 100 };
 
         var uploadsDir = Path.Combine(webRootPath, "uploads", "images");
@@ -300,21 +313,19 @@ public static class DatabaseSeeder
                 CreatedAt         = DateTime.UtcNow,
             };
             db.Properties.Add(property);
-            await db.SaveChangesAsync();   // need Id before adding photos
+            await db.SaveChangesAsync();
 
             for (int j = 0; j < 3; j++)
             {
-                int seed      = picsumSeeds[i] + j;
-                var imageUrl  = $"https://picsum.photos/seed/{seed}/800/600";
-                var bytes     = await DownloadImageAsync(imageUrl, logger);
-                var fileName  = $"property{property.Id}_img{j + 1}_{Guid.NewGuid():N}.jpg";
-                var filePath  = Path.Combine(uploadsDir, fileName);
-                var urlPath   = $"/uploads/images/{fileName}";
+                int seed     = picsumSeeds[i] + j;
+                var imageUrl = $"https://picsum.photos/seed/{seed}/800/600";
+                var bytes    = await DownloadImageAsync(imageUrl, logger);
+                var fileName = $"property{property.Id}_img{j + 1}_{Guid.NewGuid():N}.jpg";
+                var filePath = Path.Combine(uploadsDir, fileName);
+                var urlPath  = $"/uploads/images/{fileName}";
 
                 if (bytes != null)
-                {
                     await File.WriteAllBytesAsync(filePath, bytes);
-                }
 
                 db.Photos.Add(new Photo
                 {
@@ -325,7 +336,6 @@ public static class DatabaseSeeder
                 });
             }
             await db.SaveChangesAsync();
-
             logger.LogInformation("Seeded property '{Name}' with 3 images.", property.Name);
         }
     }
@@ -339,54 +349,548 @@ public static class DatabaseSeeder
     {
         if (await db.PropertyReservations.AnyAsync()) return;
 
-        var mobile  = await userManager.FindByNameAsync("mobile");
-        var admin   = await userManager.FindByNameAsync("desktop");
-        var renter  = await userManager.FindByNameAsync("izdavac");
+        var mobile = await userManager.FindByNameAsync("mobile");
+        var admin  = await userManager.FindByNameAsync("desktop");
+        var renter = await userManager.FindByNameAsync("izdavac");
         if (mobile == null || admin == null || renter == null) return;
 
-        var adminProperties  = await db.Properties.Where(p => p.ApplicationUserId == admin.Id  && !p.IsDeleted).ToListAsync();
-        var renterProperties = await db.Properties.Where(p => p.ApplicationUserId == renter.Id && !p.IsDeleted).ToListAsync();
+        // Properties ordered by Id: [0-4] = admin's, [5-9] = renter's
+        var props = await db.Properties.Where(p => !p.IsDeleted).OrderBy(p => p.Id).ToListAsync();
+        if (props.Count < 10) return;
 
-        if (adminProperties.Count == 0 && renterProperties.Count == 0) return;
+        var now = DateTime.UtcNow;
 
-        var reservations = new List<(Property property, int renterId, DateTime start, int days)>
+        // ── 1. Confirmed – future check-in (daily, admin prop) ────────────────
+        var r1Start = new DateTime(2026, 5, 1);
+        var r1End   = new DateTime(2026, 5, 8);
+        db.PropertyReservations.Add(new PropertyReservation
         {
-            (adminProperties.ElementAtOrDefault(0)  ?? renterProperties[0], admin.Id,  new DateTime(2025, 6, 1),  7),
-            (adminProperties.ElementAtOrDefault(1)  ?? renterProperties[0], admin.Id,  new DateTime(2025, 7, 15), 5),
-            (renterProperties.ElementAtOrDefault(0) ?? adminProperties[0],  renter.Id, new DateTime(2025, 8, 10), 10),
-            (renterProperties.ElementAtOrDefault(1) ?? adminProperties[0],  renter.Id, new DateTime(2025, 9, 1),  3),
+            ReservationNumber    = "#0001",
+            PropertyId           = props[1].Id,   // Studio Bašćaršija – daily 45/day
+            RenterId             = admin.Id,
+            ClientId             = mobile.Id,
+            NumberOfGuests       = 2,
+            DateOfOccupancyStart = r1Start,
+            DateOfOccupancyEnd   = r1End,
+            NumberOfDays         = 7,
+            NumberOfMonths       = 1,
+            TotalPrice           = 315,            // 45 * 7
+            IsDaily              = true,
+            IsMonthly            = false,
+            Status               = ReservationStatus.Confirmed,
+            ConfirmedById        = mobile.Id,
+            ConfirmedAt          = now.AddDays(-10),
+            Description          = "Dolazim sa partnerom, molim za tiho smještanje.",
+            CreatedAt            = now.AddDays(-10),
+        });
+
+        // ── 2. Confirmed – currently ongoing (daily, renter prop) ─────────────
+        var r2Start = new DateTime(2026, 4, 10);
+        var r2End   = new DateTime(2026, 4, 30);
+        db.PropertyReservations.Add(new PropertyReservation
+        {
+            ReservationNumber    = "#0002",
+            PropertyId           = props[5].Id,   // Vila Blagaj – daily 90/day
+            RenterId             = renter.Id,
+            ClientId             = mobile.Id,
+            NumberOfGuests       = 4,
+            DateOfOccupancyStart = r2Start,
+            DateOfOccupancyEnd   = r2End,
+            NumberOfDays         = 20,
+            NumberOfMonths       = 1,
+            TotalPrice           = 1800,           // 90 * 20
+            IsDaily              = true,
+            IsMonthly            = false,
+            Status               = ReservationStatus.Confirmed,
+            ConfirmedById        = mobile.Id,
+            ConfirmedAt          = now.AddDays(-15),
+            Description          = "Porodični odmor, potrebne su dvije sobe.",
+            CreatedAt            = now.AddDays(-15),
+        });
+
+        // ── 3. Completed – past monthly rental (renter prop) ──────────────────
+        var r3Start = new DateTime(2026, 1, 1);
+        var r3End   = new DateTime(2026, 2, 1);
+        db.PropertyReservations.Add(new PropertyReservation
+        {
+            ReservationNumber    = "#0003",
+            PropertyId           = props[6].Id,   // Apartman Mostar Stari Grad – monthly 850/month
+            RenterId             = renter.Id,
+            ClientId             = mobile.Id,
+            NumberOfGuests       = 2,
+            DateOfOccupancyStart = r3Start,
+            DateOfOccupancyEnd   = r3End,
+            NumberOfDays         = 31,
+            NumberOfMonths       = 1,
+            TotalPrice           = 850,
+            IsDaily              = false,
+            IsMonthly            = true,
+            Status               = ReservationStatus.Completed,
+            ConfirmedById        = mobile.Id,
+            ConfirmedAt          = new DateTime(2025, 12, 20),
+            Description          = "Duži boravak radi posla.",
+            CreatedAt            = new DateTime(2025, 12, 20),
+        });
+
+        // ── 4. Completed – past daily rental (admin prop) ─────────────────────
+        var r4Start = new DateTime(2026, 2, 10);
+        var r4End   = new DateTime(2026, 2, 15);
+        db.PropertyReservations.Add(new PropertyReservation
+        {
+            ReservationNumber    = "#0004",
+            PropertyId           = props[3].Id,   // Kuća sa vrtom Tuzla – daily 70/day
+            RenterId             = admin.Id,
+            ClientId             = mobile.Id,
+            NumberOfGuests       = 3,
+            DateOfOccupancyStart = r4Start,
+            DateOfOccupancyEnd   = r4End,
+            NumberOfDays         = 5,
+            NumberOfMonths       = 1,
+            TotalPrice           = 350,            // 70 * 5
+            IsDaily              = true,
+            IsMonthly            = false,
+            Status               = ReservationStatus.Completed,
+            ConfirmedById        = mobile.Id,
+            ConfirmedAt          = new DateTime(2026, 2, 1),
+            Description          = "Kratki vikend odmor.",
+            CreatedAt            = new DateTime(2026, 2, 1),
+        });
+
+        // ── 5. Cancelled by client – had paid (admin prop) ────────────────────
+        var r5Start = new DateTime(2026, 4, 1);
+        var r5End   = new DateTime(2026, 5, 1);
+        db.PropertyReservations.Add(new PropertyReservation
+        {
+            ReservationNumber    = "#0005",
+            PropertyId           = props[2].Id,   // Apartman Banja Luka – monthly 750/month
+            RenterId             = admin.Id,
+            ClientId             = mobile.Id,
+            NumberOfGuests       = 2,
+            DateOfOccupancyStart = r5Start,
+            DateOfOccupancyEnd   = r5End,
+            NumberOfDays         = 30,
+            NumberOfMonths       = 1,
+            TotalPrice           = 750,
+            IsDaily              = false,
+            IsMonthly            = true,
+            Status               = ReservationStatus.Cancelled,
+            ConfirmedById        = mobile.Id,
+            ConfirmedAt          = new DateTime(2026, 3, 10),
+            CancelledById        = mobile.Id,
+            CancelledAt          = new DateTime(2026, 3, 20),
+            CancellationReason   = "Klijent otkazao zbog promjene poslovnih planova.",
+            Description          = "Planirani poslovni boravak.",
+            CreatedAt            = new DateTime(2026, 3, 10),
+        });
+
+        // ── 6. Cancelled by renter – had paid (renter prop) ───────────────────
+        var r6Start = new DateTime(2026, 3, 15);
+        var r6End   = new DateTime(2026, 3, 20);
+        db.PropertyReservations.Add(new PropertyReservation
+        {
+            ReservationNumber    = "#0006",
+            PropertyId           = props[7].Id,   // Kuća Radobolja – daily 55/day
+            RenterId             = renter.Id,
+            ClientId             = mobile.Id,
+            NumberOfGuests       = 5,
+            DateOfOccupancyStart = r6Start,
+            DateOfOccupancyEnd   = r6End,
+            NumberOfDays         = 5,
+            NumberOfMonths       = 1,
+            TotalPrice           = 275,            // 55 * 5
+            IsDaily              = true,
+            IsMonthly            = false,
+            Status               = ReservationStatus.Cancelled,
+            ConfirmedById        = mobile.Id,
+            ConfirmedAt          = new DateTime(2026, 3, 5),
+            CancelledById        = renter.Id,
+            CancelledAt          = new DateTime(2026, 3, 10),
+            CancellationReason   = "Nekretnina privremeno nedostupna zbog hitnog renoviranja.",
+            Description          = "Grupni odmor.",
+            CreatedAt            = new DateTime(2026, 3, 5),
+        });
+
+        // ── 7. Pending – awaiting payment (admin prop) ────────────────────────
+        var r7Start = new DateTime(2026, 6, 1);
+        var r7End   = new DateTime(2026, 6, 8);
+        db.PropertyReservations.Add(new PropertyReservation
+        {
+            ReservationNumber    = "#0007",
+            PropertyId           = props[0].Id,   // Luksuzni stan Sarajevo – monthly 1200/month
+            RenterId             = admin.Id,
+            ClientId             = mobile.Id,
+            NumberOfGuests       = 2,
+            DateOfOccupancyStart = r7Start,
+            DateOfOccupancyEnd   = r7End,
+            NumberOfDays         = 7,
+            NumberOfMonths       = 1,
+            TotalPrice           = 1200,
+            IsDaily              = false,
+            IsMonthly            = true,
+            Status               = ReservationStatus.Pending,
+            Description          = "Čeka na uplatu.",
+            CreatedAt            = now.AddDays(-2),
+        });
+
+        // ── 8. Pending – awaiting payment (renter prop) ───────────────────────
+        var r8Start = new DateTime(2026, 7, 1);
+        var r8End   = new DateTime(2026, 7, 4);
+        db.PropertyReservations.Add(new PropertyReservation
+        {
+            ReservationNumber    = "#0008",
+            PropertyId           = props[9].Id,   // Luksuzna villa Sarajevo Ilidža – daily 180/day
+            RenterId             = renter.Id,
+            ClientId             = mobile.Id,
+            NumberOfGuests       = 6,
+            DateOfOccupancyStart = r8Start,
+            DateOfOccupancyEnd   = r8End,
+            NumberOfDays         = 3,
+            NumberOfMonths       = 1,
+            TotalPrice           = 540,            // 180 * 3
+            IsDaily              = true,
+            IsMonthly            = false,
+            Status               = ReservationStatus.Pending,
+            Description          = "Ljetovanje sa porodicom.",
+            CreatedAt            = now.AddDays(-1),
+        });
+
+        var yesterday = now.Date.AddDays(-1);
+
+        // ── 9. Confirmed – started yesterday, ongoing (admin prop) ───────────
+        db.PropertyReservations.Add(new PropertyReservation
+        {
+            ReservationNumber    = "#0009",
+            PropertyId           = props[4].Id,   // Penthouse Zenica – monthly 1500/month
+            RenterId             = admin.Id,
+            ClientId             = mobile.Id,
+            NumberOfGuests       = 3,
+            DateOfOccupancyStart = yesterday,
+            DateOfOccupancyEnd   = yesterday.AddDays(14),
+            NumberOfDays         = 14,
+            NumberOfMonths       = 1,
+            TotalPrice           = 700,
+            IsDaily              = false,
+            IsMonthly            = true,
+            Status               = ReservationStatus.Confirmed,
+            ConfirmedById        = mobile.Id,
+            ConfirmedAt          = now.AddDays(-3),
+            Description          = "Kratki poslovni boravak u Zenici.",
+            CreatedAt            = now.AddDays(-3),
+        });
+
+        // ── 10. Confirmed – started yesterday, ongoing (renter prop) ─────────
+        db.PropertyReservations.Add(new PropertyReservation
+        {
+            ReservationNumber    = "#0010",
+            PropertyId           = props[8].Id,   // Studio Neretva – daily 40/day
+            RenterId             = renter.Id,
+            ClientId             = mobile.Id,
+            NumberOfGuests       = 1,
+            DateOfOccupancyStart = yesterday,
+            DateOfOccupancyEnd   = yesterday.AddDays(30),
+            NumberOfDays         = 30,
+            NumberOfMonths       = 1,
+            TotalPrice           = 1200,            // 40 * 30
+            IsDaily              = true,
+            IsMonthly            = false,
+            Status               = ReservationStatus.Confirmed,
+            ConfirmedById        = mobile.Id,
+            ConfirmedAt          = now.AddDays(-5),
+            Description          = "Duži odmor uz rijeku Neretvu.",
+            CreatedAt            = now.AddDays(-5),
+        });
+
+        await db.SaveChangesAsync();
+        logger.LogInformation("Seeded 10 reservations (Confirmed×4, Completed×2, Cancelled×2, Pending×2).");
+    }
+
+    // ─── PAYMENTS ─────────────────────────────────────────────────────────────
+
+    private static async Task SeedPaymentsAsync(
+        DatabaseContext db,
+        UserManager<ApplicationUser> userManager,
+        ILogger logger)
+    {
+        if (await db.Payments.AnyAsync()) return;
+
+        var mobile = await userManager.FindByNameAsync("mobile");
+        if (mobile == null) return;
+
+        var reservations = await db.PropertyReservations
+            .OrderBy(r => r.Id)
+            .ToListAsync();
+
+        if (reservations.Count < 8) return;
+
+        // Index by seed number
+        var r1 = reservations[0]; // Confirmed
+        var r2 = reservations[1]; // Confirmed
+        var r3 = reservations[2]; // Completed
+        var r4 = reservations[3]; // Completed
+        var r5 = reservations[4]; // Cancelled (refunded)
+        var r6 = reservations[5]; // Cancelled (refunded)
+        var r7  = reservations[6]; // Pending
+        var r9  = reservations.Count > 7 ? reservations[7] : null;  // Confirmed – started yesterday
+        var r10 = reservations.Count > 8 ? reservations[8] : null;  // Confirmed – started yesterday
+
+        var payments = new List<Payment>
+        {
+            new Payment
+            {
+                ClientId        = mobile.Id,
+                ReservationId   = r1.Id,
+                PayPalPaymentId = "PAYID-SEED-0001",
+                PayPalPayerId   = "PAYERID-SEED-001",
+                Amount          = r1.TotalPrice,
+                Currency        = "BAM",
+                Status          = PaymentStatus.Completed,
+                Description     = $"Plaćanje za rezervaciju {r1.ReservationNumber}",
+                CreatedAt       = r1.ConfirmedAt ?? DateTime.UtcNow,
+            },
+            new Payment
+            {
+                ClientId        = mobile.Id,
+                ReservationId   = r2.Id,
+                PayPalPaymentId = "PAYID-SEED-0002",
+                PayPalPayerId   = "PAYERID-SEED-002",
+                Amount          = r2.TotalPrice,
+                Currency        = "BAM",
+                Status          = PaymentStatus.Completed,
+                Description     = $"Plaćanje za rezervaciju {r2.ReservationNumber}",
+                CreatedAt       = r2.ConfirmedAt ?? DateTime.UtcNow,
+            },
+            new Payment
+            {
+                ClientId        = mobile.Id,
+                ReservationId   = r3.Id,
+                PayPalPaymentId = "PAYID-SEED-0003",
+                PayPalPayerId   = "PAYERID-SEED-003",
+                Amount          = r3.TotalPrice,
+                Currency        = "BAM",
+                Status          = PaymentStatus.Completed,
+                Description     = $"Plaćanje za rezervaciju {r3.ReservationNumber}",
+                CreatedAt       = r3.ConfirmedAt ?? DateTime.UtcNow,
+            },
+            new Payment
+            {
+                ClientId        = mobile.Id,
+                ReservationId   = r4.Id,
+                PayPalPaymentId = "PAYID-SEED-0004",
+                PayPalPayerId   = "PAYERID-SEED-004",
+                Amount          = r4.TotalPrice,
+                Currency        = "BAM",
+                Status          = PaymentStatus.Completed,
+                Description     = $"Plaćanje za rezervaciju {r4.ReservationNumber}",
+                CreatedAt       = r4.ConfirmedAt ?? DateTime.UtcNow,
+            },
+            new Payment
+            {
+                ClientId        = mobile.Id,
+                ReservationId   = r5.Id,
+                PayPalPaymentId = "PAYID-SEED-0005",
+                PayPalPayerId   = "PAYERID-SEED-005",
+                Amount          = r5.TotalPrice,
+                Currency        = "BAM",
+                Status          = PaymentStatus.Refunded,
+                Description     = $"Refund za rezervaciju {r5.ReservationNumber} – klijent otkazao",
+                CreatedAt       = r5.CancelledAt ?? DateTime.UtcNow,
+            },
+            new Payment
+            {
+                ClientId        = mobile.Id,
+                ReservationId   = r6.Id,
+                PayPalPaymentId = "PAYID-SEED-0006",
+                PayPalPayerId   = "PAYERID-SEED-006",
+                Amount          = r6.TotalPrice,
+                Currency        = "BAM",
+                Status          = PaymentStatus.Refunded,
+                Description     = $"Refund za rezervaciju {r6.ReservationNumber} – iznajmljivač otkazao",
+                CreatedAt       = r6.CancelledAt ?? DateTime.UtcNow,
+            },
+            new Payment
+            {
+                ClientId        = mobile.Id,
+                ReservationId   = r7.Id,
+                PayPalPaymentId = "PAYID-SEED-0007",
+                PayPalPayerId   = "PAYERID-SEED-007",
+                Amount          = r7.TotalPrice,
+                Currency        = "BAM",
+                Status          = PaymentStatus.Pending,
+                Description     = $"Čekanje na plaćanje za rezervaciju {r7.ReservationNumber}",
+                CreatedAt       = r7.CreatedAt,
+            },
         };
 
-        int counter = 1;
-        foreach (var (prop, renterId, start, days) in reservations)
-        {
-            bool isMonthly = prop.IsMonthly;
-            int months = isMonthly ? Math.Max(1, days / 30) : 0;
-            float totalPrice = isMonthly
-                ? (prop.MonthlyPrice ?? 500f) * months
-                : (prop.DailyPrice  ?? 60f)  * days;
-            db.PropertyReservations.Add(new PropertyReservation
+        if (r9 != null)
+            payments.Add(new Payment
             {
-                ReservationNumber    = $"RES-SEED-{counter:D4}",
-                PropertyId           = prop.Id,
-                RenterId             = renterId,
-                ClientId             = mobile.Id,
-                NumberOfGuests       = 2,
-                DateOfOccupancyStart = start,
-                DateOfOccupancyEnd   = isMonthly ? start.AddMonths(months) : start.AddDays(days),
-                NumberOfDays         = isMonthly ? 0 : days,
-                NumberOfMonths       = months,
-                TotalPrice           = totalPrice,
-                IsDaily              = !isMonthly,
-                IsMonthly            = isMonthly,
-                IsActive             = false,
-                Description          = "Seeded reservation",
-                CreatedAt            = DateTime.UtcNow,
+                ClientId        = mobile.Id,
+                ReservationId   = r9.Id,
+                PayPalPaymentId = "PAYID-SEED-0009",
+                PayPalPayerId   = "PAYERID-SEED-009",
+                Amount          = r9.TotalPrice,
+                Currency        = "BAM",
+                Status          = PaymentStatus.Completed,
+                Description     = $"Plaćanje za rezervaciju {r9.ReservationNumber}",
+                CreatedAt       = r9.ConfirmedAt ?? DateTime.UtcNow,
             });
-            counter++;
-        }
+
+        if (r10 != null)
+            payments.Add(new Payment
+            {
+                ClientId        = mobile.Id,
+                ReservationId   = r10.Id,
+                PayPalPaymentId = "PAYID-SEED-0010",
+                PayPalPayerId   = "PAYERID-SEED-010",
+                Amount          = r10.TotalPrice,
+                Currency        = "BAM",
+                Status          = PaymentStatus.Completed,
+                Description     = $"Plaćanje za rezervaciju {r10.ReservationNumber}",
+                CreatedAt       = r10.ConfirmedAt ?? DateTime.UtcNow,
+            });
+
+        db.Payments.AddRange(payments);
         await db.SaveChangesAsync();
-        logger.LogInformation("Seeded {Count} reservations for user 'mobile'.", counter - 1);
+        logger.LogInformation("Seeded {Count} payments.", payments.Count);
+    }
+
+    // ─── RESERVATION NOTIFICATIONS ────────────────────────────────────────────
+
+    private static async Task SeedReservationNotificationsAsync(
+        DatabaseContext db,
+        UserManager<ApplicationUser> userManager,
+        ILogger logger)
+    {
+        if (await db.ReservationNotifications.AnyAsync()) return;
+
+        var mobile = await userManager.FindByNameAsync("mobile");
+        var admin  = await userManager.FindByNameAsync("desktop");
+        var renter = await userManager.FindByNameAsync("izdavac");
+        if (mobile == null || admin == null || renter == null) return;
+
+        var reservations = await db.PropertyReservations
+            .Include(r => r.Property)
+            .OrderBy(r => r.Id)
+            .ToListAsync();
+
+        if (reservations.Count < 6) return;
+
+        var notifications = new List<ReservationNotification>();
+
+        foreach (var res in reservations)
+        {
+            var photoUrl = await db.Photos
+                .Where(p => p.PropertyId == res.PropertyId && !p.IsDeleted)
+                .Select(p => p.Url)
+                .FirstOrDefaultAsync();
+
+            var propName = res.Property?.Name ?? "Nekretnina";
+            var renterUserId = res.RenterId;
+
+            switch (res.Status)
+            {
+                case ReservationStatus.Confirmed:
+                case ReservationStatus.Completed:
+                    notifications.Add(new ReservationNotification
+                    {
+                        UserId            = renterUserId,
+                        ReservationId     = res.Id,
+                        Title             = "Nova rezervacija",
+                        Message           = $"Nova rezervacija #{res.ReservationNumber} za nekretninu \"{propName}\".",
+                        IsSeen            = res.Status == ReservationStatus.Completed,
+                        ReservationNumber = res.ReservationNumber,
+                        PropertyName      = propName,
+                        PropertyPhotoUrl  = photoUrl,
+                        CreatedAt         = res.ConfirmedAt ?? res.CreatedAt,
+                    });
+                    notifications.Add(new ReservationNotification
+                    {
+                        UserId            = mobile.Id,
+                        ReservationId     = res.Id,
+                        Title             = "Rezervacija potvrđena",
+                        Message           = $"Vaša rezervacija {res.ReservationNumber} za \"{propName}\" je uspješno potvrđena.",
+                        IsSeen            = true,
+                        ReservationNumber = res.ReservationNumber,
+                        PropertyName      = propName,
+                        PropertyPhotoUrl  = photoUrl,
+                        CreatedAt         = res.ConfirmedAt ?? res.CreatedAt,
+                    });
+                    if (res.Status == ReservationStatus.Completed)
+                    {
+                        notifications.Add(new ReservationNotification
+                        {
+                            UserId            = mobile.Id,
+                            ReservationId     = res.Id,
+                            Title             = "Rezervacija završena",
+                            Message           = $"Vaša rezervacija za \"{propName}\" je završena. Ocijenite vaš boravak i iznajmljivača.",
+                            IsSeen            = false,
+                            ReservationNumber = res.ReservationNumber,
+                            PropertyName      = propName,
+                            PropertyPhotoUrl  = photoUrl,
+                            CreatedAt         = res.DateOfOccupancyEnd,
+                        });
+                    }
+                    break;
+
+                case ReservationStatus.Cancelled:
+                    notifications.Add(new ReservationNotification
+                    {
+                        UserId            = mobile.Id,
+                        ReservationId     = res.Id,
+                        Title             = "Rezervacija otkazana",
+                        Message           = $"Vaša rezervacija {res.ReservationNumber} je otkazana. Razlog: {res.CancellationReason}",
+                        IsSeen            = false,
+                        ReservationNumber = res.ReservationNumber,
+                        PropertyName      = propName,
+                        PropertyPhotoUrl  = photoUrl,
+                        CreatedAt         = res.CancelledAt ?? res.CreatedAt,
+                    });
+                    notifications.Add(new ReservationNotification
+                    {
+                        UserId            = mobile.Id,
+                        ReservationId     = res.Id,
+                        Title             = "Povrat sredstava",
+                        Message           = $"Povrat sredstava za rezervaciju {res.ReservationNumber} je uspješno obrađen.",
+                        IsSeen            = false,
+                        ReservationNumber = res.ReservationNumber,
+                        PropertyName      = propName,
+                        PropertyPhotoUrl  = photoUrl,
+                        CreatedAt         = (res.CancelledAt ?? res.CreatedAt).AddMinutes(5),
+                    });
+                    notifications.Add(new ReservationNotification
+                    {
+                        UserId            = renterUserId,
+                        ReservationId     = res.Id,
+                        Title             = "Rezervacija otkazana",
+                        Message           = $"Rezervacija {res.ReservationNumber} za \"{propName}\" je otkazana. Razlog: {res.CancellationReason}",
+                        IsSeen            = true,
+                        ReservationNumber = res.ReservationNumber,
+                        PropertyName      = propName,
+                        PropertyPhotoUrl  = photoUrl,
+                        CreatedAt         = res.CancelledAt ?? res.CreatedAt,
+                    });
+                    break;
+
+                case ReservationStatus.Pending:
+                    notifications.Add(new ReservationNotification
+                    {
+                        UserId            = mobile.Id,
+                        ReservationId     = res.Id,
+                        Title             = "Rezervacija u obradi",
+                        Message           = $"Vaša rezervacija {res.ReservationNumber} za \"{propName}\" čeka na plaćanje.",
+                        IsSeen            = false,
+                        ReservationNumber = res.ReservationNumber,
+                        PropertyName      = propName,
+                        PropertyPhotoUrl  = photoUrl,
+                        CreatedAt         = res.CreatedAt,
+                    });
+                    break;
+            }
+        }
+
+        db.ReservationNotifications.AddRange(notifications);
+        await db.SaveChangesAsync();
+        logger.LogInformation("Seeded {Count} reservation notifications.", notifications.Count);
     }
 
     // ─── RATINGS ──────────────────────────────────────────────────────────────
@@ -398,56 +902,69 @@ public static class DatabaseSeeder
     {
         if (await db.PropertyRatings.AnyAsync() || await db.UserRatings.AnyAsync()) return;
 
-        var mobile  = await userManager.FindByNameAsync("mobile");
-        var admin   = await userManager.FindByNameAsync("desktop");
-        var renter  = await userManager.FindByNameAsync("izdavac");
+        var mobile = await userManager.FindByNameAsync("mobile");
+        var admin  = await userManager.FindByNameAsync("desktop");
+        var renter = await userManager.FindByNameAsync("izdavac");
         if (mobile == null || admin == null || renter == null) return;
 
-        var properties = await db.Properties.Where(p => !p.IsDeleted).Take(4).ToListAsync();
-        if (properties.Count == 0) return;
+        var props = await db.Properties.Where(p => !p.IsDeleted).OrderBy(p => p.Id).Take(8).ToListAsync();
+        if (props.Count == 0) return;
 
-        // Property ratings – mobile reviews properties
         var propertyRatings = new[]
         {
-            (prop: properties.ElementAtOrDefault(0), rating: 4.5, desc: "Odličan stan, čisto i uredno. Preporučujem!"),
-            (prop: properties.ElementAtOrDefault(1), rating: 5.0, desc: "Fantastičan smještaj, lokacija je savršena."),
-            (prop: properties.ElementAtOrDefault(2), rating: 3.5, desc: "Dobar smještaj ali malo zastarjelo namještanje."),
-            (prop: properties.ElementAtOrDefault(3), rating: 4.0, desc: "Ugodna vila, bazen je bonus. Sve u svemu odlično."),
+            (prop: props.ElementAtOrDefault(0), rating: 4.5, reviewer: mobile.Id,  name: "Mobilni Korisnik",  desc: "Odličan stan, čisto i uredno. Lokacija je savršena za posjet centru."),
+            (prop: props.ElementAtOrDefault(1), rating: 5.0, reviewer: mobile.Id,  name: "Mobilni Korisnik",  desc: "Fantastičan studio, sve je bilo na svom mjestu. Definitivno preporučujem!"),
+            (prop: props.ElementAtOrDefault(2), rating: 3.5, reviewer: mobile.Id,  name: "Mobilni Korisnik",  desc: "Solidan smještaj, ali namještaj je malo zastarjelo. Čisto i uredno."),
+            (prop: props.ElementAtOrDefault(3), rating: 4.0, reviewer: mobile.Id,  name: "Mobilni Korisnik",  desc: "Lijepa kuća s velikom baštom. Mirno i ugodno okruženje."),
+            (prop: props.ElementAtOrDefault(5), rating: 5.0, reviewer: mobile.Id,  name: "Mobilni Korisnik",  desc: "Vila Blagaj je nešto posebno. Pogled na rijeku i priroda su nestvarna."),
+            (prop: props.ElementAtOrDefault(6), rating: 4.5, reviewer: mobile.Id,  name: "Mobilni Korisnik",  desc: "Tradiconalni ambijent uz Stari most – autentično iskustvo."),
+            (prop: props.ElementAtOrDefault(0), rating: 4.0, reviewer: admin.Id,   name: "Admin Korisnik",    desc: "Nekretnina je u odličnom stanju, gostima se svidjelo."),
+            (prop: props.ElementAtOrDefault(5), rating: 4.5, reviewer: admin.Id,   name: "Admin Korisnik",    desc: "Iznajmljivač je veoma kooperativan i odgovoran."),
         };
 
-        foreach (var (prop, rating, desc) in propertyRatings)
+        foreach (var (prop, rating, reviewer, name, desc) in propertyRatings)
         {
             if (prop == null) continue;
             db.PropertyRatings.Add(new PropertyRating
             {
                 PropertyId   = prop.Id,
-                ReviewerId   = mobile.Id,
-                ReviewerName = "Mobilni Korisnik",
+                ReviewerId   = reviewer,
+                ReviewerName = name,
                 Rating       = rating,
                 Description  = desc,
-                CreatedAt    = DateTime.UtcNow,
+                CreatedAt    = DateTime.UtcNow.AddDays(-Random.Shared.Next(1, 60)),
             });
         }
 
-        // User ratings – mobile rates renter and admin
-        db.UserRatings.Add(new UserRating
-        {
-            RenterId     = renter.Id,
-            ReviewerId   = mobile.Id,
-            ReviewerName = "Mobilni Korisnik",
-            Rating       = 4.5,
-            Description  = "Vrlo komunikativan i profesionalan izdavač.",
-            CreatedAt    = DateTime.UtcNow,
-        });
-        db.UserRatings.Add(new UserRating
-        {
-            RenterId     = admin.Id,
-            ReviewerId   = mobile.Id,
-            ReviewerName = "Mobilni Korisnik",
-            Rating       = 5.0,
-            Description  = "Izvrsna usluga i brz odgovor na sve upite.",
-            CreatedAt    = DateTime.UtcNow,
-        });
+        db.UserRatings.AddRange(
+            new UserRating
+            {
+                RenterId     = renter.Id,
+                ReviewerId   = mobile.Id,
+                ReviewerName = "Mobilni Korisnik",
+                Rating       = 4.5,
+                Description  = "Veoma komunikativan i profesionalan. Brzo odgovara na poruke.",
+                CreatedAt    = DateTime.UtcNow.AddDays(-30),
+            },
+            new UserRating
+            {
+                RenterId     = admin.Id,
+                ReviewerId   = mobile.Id,
+                ReviewerName = "Mobilni Korisnik",
+                Rating       = 5.0,
+                Description  = "Izvrsna usluga i brz odgovor na sve upite. Nekretnina u savršenom stanju.",
+                CreatedAt    = DateTime.UtcNow.AddDays(-15),
+            },
+            new UserRating
+            {
+                RenterId     = renter.Id,
+                ReviewerId   = admin.Id,
+                ReviewerName = "Admin Korisnik",
+                Rating       = 4.0,
+                Description  = "Pouzdani iznajmljivač, nekretnine su uvijek dobro održavane.",
+                CreatedAt    = DateTime.UtcNow.AddDays(-5),
+            }
+        );
 
         await db.SaveChangesAsync();
         logger.LogInformation("Seeded property and user ratings.");
@@ -458,10 +975,14 @@ public static class DatabaseSeeder
     private static async Task SeedProfilePhotosAsync(
         DatabaseContext db,
         UserManager<ApplicationUser> userManager,
-        ILogger logger)
+        ILogger logger,
+        string webRootPath)
     {
-        var users = new[] { "desktop", "mobile", "izdavac" };
+        var users        = new[] { "desktop", "mobile", "izdavac" };
         int[] picsumSeeds = { 200, 201, 202 };
+
+        var uploadsDir = Path.Combine(webRootPath, "uploads", "images");
+        Directory.CreateDirectory(uploadsDir);
 
         for (int i = 0; i < users.Length; i++)
         {
@@ -471,20 +992,25 @@ public static class DatabaseSeeder
             var person = await db.Persons.FirstOrDefaultAsync(p => p.ApplicationUserId == user.Id);
             if (person == null || person.ProfilePhoto != null) continue;
 
-            var url   = $"https://picsum.photos/seed/{picsumSeeds[i]}/200/200";
-            var bytes = await DownloadImageAsync(url, logger);
+            var url      = $"https://picsum.photos/seed/{picsumSeeds[i]}/200/200";
+            var bytes    = await DownloadImageAsync(url, logger);
             if (bytes == null) continue;
 
-            var fileName  = $"avatar_{users[i]}_{Guid.NewGuid():N}.jpg";
-            person.ProfilePhoto      = $"/uploads/images/{fileName}";
-            person.ProfilePhotoBytes = bytes;
+            var fileName = $"avatar_{users[i]}_{Guid.NewGuid():N}.jpg";
+            var filePath = Path.Combine(uploadsDir, fileName);
+
+            await File.WriteAllBytesAsync(filePath, bytes);
+
+            person.ProfilePhoto          = $"/uploads/images/{fileName}";
+            person.ProfilePhotoThumbnail = $"/uploads/images/{fileName}";
+            person.ProfilePhotoBytes     = bytes;
         }
 
         await db.SaveChangesAsync();
         logger.LogInformation("Seeded profile photos for users.");
     }
 
-    // ─── CONVERSATIONS ─────────────────────────────────────────────────────────
+    // ─── CONVERSATIONS & MESSAGES ─────────────────────────────────────────────
 
     private static async Task SeedConversationsAsync(
         DatabaseContext db,
@@ -493,50 +1019,88 @@ public static class DatabaseSeeder
     {
         if (await db.Conversations.AnyAsync()) return;
 
-        var mobile  = await userManager.FindByNameAsync("mobile");
-        var renter  = await userManager.FindByNameAsync("izdavac");
-        if (mobile == null || renter == null) return;
+        var mobile = await userManager.FindByNameAsync("mobile");
+        var admin  = await userManager.FindByNameAsync("desktop");
+        var renter = await userManager.FindByNameAsync("izdavac");
+        if (mobile == null || admin == null || renter == null) return;
 
-        var property = await db.Properties
-            .FirstOrDefaultAsync(p => p.ApplicationUserId == renter.Id && !p.IsDeleted);
-        if (property == null) return;
+        var props = await db.Properties.Where(p => !p.IsDeleted).OrderBy(p => p.Id).ToListAsync();
+        if (props.Count < 8) return;
 
         var now = DateTime.UtcNow;
-        var messages = new[]
-        {
-            (SenderId: mobile.Id,  RecipientId: renter.Id,  Content: "Pozdrav! Da li je nekretnina slobodna u periodu 1-7. aprila?",                           SentAt: now.AddHours(-5)),
-            (SenderId: renter.Id,  RecipientId: mobile.Id,  Content: "Zdravo! Da, nekretnina je slobodna u tom periodu. Cijena je 90 KM po noći.",             SentAt: now.AddHours(-4)),
-            (SenderId: mobile.Id,  RecipientId: renter.Id,  Content: "Odlično! Da li je moguće early check-in oko 11h?",                                        SentAt: now.AddHours(-3)),
-            (SenderId: renter.Id,  RecipientId: mobile.Id,  Content: "Nažalost, standardni check-in je od 14h. Ako stignu ranijе, prtljag mogu ostaviti kod nas.", SentAt: now.AddHours(-2)),
-            (SenderId: mobile.Id,  RecipientId: renter.Id,  Content: "Razumijem, hvala na informaciji. Rezervišemo!",                                           SentAt: now.AddHours(-1)),
-        };
 
-        var conversation = new Conversation
+        // ── Conversation 1: mobile ↔ renter about Vila Blagaj ─────────────────
+        await AddConversation(db, mobile, renter, props[5], now.AddHours(-5), new[]
         {
-            ClientId    = mobile.Id,
+            (mobile.Id, renter.Id, "Pozdrav! Da li je vila slobodna u periodu 10-30. aprila?",                                               now.AddHours(-5)),
+            (renter.Id, mobile.Id, "Zdravo! Da, vila je slobodna. Cijena je 90 KM po noći.",                                                 now.AddHours(-4)),
+            (mobile.Id, renter.Id, "Odlično! Da li su dostupne dvije zasebne spavaće sobe?",                                                  now.AddHours(-3)),
+            (renter.Id, mobile.Id, "Da, vila ima 4 spavaće sobe, sve sa zasebnim kupatilima. Bazen je također dostupan.",                     now.AddHours(-2)),
+            (mobile.Id, renter.Id, "Savršeno, rezervišemo. Hvala na informacijama!",                                                          now.AddHours(-1)),
+        });
+
+        // ── Conversation 2: mobile ↔ admin about Luksuzni stan Sarajevo ───────
+        await AddConversation(db, mobile, admin, props[0], now.AddDays(-3), new[]
+        {
+            (mobile.Id, admin.Id, "Dobar dan! Zanima me stan u centru Sarajeva za juni. Da li je dostupan od 1. do 8. juna?",                  now.AddDays(-3)),
+            (admin.Id, mobile.Id, "Dobar dan! Da, stan je slobodan u tom periodu. Cijena je 1200 KM/miesec.",                                  now.AddDays(-3).AddHours(1)),
+            (mobile.Id, admin.Id, "Odlično! Je li parking uključen u cijenu?",                                                                 now.AddDays(-2)),
+            (admin.Id, mobile.Id, "Nažalost, parking nije uključen, ali postoji javna garaža 100m od stana za 5 KM/dan. Platite unaprijed?",   now.AddDays(-2).AddHours(2)),
+            (mobile.Id, admin.Id, "Razumijem, hvala. Izvršio sam rezervaciju putem platforme.",                                                 now.AddDays(-1)),
+        });
+
+        // ── Conversation 3: mobile ↔ renter about Studio Neretva ──────────────
+        await AddConversation(db, mobile, renter, props[8], now.AddDays(-1), new[]
+        {
+            (mobile.Id, renter.Id, "Pozdrav, da li studio ima klimu? Planiram boravak u julu.",                                                now.AddDays(-1)),
+            (renter.Id, mobile.Id, "Zdravo! Da, studio ima klima uređaj i WiFi. Pogled na Neretvu je prelijep u ljetnim večerima.",            now.AddDays(-1).AddHours(1)),
+            (mobile.Id, renter.Id, "Zvuči odlično! Rezervišem za 1-4. jula. Hvala!",                                                          now.AddDays(-1).AddHours(2)),
+        });
+
+        // ── Conversation 4: mobile ↔ admin about Kuća sa vrtom Tuzla ─────────
+        await AddConversation(db, mobile, admin, props[3], now.AddDays(-7), new[]
+        {
+            (mobile.Id, admin.Id, "Koliko gostiju može primiti kuća u Tuzli?",                                                                 now.AddDays(-7)),
+            (admin.Id, mobile.Id, "Kuća prima do 8 gostiju, ima 5 soba i 2 kupatila. Idealna za porodični odmor.",                             now.AddDays(-7).AddHours(3)),
+            (mobile.Id, admin.Id, "Hvala, ovo je savršeno za naš izlet!",                                                                      now.AddDays(-6)),
+        });
+
+        logger.LogInformation("Seeded 4 conversations.");
+    }
+
+    private static async Task AddConversation(
+        DatabaseContext db,
+        ApplicationUser client,
+        ApplicationUser renter,
+        Property property,
+        DateTime createdAt,
+        (int SenderId, int RecipientId, string Content, DateTime SentAt)[] messages)
+    {
+        var conv = new Conversation
+        {
+            ClientId    = client.Id,
             RenterId    = renter.Id,
             PropertyId  = property.Id,
             LastMessage = messages.Last().Content,
             LastSent    = messages.Last().SentAt,
-            CreatedAt   = messages.First().SentAt,
+            CreatedAt   = createdAt,
         };
-        db.Conversations.Add(conversation);
+        db.Conversations.Add(conv);
         await db.SaveChangesAsync();
 
-        foreach (var m in messages)
+        foreach (var (senderId, recipientId, content, sentAt) in messages)
         {
             db.Messages.Add(new Message
             {
-                ConversationId = conversation.Id,
-                SenderId       = m.SenderId,
-                RecipientId    = m.RecipientId,
-                Content        = m.Content,
-                IsRead         = false,
-                CreatedAt      = m.SentAt,
+                ConversationId = conv.Id,
+                SenderId       = senderId,
+                RecipientId    = recipientId,
+                Content        = content,
+                IsRead         = sentAt < DateTime.UtcNow.AddHours(-1),
+                CreatedAt      = sentAt,
             });
         }
         await db.SaveChangesAsync();
-        logger.LogInformation("Seeded 1 conversation with {Count} messages.", messages.Length);
     }
 
     // ─── NOTIFICATIONS ─────────────────────────────────────────────────────────
@@ -544,42 +1108,117 @@ public static class DatabaseSeeder
     private static async Task SeedNotificationsAsync(
         DatabaseContext db,
         UserManager<ApplicationUser> userManager,
-        ILogger logger)
+        ILogger logger,
+        string webRootPath)
     {
         if (await db.Notifications.AnyAsync()) return;
 
         var mobile = await userManager.FindByNameAsync("mobile");
+        var admin  = await userManager.FindByNameAsync("desktop");
         var renter = await userManager.FindByNameAsync("izdavac");
-        if (mobile == null || renter == null) return;
+        if (mobile == null || admin == null || renter == null) return;
+
+        var uploadsDir = Path.Combine(webRootPath, "uploads", "images");
+        Directory.CreateDirectory(uploadsDir);
 
         var now = DateTime.UtcNow;
 
+        // Download a few notification images
+        async Task<(string? url, byte[]? bytes)> NotifImage(int seed)
+        {
+            var imgUrl  = $"https://picsum.photos/seed/{seed}/400/300";
+            var bytes   = await DownloadImageAsync(imgUrl, logger);
+            if (bytes == null) return (null, null);
+            var fileName = $"notif_{seed}_{Guid.NewGuid():N}.jpg";
+            var filePath = Path.Combine(uploadsDir, fileName);
+            await File.WriteAllBytesAsync(filePath, bytes);
+            return ($"/uploads/images/{fileName}", bytes);
+        }
+
+        var (img300Url, img300Bytes) = await NotifImage(300);
+        var (img301Url, img301Bytes) = await NotifImage(301);
+        var (img302Url, img302Bytes) = await NotifImage(302);
+
         db.Notifications.AddRange(
+
+            // ── Mobile (client) notifications ─────────────────────────────────
             new Notification
             {
                 UserId    = mobile.Id,
                 Name      = "Dobrodošli u PropertEase!",
-                Text      = "Hvala što ste se prijavili. Pregledajte naše ponude nekretnina i pronađite savršen smještaj za vaš odmor.",
-                CreatedAt = now.AddDays(-3),
+                Text      = "Hvala što ste se prijavili. Pregledajte naše ponude nekretnina i pronađite savršen smještaj za vaš odmor ili posao.",
+                Image     = img300Url,
+                ImageBytes = img300Bytes,
+                CreatedAt = now.AddDays(-10),
             },
             new Notification
             {
                 UserId    = mobile.Id,
-                Name      = "Nova promocija – proljetni popusti",
-                Text      = "Iskoristite proljetnu sezonu! Odabrane nekretnine imaju popust do 20% za rezervacije u aprilu i maju.",
+                Name      = "Proljetna akcija – popusti do 20%",
+                Text      = "Iskoristite proljetnu sezonu! Odabrane nekretnine imaju popust do 20% za rezervacije u aprilu i maju. Ne propustite!",
+                Image     = img301Url,
+                ImageBytes = img301Bytes,
+                CreatedAt = now.AddDays(-5),
+            },
+            new Notification
+            {
+                UserId    = mobile.Id,
+                Name      = "Vaša recenzija je objavljena",
+                Text      = "Hvala na ocjeni nekretnine 'Vila Blagaj'. Vaša recenzija pomaže drugim korisnicima da donesu bolju odluku.",
+                CreatedAt = now.AddDays(-2),
+            },
+            new Notification
+            {
+                UserId    = mobile.Id,
+                Name      = "Podsjetnik: nadolazeći check-in",
+                Text      = "Podsjetnik: vaš check-in za Studio Bašćaršija je za 10 dana (01.05.2026). Sretno putovanje!",
                 CreatedAt = now.AddDays(-1),
+            },
+
+            // ── Renter notifications ───────────────────────────────────────────
+            new Notification
+            {
+                UserId    = renter.Id,
+                Name      = "Nova ocjena nekretnine",
+                Text      = "Korisnik 'Mobilni Korisnik' je ostavio ocjenu 5★ za vašu nekretninu 'Vila Blagaj'. Odlično!",
+                Image     = img302Url,
+                ImageBytes = img302Bytes,
+                CreatedAt = now.AddDays(-2),
             },
             new Notification
             {
                 UserId    = renter.Id,
-                Name      = "Vaša nekretnina je dobila novu ocjenu",
-                Text      = "Korisnik 'Mobilni Korisnik' je ostavio ocjenu 5★ za vašu nekretninu. Provjerite recenziju!",
-                CreatedAt = now.AddHours(-6),
+                Name      = "Vaša nekretnina je popularna!",
+                Text      = "Apartman Mostar Stari Grad je pregledan 47 puta ovog tjedna. Razmislite o ažuriranju fotografija za još veću vidljivost.",
+                CreatedAt = now.AddDays(-4),
+            },
+            new Notification
+            {
+                UserId    = renter.Id,
+                Name      = "Plaćanje primljeno",
+                Text      = "Primili ste plaćanje od 1800 KM za rezervaciju #0002 (Vila Blagaj, 10-30. april). Iznos je dostupan na vašem računu.",
+                CreatedAt = now.AddDays(-15),
+            },
+
+            // ── Admin notifications ────────────────────────────────────────────
+            new Notification
+            {
+                UserId    = admin.Id,
+                Name      = "Novi korisnik registriran",
+                Text      = "Korisnik 'Mobilni Korisnik' (mobile@propertease.test) se registrirao na platformu. Provjerite profil po potrebi.",
+                CreatedAt = now.AddDays(-10),
+            },
+            new Notification
+            {
+                UserId    = admin.Id,
+                Name      = "Tjedni izvještaj",
+                Text      = "Ovaj tjedan je kreirano 3 novih rezervacija, od čega su 2 plaćene. Ukupan prihod: 2115 KM. Detalje pogledajte u izvještajima.",
+                CreatedAt = now.AddDays(-3),
             }
         );
 
         await db.SaveChangesAsync();
-        logger.LogInformation("Seeded notifications.");
+        logger.LogInformation("Seeded notifications for all users.");
     }
 
     // ─── HELPERS ──────────────────────────────────────────────────────────────

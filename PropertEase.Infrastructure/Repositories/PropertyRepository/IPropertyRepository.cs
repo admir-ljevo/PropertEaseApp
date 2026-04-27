@@ -21,7 +21,5 @@ namespace PropertEase.Infrastructure.Repositories.PropertyRepository
         Task UpdateAverageRating(int propertyId, double averageRating);
         Task<List<PropertyRecommendationDto>> GetByIdsAsync(IReadOnlyList<int> ids);
 
-        Task<List<PropertyDto>> GetForPaginationAsync(string searchFilter, int pageSize, int offeset)
-                   => throw new NotImplementedException();
     }
 }

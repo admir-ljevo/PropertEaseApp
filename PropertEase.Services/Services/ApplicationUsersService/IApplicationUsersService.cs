@@ -17,6 +17,7 @@ namespace PropertEase.Services.Services.ApplicationUsersService
         Task<List<ApplicationUserDto>> GetRenters();
         Task<ApplicationUserDto> EditEmployee(EmployeeUpdateDto user);
         Task<ApplicationUserDto> EditClient(ClientUpdateDto user);
+        Task<ApplicationUserDto> GetByIdAsync(int id);
 
         Task ChangePhoto(ApplicationUserDto entityDto);
     }

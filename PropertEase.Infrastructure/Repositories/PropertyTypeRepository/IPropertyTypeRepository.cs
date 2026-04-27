@@ -14,7 +14,5 @@ namespace PropertEase.Infrastructure.Repositories.PropertyTypeRepository
         new Task<List<PropertyTypeDto>> GetAllAsync();
         Task<List<PropertyTypeDto>> GetByName(string name);
         Task<PropertyTypeDto> GetByIdAsync(int id);
-        Task<List<PropertyTypeDto>> GetForPaginationAsync(string searchFilter, int pageSize, int offeset)
-                   => throw new NotImplementedException();
     }
 }

@@ -43,7 +43,7 @@ namespace PropertEase.Services.Services.NotificationService
 
         public async Task RemoveByIdAsync(int id, bool isSoft = true)
         {
-           await unitOfWork.MessageRepository.RemoveByIdAsync(id, isSoft);
+           await unitOfWork.NotificationRepository.RemoveByIdAsync(id, isSoft);
            await unitOfWork.SaveChangesAsync();
         }
 

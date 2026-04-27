@@ -9,8 +9,15 @@ import 'package:provider/provider.dart';
 import 'package:propertease_client/utils/authorization.dart';
 
 class ReviewListScreen extends StatefulWidget {
-  int? id;
-  ReviewListScreen({super.key, this.id});
+  final int? id;
+  final bool canReview;
+  final int? reservationId;
+  const ReviewListScreen({
+    super.key,
+    this.id,
+    this.canReview = false,
+    this.reservationId,
+  });
 
   @override
   State<StatefulWidget> createState() => ReviewListScreenState();
@@ -26,6 +33,8 @@ class ReviewListScreenState extends State<ReviewListScreen> {
   int _totalCount = 0;
   String? _sortByRating; // null=newest, 'desc'=highest, 'asc'=lowest
   bool _submitting = false;
+  PropertyRating? _existingRating;
+  bool _checkingExisting = false;
   final ScrollController _scrollController = ScrollController();
 
   DateTime? startDate;
@@ -47,6 +56,35 @@ class ReviewListScreenState extends State<ReviewListScreen> {
     _ratingProvider = context.read<RatingProvider>();
     _scrollController.addListener(_onScroll);
     _fetchRatings();
+    if (widget.canReview && widget.reservationId != null) {
+      _loadExistingRating();
+    }
+  }
+
+  Future<void> _loadExistingRating() async {
+    if (!mounted) return;
+    setState(() => _checkingExisting = true);
+    try {
+      final result = await _ratingProvider.getFiltered(filter: {
+        'propertyId': widget.id!,
+        'reviewerId': userId!,
+        'reservationId': widget.reservationId!,
+        'page': 1,
+        'pageSize': 1,
+      });
+      if (!mounted) return;
+      if (result.result.isNotEmpty) {
+        final r = result.result.first;
+        setState(() {
+          _existingRating = r;
+          selectedRating = (r.rating ?? 1).round().clamp(1, 5);
+          commentController.text = r.description ?? '';
+        });
+      }
+    } catch (_) {
+    } finally {
+      if (mounted) setState(() => _checkingExisting = false);
+    }
   }
 
   @override
@@ -241,118 +279,145 @@ class ReviewListScreenState extends State<ReviewListScreen> {
                     ],
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Row(
-                    children: [
-                      const Text("Rating:    "),
-                      SizedBox(
-                        width: 200,
-                        child: DropdownButton<int>(
-                          value: selectedRating,
-                          onChanged: (int? value) {
-                            setState(() => selectedRating = value!);
-                          },
-                          items: [1, 2, 3, 4, 5].map((int value) {
-                            return DropdownMenuItem<int>(
-                              value: value,
-                              child: Text(value.toString()),
-                            );
-                          }).toList(),
+                if (widget.canReview) ...[
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+                    child: Text(
+                      _checkingExisting
+                          ? 'Loading...'
+                          : _existingRating != null
+                              ? 'Edit your review'
+                              : 'Leave a review',
+                      style: const TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(20.0),
+                    child: Row(
+                      children: [
+                        const Text("Rating:    "),
+                        SizedBox(
+                          width: 200,
+                          child: DropdownButton<int>(
+                            value: selectedRating,
+                            onChanged: (int? value) {
+                              setState(() => selectedRating = value!);
+                            },
+                            items: [1, 2, 3, 4, 5].map((int value) {
+                              return DropdownMenuItem<int>(
+                                value: value,
+                                child: Text(value.toString()),
+                              );
+                            }).toList(),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: TextField(
-                    controller: commentController,
-                    decoration: const InputDecoration(labelText: 'Review Comment'),
+                  Padding(
+                    padding: const EdgeInsets.all(20.0),
+                    child: TextField(
+                      controller: commentController,
+                      decoration:
+                          const InputDecoration(labelText: 'Review Comment'),
+                    ),
                   ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Center(
-                    child: ElevatedButton(
-                      onPressed: _submitting
-                          ? null
-                          : () async {
-                              setState(() => _submitting = true);
-                              try {
-                                final description = commentController.text;
-                                final rating = selectedRating.toDouble();
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Center(
+                      child: ElevatedButton(
+                        onPressed: _submitting
+                            ? null
+                            : () async {
+                                setState(() => _submitting = true);
+                                try {
+                                  final description = commentController.text;
+                                  final rating = selectedRating.toDouble();
 
-                                addedRating.id = 0;
-                                addedRating.modifiedAt = DateTime.now();
-                                addedRating.totalRecordsCount = 0;
-                                addedRating.isDeleted = false;
-                                addedRating.createdAt = DateTime.now();
-                                addedRating.propertyId = widget.id!;
-                                addedRating.rating = rating;
-                                addedRating.description = description;
-                                addedRating.reviewerId = userId!;
-                                addedRating.reviewerName = "$firstName $lastName";
+                                  addedRating.id = _existingRating?.id ?? 0;
+                                  addedRating.modifiedAt = DateTime.now();
+                                  addedRating.totalRecordsCount = 0;
+                                  addedRating.isDeleted = false;
+                                  addedRating.createdAt = _existingRating?.createdAt ?? DateTime.now();
+                                  addedRating.propertyId = widget.id!;
+                                  addedRating.rating = rating;
+                                  addedRating.description = description;
+                                  addedRating.reviewerId = userId!;
+                                  addedRating.reviewerName =
+                                      "$firstName $lastName";
+                                  addedRating.reservationId = widget.reservationId;
 
-                                final saved = await _ratingProvider.addAsync(addedRating);
-                                if (!mounted) return;
+                                  final saved =
+                                      await _ratingProvider.addAsync(addedRating);
+                                  if (!mounted) return;
 
-                                final person = Person()
-                                  ..firstName = firstName
-                                  ..lastName = lastName
-                                  ..profilePhotoBytes = Authorization.profilePhotoBytes;
-                                final reviewer = ApplicationUser(id: userId)
-                                  ..person = person;
-                                final newRating = PropertyRating(
-                                  id: saved.id,
-                                  createdAt: saved.createdAt ?? DateTime.now(),
-                                  propertyId: widget.id,
-                                  reviewerId: userId,
-                                  reviewerName: "$firstName $lastName",
-                                  rating: rating,
-                                  description: description,
-                                )..reviewer = reviewer;
+                                  final person = Person()
+                                    ..firstName = firstName
+                                    ..lastName = lastName
+                                    ..profilePhotoBytes =
+                                        Authorization.profilePhotoBytes;
+                                  final reviewer =
+                                      ApplicationUser(id: userId)..person = person;
+                                  final newRating = PropertyRating(
+                                    id: saved.id,
+                                    createdAt: saved.createdAt ?? _existingRating?.createdAt ?? DateTime.now(),
+                                    propertyId: widget.id,
+                                    reviewerId: userId,
+                                    reviewerName: "$firstName $lastName",
+                                    rating: rating,
+                                    description: description,
+                                    reservationId: widget.reservationId,
+                                  )..reviewer = reviewer;
 
-                                setState(() {
-                                  _ratings.insert(0, newRating);
-                                  _totalCount++;
-                                  commentController.clear();
-                                  selectedRating = 1;
-                                  _submitting = false;
-                                });
-                                if (mounted) {
+                                  final isUpdate = _existingRating != null;
+                                  setState(() {
+                                    _existingRating = newRating;
+                                    if (isUpdate) {
+                                      final idx = _ratings.indexWhere((r) => r.id == newRating.id);
+                                      if (idx >= 0) _ratings[idx] = newRating;
+                                    } else {
+                                      _ratings.insert(0, newRating);
+                                      _totalCount++;
+                                    }
+                                    _submitting = false;
+                                  });
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(isUpdate
+                                            ? 'Review updated successfully'
+                                            : 'Review added successfully'),
+                                        backgroundColor: Colors.green,
+                                        duration: const Duration(seconds: 2),
+                                      ),
+                                    );
+                                  }
+                                } catch (e) {
+                                  if (!mounted) return;
+                                  setState(() => _submitting = false);
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Review added successfully'),
-                                      backgroundColor: Colors.green,
-                                      duration: Duration(seconds: 2),
+                                    SnackBar(
+                                      content: Text('Failed to add review: $e'),
+                                      backgroundColor: Colors.red,
+                                      duration: const Duration(seconds: 3),
                                     ),
                                   );
                                 }
-                              } catch (e) {
-                                if (!mounted) return;
-                                setState(() => _submitting = false);
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Failed to add review: $e'),
-                                    backgroundColor: Colors.red,
-                                    duration: const Duration(seconds: 3),
-                                  ),
-                                );
-                              }
-                            },
-                      child: _submitting
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                  strokeWidth: 2, color: Colors.white),
-                            )
-                          : const Text("Add Review"),
+                              },
+                        child: _submitting
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2, color: Colors.white),
+                              )
+                            : Text(_existingRating != null ? 'Update Review' : 'Add Review'),
+                      ),
                     ),
                   ),
-                ),
-                const Divider(thickness: 2),
+                  const Divider(thickness: 2),
+                ],
               ],
             ),
           ),

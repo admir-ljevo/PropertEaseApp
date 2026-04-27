@@ -13,10 +13,7 @@ namespace PropertEase.Infrastructure
     {
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            optionsBuilder.LogTo(Console.WriteLine);
             base.OnConfiguring(optionsBuilder);
-            optionsBuilder.EnableSensitiveDataLogging();
-
         }
         private void ConfigureModel(ModelBuilder modelBuilder)
         {
@@ -44,7 +41,8 @@ namespace PropertEase.Infrastructure
 
             foreach (var entry in entries)
             {
-                var entity = ((IBaseEntity)entry.Entity);
+                if (entry.Entity is not IBaseEntity entity)
+                    continue;
 
                 if (entry.State == EntityState.Added)
                 {

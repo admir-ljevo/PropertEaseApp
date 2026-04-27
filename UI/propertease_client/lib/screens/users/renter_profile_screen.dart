@@ -3,15 +3,14 @@ import 'package:intl/intl.dart';
 import 'package:propertease_client/config/app_config.dart';
 import 'package:provider/provider.dart';
 
-import '../../models/application_user.dart';
-import '../../models/property.dart';
-import '../../models/user_rating.dart';
-import '../../providers/application_user_provider.dart';
-import '../../providers/property_provider.dart';
-import '../../providers/property_reservation_provider.dart';
-import '../../providers/user_rating_provider.dart';
-import '../../utils/authorization.dart';
-import '../property/property_details.dart';
+import 'package:propertease_client/models/application_user.dart';
+import 'package:propertease_client/models/property.dart';
+import 'package:propertease_client/models/user_rating.dart';
+import 'package:propertease_client/providers/application_user_provider.dart';
+import 'package:propertease_client/providers/property_provider.dart';
+import 'package:propertease_client/providers/property_reservation_provider.dart';
+import 'package:propertease_client/providers/user_rating_provider.dart';
+import 'package:propertease_client/screens/property/property_details.dart';
 
 const _kPrimary = Color(0xFF115892);
 const _kPageSize = 10;
@@ -154,172 +153,46 @@ class _RenterProfileScreenState extends State<RenterProfileScreen> {
     }
   }
 
-  Future<void> _showRatingDialog() async {
-    final renterId = _effectiveRenterId;
-    if (renterId == null) return;
-
-    int selectedStars = 0;
-    final descController = TextEditingController();
-    bool submitting = false;
-
-    await showModalBottomSheet(
+  void _showReviewerInfo(UserRating r, String reviewerName) {
+    final date = r.createdAt != null
+        ? DateFormat('dd.MM.yyyy').format(r.createdAt!)
+        : null;
+    showModalBottomSheet(
       context: context,
-      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (ctx) {
-        return StatefulBuilder(builder: (ctx, setModalState) {
-          return Padding(
-            padding: EdgeInsets.only(
-              left: 24,
-              right: 24,
-              top: 24,
-              bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.fromLTRB(24, 28, 24, 40),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircleAvatar(
+              radius: 32,
+              backgroundColor: _kPrimary.withOpacity(0.12),
+              child: Text(
+                reviewerName.isNotEmpty ? reviewerName[0].toUpperCase() : '?',
+                style: const TextStyle(
+                    color: _kPrimary,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 24),
+              ),
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Ocijeni izdavača',
-                    style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: _kPrimary)),
-                const SizedBox(height: 16),
-                // Star selector
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(5, (i) {
-                    final star = i + 1;
-                    return GestureDetector(
-                      onTap: () => setModalState(() => selectedStars = star),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 6),
-                        child: Icon(
-                          selectedStars >= star
-                              ? Icons.star_rounded
-                              : Icons.star_outline_rounded,
-                          size: 40,
-                          color: Colors.amber,
-                        ),
-                      ),
-                    );
-                  }),
-                ),
-                const SizedBox(height: 4),
-                Center(
-                  child: Text(
-                    selectedStars == 0
-                        ? 'Odaberite ocjenu'
-                        : _starLabel(selectedStars),
-                    style: TextStyle(
-                        color: selectedStars == 0
-                            ? Colors.grey
-                            : Colors.amber.shade700,
-                        fontWeight: FontWeight.w600),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: descController,
-                  maxLines: 3,
-                  decoration: InputDecoration(
-                    hintText: 'Komentar (opciono)...',
-                    filled: true,
-                    fillColor: Colors.grey.shade50,
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide(color: Colors.grey.shade300)),
-                    enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide(color: Colors.grey.shade300)),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    style: FilledButton.styleFrom(
-                        backgroundColor: _kPrimary,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10))),
-                    onPressed: submitting || selectedStars == 0
-                        ? null
-                        : () async {
-                            setModalState(() => submitting = true);
-                            try {
-                              final name =
-                                  '${Authorization.firstName ?? ''} ${Authorization.lastName ?? ''}'
-                                      .trim();
-                              await context.read<UserRatingProvider>().addRating(
-                                    UserRating(
-                                      renterId: renterId,
-                                      reviewerId: Authorization.userId,
-                                      reviewerName: name.isNotEmpty
-                                          ? name
-                                          : Authorization.username,
-                                      rating: selectedStars.toDouble(),
-                                      description:
-                                          descController.text.trim().isEmpty
-                                              ? null
-                                              : descController.text.trim(),
-                                    ),
-                                  );
-                              if (mounted) Navigator.of(ctx).pop();
-                              if (mounted) {
-                                _loadRatings(page: 1);
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Ocjena uspješno dodana!'),
-                                    backgroundColor: Colors.green,
-                                  ),
-                                );
-                              }
-                            } catch (_) {
-                              setModalState(() => submitting = false);
-                              if (mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Greška pri dodavanju ocjene.'),
-                                    backgroundColor: Colors.red,
-                                  ),
-                                );
-                              }
-                            }
-                          },
-                    child: submitting
-                        ? const SizedBox(
-                            height: 18,
-                            width: 18,
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2, color: Colors.white))
-                        : const Text('Pošalji ocjenu'),
-                  ),
-                ),
-              ],
-            ),
-          );
-        });
-      },
+            const SizedBox(height: 12),
+            Text(reviewerName,
+                style: const TextStyle(
+                    fontSize: 17, fontWeight: FontWeight.bold)),
+            if (date != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                'Ocjenio/la dana $date',
+                style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
-  }
-
-  String _starLabel(int stars) {
-    switch (stars) {
-      case 1:
-        return 'Loše';
-      case 2:
-        return 'Ispod prosjeka';
-      case 3:
-        return 'Prosječno';
-      case 4:
-        return 'Dobro';
-      case 5:
-        return 'Odlično';
-      default:
-        return '';
-    }
   }
 
   @override
@@ -336,17 +209,6 @@ class _RenterProfileScreenState extends State<RenterProfileScreen> {
         foregroundColor: Colors.white,
         title: Text(displayName),
       ),
-      floatingActionButton: _effectiveRenterId != null &&
-              Authorization.isLoggedIn &&
-              Authorization.userId != _effectiveRenterId
-          ? FloatingActionButton.extended(
-              backgroundColor: _kPrimary,
-              foregroundColor: Colors.white,
-              onPressed: _showRatingDialog,
-              icon: const Icon(Icons.star_outline_rounded),
-              label: const Text('Ocijeni'),
-            )
-          : null,
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(12),
         child: Column(
@@ -482,16 +344,18 @@ class _RenterProfileScreenState extends State<RenterProfileScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Avatar
-          CircleAvatar(
-            radius: 18,
-            backgroundColor: _kPrimary.withOpacity(0.12),
-            child: Text(
-              reviewerName.isNotEmpty ? reviewerName[0].toUpperCase() : '?',
-              style: const TextStyle(
-                  color: _kPrimary,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14),
+          GestureDetector(
+            onTap: () => _showReviewerInfo(r, reviewerName),
+            child: CircleAvatar(
+              radius: 18,
+              backgroundColor: _kPrimary.withOpacity(0.12),
+              child: Text(
+                reviewerName.isNotEmpty ? reviewerName[0].toUpperCase() : '?',
+                style: const TextStyle(
+                    color: _kPrimary,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14),
+              ),
             ),
           ),
           const SizedBox(width: 10),
@@ -501,9 +365,16 @@ class _RenterProfileScreenState extends State<RenterProfileScreen> {
               children: [
                 Row(
                   children: [
-                    Text(reviewerName,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w600, fontSize: 13)),
+                    GestureDetector(
+                      onTap: () => _showReviewerInfo(r, reviewerName),
+                      child: Text(reviewerName,
+                          style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                              color: _kPrimary,
+                              decoration: TextDecoration.underline,
+                              decorationColor: _kPrimary)),
+                    ),
                     const Spacer(),
                     Text(date,
                         style: TextStyle(

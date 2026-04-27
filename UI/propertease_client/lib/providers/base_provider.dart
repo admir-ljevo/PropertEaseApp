@@ -7,6 +7,7 @@ import 'package:http/io_client.dart';
 
 import '../config/app_config.dart';
 import '../models/search_result.dart';
+import '../utils/app_navigator.dart';
 import '../utils/authorization.dart';
 
 abstract class BaseProvider<T> with ChangeNotifier {
@@ -117,7 +118,11 @@ abstract class BaseProvider<T> with ChangeNotifier {
 
   bool isValidResponse(Response response) {
     if (response.statusCode < 300) return true;
-    if (response.statusCode == 401) throw Exception('Unauthorized');
+    if (response.statusCode == 401) {
+      Authorization.clear();
+      onUnauthorized?.call();
+      throw Exception('Sesija je istekla. Prijavite se ponovo.');
+    }
     if (response.statusCode == 403) throw Exception('Forbidden');
     throw Exception('HTTP ${response.statusCode}: ${response.body}');
   }

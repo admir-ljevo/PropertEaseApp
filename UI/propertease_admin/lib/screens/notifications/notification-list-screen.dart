@@ -213,6 +213,7 @@ class NewsListWidgetState extends State<NewsListWidget> {
                   builder: (_) =>
                       NotificationDetailScreen(notification: news[index])))
               .then((_) => _fetchData()),
+          onDeleted: _fetchData,
         ),
       ),
     );
@@ -262,7 +263,8 @@ class NewsListWidgetState extends State<NewsListWidget> {
 class _NewsCard extends StatefulWidget {
   final New item;
   final VoidCallback onTap;
-  const _NewsCard({required this.item, required this.onTap});
+  final VoidCallback onDeleted;
+  const _NewsCard({required this.item, required this.onTap, required this.onDeleted});
 
   @override
   State<_NewsCard> createState() => _NewsCardState();
@@ -270,6 +272,38 @@ class _NewsCard extends StatefulWidget {
 
 class _NewsCardState extends State<_NewsCard> {
   bool _hovered = false;
+
+  Future<void> _confirmDelete(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final provider = context.read<NotificationProvider>();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Obriši vijest'),
+        content: Text('Da li ste sigurni da želite obrisati "${widget.item.name}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Odustani'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Obriši'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      await provider.deleteNews(widget.item.id!);
+      widget.onDeleted();
+    } catch (e) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('Greška pri brisanju: $e'), backgroundColor: Colors.red),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -371,9 +405,21 @@ class _NewsCardState extends State<_NewsCard> {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.only(right: 16),
-                child: Icon(Icons.chevron_right,
-                    color: _hovered ? _kPrimary : Colors.grey.shade300),
+                padding: const EdgeInsets.only(right: 8),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.chevron_right,
+                        color: _hovered ? _kPrimary : Colors.grey.shade300),
+                    if (Authorization.isAdmin)
+                      IconButton(
+                        icon: const Icon(Icons.delete_outline, size: 20),
+                        color: Colors.red.shade300,
+                        tooltip: 'Obriši vijest',
+                        onPressed: () => _confirmDelete(context),
+                      ),
+                  ],
+                ),
               ),
             ],
           ),

@@ -4,7 +4,7 @@ services:
 
   # ─────────────────────── SQL SERVER ───────────────────────
   sqlserver:
-    image: mcr.microsoft.com/mssql/server:2022-latest
+    image: mcr.microsoft.com/mssql/server:2022-CU14-ubuntu-22.04
     container_name: propertease-sqlserver
     environment:
       ACCEPT_EULA: "Y"
@@ -24,7 +24,7 @@ services:
 
   # ─────────────────────── RABBITMQ ─────────────────────────
   rabbitmq:
-    image: rabbitmq:3.12-management
+    image: rabbitmq:3.12.13-management
     container_name: propertease-rabbitmq
     environment:
       RABBITMQ_DEFAULT_USER: "${RABBITMQ_USER:-guest}"
@@ -39,8 +39,8 @@ services:
     healthcheck:
       test: rabbitmq-diagnostics -q ping
       interval: 10s
-      retries: 10
-      start_period: 20s
+      retries: 15
+      start_period: 30s
 
   # ─────────────────────── MAIN API ─────────────────────────
   api:
@@ -51,7 +51,7 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: "Production"
       ASPNETCORE_URLS: "http://+:80"
-      ConnectionStrings__DefaultConnection: "Server=sqlserver;Database=PropertEaseDb;User Id=sa;Password=${SA_PASSWORD:-PropertEase_Dev#2024};TrustServerCertificate=True;MultipleActiveResultSets=true"
+      ConnectionStrings__DefaultConnection: "Server=sqlserver;Database=190049;User Id=sa;Password=${SA_PASSWORD:-PropertEase_Dev#2024};TrustServerCertificate=True;MultipleActiveResultSets=true"
       JWTConfig__TokenKey: "${JWT_TOKEN_KEY:-change-this-in-production-must-be-32-chars}"
       JWTConfig__TokenValidityInMinutes: "120"
       RabbitMQ__Host: "rabbitmq"
@@ -61,6 +61,17 @@ services:
       RabbitMQ__Exchange: "propertease.exchange"
       Uploads__DirectoryPath: "uploads/images"
       ApiBaseUrl: "http://api:80"
+      PayPal__ClientId: "${PayPal__ClientId}"
+      PayPal__Secret: "${PayPal__Secret}"
+      PayPal__Mode: "${PayPal__Mode:-sandbox}"
+      Smtp__Host: "${SMTP_HOST:-smtp.gmail.com}"
+      Smtp__Port: "${SMTP_PORT:-587}"
+      Smtp__Username: "${SMTP_USERNAME}"
+      Smtp__Password: "${SMTP_PASSWORD}"
+      Smtp__FromName: "PropertEase"
+      Logging__LogLevel__Default: "Information"
+      Logging__LogLevel__Microsoft.AspNetCore: "Warning"
+      Logging__LogLevel__Microsoft.EntityFrameworkCore.Database.Command: "Warning"
     ports:
       - "5000:80"
     depends_on:
@@ -73,6 +84,11 @@ services:
     networks:
       - propertease-net
     restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
 
   # ─────────────────────── WORKER SERVICE ───────────────────
   worker:
@@ -82,7 +98,7 @@ services:
     container_name: propertease-worker
     environment:
       DOTNET_ENVIRONMENT: "Production"
-      ConnectionStrings__DefaultConnection: "Server=sqlserver;Database=PropertEaseDb;User Id=sa;Password=${SA_PASSWORD:-PropertEase_Dev#2024};TrustServerCertificate=True;MultipleActiveResultSets=true"
+      ConnectionStrings__DefaultConnection: "Server=sqlserver;Database=190049;User Id=sa;Password=${SA_PASSWORD:-PropertEase_Dev#2024};TrustServerCertificate=True;MultipleActiveResultSets=true"
       RabbitMQ__Host: "rabbitmq"
       RabbitMQ__Port: "5672"
       RabbitMQ__Username: "${RABBITMQ_USER:-guest}"
@@ -92,6 +108,7 @@ services:
       Smtp__Username: "${SMTP_USERNAME}"
       Smtp__Password: "${SMTP_PASSWORD}"
       Smtp__FromName: "PropertEase"
+      Logging__LogLevel__Default: "Information"
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -100,6 +117,11 @@ services:
     networks:
       - propertease-net
     restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
 
 volumes:
   sqlserver_data:

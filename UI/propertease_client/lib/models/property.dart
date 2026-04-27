@@ -50,6 +50,7 @@ class Property {
   bool? isAvailable;
   DateTime? availableFrom;
   String? firstPhotoUrl;
+  String? reason;
   PropertyType? propertyType;
   ApplicationUser? applicationUser;
   City? city;

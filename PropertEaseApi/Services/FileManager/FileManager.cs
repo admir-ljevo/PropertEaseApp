@@ -1,4 +1,5 @@
-﻿
+﻿using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Processing;
 
 namespace PropertEase.Services.FileManager
 {
@@ -6,6 +7,16 @@ namespace PropertEase.Services.FileManager
     {
         private readonly IConfiguration _configuration;
         private readonly IWebHostEnvironment _webHostEnvironment;
+
+        private static readonly HashSet<string> AllowedMimeTypes = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp", "image/bmp"
+        };
+
+        private static readonly HashSet<string> AllowedExtensions = new(StringComparer.OrdinalIgnoreCase)
+        {
+            ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"
+        };
 
         public FileManager(IConfiguration configuration, IWebHostEnvironment webHostEnvironment)
         {
@@ -17,8 +28,16 @@ namespace PropertEase.Services.FileManager
         {
             return "https://localhost:44340//uploads/" + path;
         }
+
         public async Task<string> UploadFile(IFormFile file)
         {
+            if (!AllowedMimeTypes.Contains(file.ContentType))
+                throw new InvalidOperationException($"Tip fajla '{file.ContentType}' nije dozvoljen. Dozvoljeni su samo formati slika.");
+
+            var ext = Path.GetExtension(file.FileName);
+            if (!AllowedExtensions.Contains(ext))
+                throw new InvalidOperationException($"Ekstenzija '{ext}' nije dozvoljena.");
+
             var filePath = GetFilePath(file);
             await using (var fileStream = new FileStream(filePath, FileMode.Create))
             {

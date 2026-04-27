@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using PropertEase.Core.Dto.Photo;
@@ -6,7 +7,10 @@ using PropertEase.Core.SearchObjects;
 using PropertEase.Services.FileManager;
 using PropertEase.Services.Services.BaseService;
 using PropertEase.Services.Services.PhotoService;
+using PropertEase.Services.Services.PropertyService;
+using PropertEase.Shared.Constants;
 using Swashbuckle.AspNetCore.Annotations;
+using System.Security.Claims;
 
 namespace PropertEase.Controllers
 {
@@ -15,24 +19,61 @@ namespace PropertEase.Controllers
     {
         private readonly IPhotoService photoService;
         private readonly IFileManager fileManager;
+        private readonly IPropertyService _propertyService;
         private readonly IMapper mapper;
-        public PhotoController(IPhotoService baseService, IMapper mapper, IFileManager fileManager) : base(baseService, mapper)
+
+        public PhotoController(IPhotoService baseService, IMapper mapper, IFileManager fileManager, IPropertyService propertyService) : base(baseService, mapper)
         {
             photoService = baseService;
-            this.mapper= mapper;
+            this.mapper = mapper;
             this.fileManager = fileManager;
+            _propertyService = propertyService;
         }
-        [HttpPost("Add")]
-        public async Task<PhotoDto> Add([FromForm] PhotoUpsertDto photoDto)
-        {
-            var file = photoDto.File;
 
+        [Authorize]
+        [HttpPost("Add")]
+        public async Task<IActionResult> Add([FromForm] PhotoUpsertDto photoDto)
+        {
+            var callerId = int.TryParse(User.FindFirstValue("Id"), out var parsed) ? parsed : 0;
+            var isAdmin = User.IsInRole(AppRoles.Admin);
+
+            if (!isAdmin && photoDto.PropertyId.HasValue)
+            {
+                var property = await _propertyService.GetByIdAsync(photoDto.PropertyId.Value);
+                if (property == null || property.ApplicationUserId != callerId)
+                    return Forbid();
+            }
+
+            var file = photoDto.File;
             if (file != null)
                 photoDto.Url = await fileManager.UploadFile(file);
 
-            return await photoService.AddAsync(mapper.Map<PhotoDto>(photoDto));
+            return Ok(await photoService.AddAsync(mapper.Map<PhotoDto>(photoDto)));
         }
 
+
+        [Authorize]
+        [HttpDelete("{id:int}")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var callerId = int.TryParse(User.FindFirstValue("Id"), out var parsed) ? parsed : 0;
+            var isAdmin = User.IsInRole(AppRoles.Admin);
+
+            if (!isAdmin)
+            {
+                var photo = await photoService.GetByIdAsync(id);
+                if (photo == null) return NotFound();
+                if (photo.PropertyId.HasValue)
+                {
+                    var property = await _propertyService.GetByIdAsync(photo.PropertyId.Value);
+                    if (property == null || property.ApplicationUserId != callerId)
+                        return Forbid();
+                }
+            }
+
+            await photoService.RemoveByIdAsync(id);
+            return Ok();
+        }
 
         [HttpGet("propertyId/{id}")]
         public async Task<List<PhotoDto>> GetPhotosByProperty(int id)

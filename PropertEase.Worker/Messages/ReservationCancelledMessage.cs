@@ -11,12 +11,12 @@ public class ReservationCancelledMessage : BaseMessage
     public decimal TotalPrice { get; set; }
     public string? PropertyPhotoUrl { get; set; }
 
-    // Client
+    public string ActorFullName { get; set; } = string.Empty;
+
     public int ClientUserId { get; set; }
     public string ClientEmail { get; set; } = string.Empty;
     public string ClientFullName { get; set; } = string.Empty;
 
-    // Renter
     public int? RenterUserId { get; set; }
     public string RenterEmail { get; set; } = string.Empty;
     public string RenterFullName { get; set; } = string.Empty;

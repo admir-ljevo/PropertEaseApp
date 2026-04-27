@@ -17,15 +17,16 @@ namespace PropertEase.Infrastructure.Repositories.ReservationNotificationReposit
         {
             var entity = new ReservationNotification
             {
-                UserId = dto.UserId,
-                ReservationId = dto.ReservationId,
-                Message = dto.Message,
-                IsSeen = false,
+                UserId           = dto.UserId,
+                ReservationId    = dto.ReservationId,
+                Title            = dto.Title,
+                Message          = dto.Message,
+                IsSeen           = false,
                 ReservationNumber = dto.ReservationNumber,
-                PropertyName = dto.PropertyName,
+                PropertyName     = dto.PropertyName,
                 PropertyPhotoUrl = dto.PropertyPhotoUrl,
-                CreatedAt = DateTime.Now,
-                IsDeleted = false
+                CreatedAt        = DateTime.UtcNow,
+                IsDeleted        = false
             };
             _db.ReservationNotifications.Add(entity);
             await _db.SaveChangesAsync();
@@ -40,15 +41,16 @@ namespace PropertEase.Infrastructure.Repositories.ReservationNotificationReposit
                 .Take(pageSize)
                 .Select(n => new ReservationNotificationDto
                 {
-                    Id = n.Id,
-                    UserId = n.UserId,
-                    ReservationId = n.ReservationId,
-                    Message = n.Message,
-                    IsSeen = n.IsSeen,
+                    Id               = n.Id,
+                    UserId           = n.UserId,
+                    ReservationId    = n.ReservationId,
+                    Title            = n.Title,
+                    Message          = n.Message,
+                    IsSeen           = n.IsSeen,
                     ReservationNumber = n.ReservationNumber,
-                    PropertyName = n.PropertyName,
+                    PropertyName     = n.PropertyName,
                     PropertyPhotoUrl = n.PropertyPhotoUrl,
-                    CreatedAt = n.CreatedAt
+                    CreatedAt        = n.CreatedAt
                 })
                 .ToListAsync();
         }
@@ -63,6 +65,13 @@ namespace PropertEase.Infrastructure.Repositories.ReservationNotificationReposit
         {
             await _db.ReservationNotifications
                 .Where(n => n.UserId == userId && !n.IsSeen && !n.IsDeleted)
+                .ExecuteUpdateAsync(s => s.SetProperty(n => n.IsSeen, true));
+        }
+
+        public async Task MarkSeenAsync(int notificationId)
+        {
+            await _db.ReservationNotifications
+                .Where(n => n.Id == notificationId && !n.IsDeleted)
                 .ExecuteUpdateAsync(s => s.SetProperty(n => n.IsSeen, true));
         }
     }

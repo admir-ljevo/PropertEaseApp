@@ -6,11 +6,11 @@ import 'package:intl/intl.dart';
 
 import 'package:provider/provider.dart';
 
-import '../../models/application_user.dart';
-import '../../models/city.dart';
-import '../../models/person.dart';
-import '../../providers/application_user_provider.dart';
-import '../../widgets/country_city_selector.dart';
+import 'package:propertease_client/models/application_user.dart';
+import 'package:propertease_client/models/city.dart';
+import 'package:propertease_client/models/person.dart';
+import 'package:propertease_client/providers/application_user_provider.dart';
+import 'package:propertease_client/widgets/country_city_selector.dart';
 
 
 class ClientAddScreen extends StatefulWidget {

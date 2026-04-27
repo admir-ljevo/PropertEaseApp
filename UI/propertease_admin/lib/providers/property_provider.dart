@@ -6,51 +6,14 @@ import 'package:propertease_admin/providers/base_provider.dart';
 
 import '../models/property.dart';
 
-class UpcomingReservationsException implements Exception {
-  final int count;
-  UpcomingReservationsException(this.count);
-}
-
 class PropertyProvider extends BaseProvider<Property> {
-  PropertyProvider() : super("Property") {}
+  PropertyProvider() : super("Property");
 
   @override
-  Property fromJson(data) {
-    return Property.fromJson(data);
-  }
+  Property fromJson(data) => Property.fromJson(data);
 
   @override
-  Map<String, dynamic> toJson(Property data) {
-    return data.toJson();
-  }
-
-  /// Returns 0 on success, or the upcoming reservation count on 409.
-  @override
-  Future<void> deleteById(int? id) async {
-    final baseUrl = AppConfig.apiBase;
-    final response = await http.delete(
-      Uri.parse('${baseUrl}Property/$id'),
-      headers: createHeaders(),
-    );
-    if (response.statusCode == 200) return;
-    if (response.statusCode == 409) {
-      final body = jsonDecode(response.body) as Map<String, dynamic>;
-      final count = (body['upcomingCount'] as int?) ?? 0;
-      throw UpcomingReservationsException(count);
-    }
-    throw Exception('Failed to delete property. Status: ${response.statusCode}');
-  }
-
-  Future<void> forceDeleteById(int id) async {
-    final baseUrl = AppConfig.apiBase;
-    final response = await http.delete(
-      Uri.parse('${baseUrl}Property/$id/force'),
-      headers: createHeaders(),
-    );
-    if (response.statusCode != 200) {
-      throw Exception('Force delete failed. Status: ${response.statusCode}');
-    }
-  }
+  Map<String, dynamic> toJson(Property data) => data.toJson();
 
   Future<List<Property>> getRecommendations(int propertyId) async {
     final baseUrl = AppConfig.apiBase;

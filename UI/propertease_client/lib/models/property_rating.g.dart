@@ -22,6 +22,7 @@ PropertyRating _$PropertyRatingFromJson(Map<String, dynamic> json) =>
       reviewerName: json['reviewerName'] as String?,
       rating: (json['rating'] as num?)?.toDouble(),
       description: json['description'] as String?,
+      reservationId: json['reservationId'] as int?,
     )
       ..property = json['property'] == null
           ? null
@@ -44,4 +45,5 @@ Map<String, dynamic> _$PropertyRatingToJson(PropertyRating instance) =>
       'reviewerName': instance.reviewerName,
       'rating': instance.rating,
       'description': instance.description,
+      'reservationId': instance.reservationId,
     };

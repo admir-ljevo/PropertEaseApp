@@ -1,6 +1,8 @@
 ﻿using AutoMapper;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PropertEase.Core.Dto.Notification;
+using PropertEase.Shared.Constants;
 using PropertEase.Core.Filters;
 using PropertEase.Core.SearchObjects;
 using PropertEase.Services.FileManager;
@@ -26,6 +28,7 @@ namespace PropertEase.Controllers
             this.fileManager = fileManager;
         }
 
+        [Authorize(Roles = AppRoles.Admin)]
         [HttpPost("Add")]
         public async Task<NotificationDto> Add([FromForm] NotificationUpsertDto notification)
         {
@@ -41,21 +44,26 @@ namespace PropertEase.Controllers
             return await notificationService.AddAsync(mapper.Map<NotificationDto>(notification));
         }
 
+        [Authorize(Roles = AppRoles.Admin)]
         [HttpPut("Edit/{id}")]
-        public async Task<NotificationDto> Edit([FromForm] NotificationUpsertDto notification)
+        public async Task<NotificationDto> Edit(int id, [FromForm] NotificationUpsertDto notification)
         {
-            byte[] imageBytes = null;
+            var existing = await notificationService.GetByIdAsync(id);
+            if (existing == null)
+                throw new KeyNotFoundException($"Notification {id} not found.");
+
+            existing.Name = notification.Name;
+            existing.Text = notification.Text;
 
             var file = notification.File;
             if (file != null)
             {
-                notification.Image = await fileManager.UploadFile(file);
-                imageBytes = await fileManager.UploadFileAsBase64String(file);
+                existing.Image = await fileManager.UploadFile(file);
+                existing.ImageBytes = await fileManager.UploadFileAsBase64String(file);
             }
-            notification.ImageBytes = imageBytes;
+            // When no new file: existing.Image, existing.ImageBytes, and existing.CreatedAt are preserved.
 
-            return await notificationService.UpdateAsync(mapper.Map<NotificationDto>(notification));
-
+            return await notificationService.UpdateAsync(existing);
         }
         [HttpGet("GetFilteredData")]
         [SwaggerOperation(OperationId = "GetFilteredData")]

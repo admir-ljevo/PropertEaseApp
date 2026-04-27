@@ -73,6 +73,48 @@ class PropertyReservationProvider extends BaseProvider<PropertyReservation> {
         'createdAt': data.createdAt?.toIso8601String(),
       };
 
+  Future<void> confirmReservation(int id) async {
+    final url = Uri.parse('${AppConfig.apiBase}PropertyReservation/$id/confirm');
+    final response = await http.post(url, headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ${Authorization.token}',
+    });
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      throw Exception('Potvrda neuspješna: ${response.statusCode} ${response.body}');
+    }
+  }
+
+  Future<void> cancelReservation(PropertyReservation r, {String? reason}) async {
+    final url = Uri.parse('${AppConfig.apiBase}PropertyReservation/${r.id}');
+    final body = jsonEncode({
+      'id': r.id,
+      'propertyId': r.propertyId,
+      'reservationNumber': r.reservationNumber ?? '',
+      'description': r.description,
+      'renterId': r.renterId ?? 0,
+      'clientId': r.clientId ?? 0,
+      'numberOfGuests': r.numberOfGuests ?? 1,
+      'dateOfOccupancyStart': r.dateOfOccupancyStart?.toIso8601String(),
+      'dateOfOccupancyEnd': r.dateOfOccupancyEnd?.toIso8601String(),
+      'numberOfDays': r.numberOfDays ?? 0,
+      'numberOfMonths': r.numberOfMonths ?? 0,
+      'totalPrice': r.totalPrice ?? 0,
+      'isMonthly': r.isMonthly ?? false,
+      'isDaily': r.isDaily ?? false,
+      'status': 3,
+      'cancellationReason': reason ?? 'Odbijeno od strane iznajmljivača',
+    });
+    final response = await http.put(url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${Authorization.token}',
+        },
+        body: body);
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      throw Exception('Otkazivanje neuspješno: ${response.statusCode} ${response.body}');
+    }
+  }
+
   Future<SummaryPage> getClientSummaries(int clientId,
       {int page = 1, int pageSize = 10}) =>
       _fetchSummaries('client/$clientId/summary', page, pageSize);

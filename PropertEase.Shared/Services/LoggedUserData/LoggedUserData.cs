@@ -17,7 +17,7 @@ namespace PropertEase.Shared.Services.LoggedUserData
             if (claimsPrincipal == null || claimsPrincipal.Claims.IsEmpty())
                 return null;
 
-            var id = int.Parse(claimsPrincipal.FindFirstValue(ClaimTypes.Sid));
+            var id = int.Parse(claimsPrincipal.FindFirstValue("Id"));
             var username = claimsPrincipal.FindFirstValue(ClaimTypes.NameIdentifier);
             var firstName = claimsPrincipal.FindFirstValue(ClaimTypes.Name);
             var lastName = claimsPrincipal.FindFirstValue(ClaimTypes.Surname);

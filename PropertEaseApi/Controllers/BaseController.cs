@@ -22,9 +22,13 @@ namespace PropertEase.Controllers
         }
 
         [HttpGet]
-        public virtual async Task<List<dtoEntity>> Get()
+        public virtual async Task<List<dtoEntity>> Get([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
         {
-            return await BaseService.GetAllAsync();
+            pageSize = Paging.Clamp(pageSize);
+            if (BaseService is IPaginationBaseService<dtoEntity> paginated)
+                return await paginated.GetForPaginationAsync(null, pageSize, (page - 1) * pageSize);
+            var all = await BaseService.GetAllAsync();
+            return all.Skip((page - 1) * pageSize).Take(pageSize).ToList();
         }
 
         [HttpGet("{id:int}")]
@@ -39,19 +43,21 @@ namespace PropertEase.Controllers
             return await ((IPaginationBaseService<dtoEntity>)BaseService).GetForPaginationAsync(search as BaseSearchObject, pageSize, (page - 1) * pageSize);
         }
 
+        [Authorize]
         [HttpPost]
         public virtual async Task<dtoEntity> Post(dtoInsertEntity insertEntity)
         {
-
             return await BaseService.AddAsync(Mapper.Map<dtoEntity>(insertEntity));
         }
 
+        [Authorize]
         [HttpPut("{id}")]
         public virtual async Task<dtoEntity> Put(int id, dtoUpdateEntity updateEntity)
         {
             return await BaseService.UpdateAsync(Mapper.Map<dtoEntity>(updateEntity));
         }
 
+        [Authorize]
         [HttpDelete("{id}")]
         public virtual async Task<IActionResult> Delete(int id)
         {

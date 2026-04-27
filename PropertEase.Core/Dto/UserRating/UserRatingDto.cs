@@ -11,5 +11,6 @@ namespace PropertEase.Core.Dto.UserRating
         public string ReviewerName { get; set; } = string.Empty;
         public double Rating { get; set; }
         public string? Description { get; set; }
+        public int? ReservationId { get; set; }
     }
 }

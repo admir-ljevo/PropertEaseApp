@@ -1,6 +1,8 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:signalr_core/signalr_core.dart';
+import 'package:propertease_client/config/app_config.dart';
 import 'package:propertease_client/screens/conversations/conversations_list_screen.dart';
 import 'package:propertease_client/screens/notifications/notification_list.dart';
 import 'package:propertease_client/screens/notifications/reservation_notification_list_screen.dart';
@@ -40,6 +42,7 @@ class _MasterScreenWidgetState extends State<MasterScreenWidget> {
   ApplicationUser? _user;
   int _unreadCount = 0;
   int _unseenNotifCount = 0;
+  HubConnection? _hub;
 
   static const _kPrimary = Color(0xFF115892);
 
@@ -49,6 +52,33 @@ class _MasterScreenWidgetState extends State<MasterScreenWidget> {
     _loadUser();
     _fetchUnreadCount();
     _fetchUnseenNotifCount();
+    _connectSignalR();
+  }
+
+  @override
+  void dispose() {
+    _hub?.stop();
+    super.dispose();
+  }
+
+  void _connectSignalR() async {
+    final token = Authorization.token;
+    if (token == null) return;
+    try {
+      _hub = HubConnectionBuilder()
+          .withUrl(
+            '${AppConfig.serverBase}/hubs/messageHub',
+            HttpConnectionOptions(
+              accessTokenFactory: () async => token,
+              logging: (level, message) {},
+            ),
+          )
+          .withAutomaticReconnect()
+          .build();
+      _hub!.on('newMessage', (_) => _fetchUnreadCount());
+      _hub!.on('NewNotification', (_) => _fetchUnseenNotifCount());
+      await _hub!.start();
+    } catch (_) {}
   }
 
   Future<void> _fetchUnreadCount() async {
@@ -205,35 +235,34 @@ class _MasterScreenWidgetState extends State<MasterScreenWidget> {
         ],
       ),
       body: widget.child ?? const SizedBox.shrink(),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: widget.currentIndex,
-        onTap: _onTabTapped,
-        selectedItemColor: _kPrimary,
-        unselectedItemColor: Colors.grey,
-        type: BottomNavigationBarType.fixed,
-        items: [
-          const BottomNavigationBarItem(
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: widget.currentIndex,
+        onDestinationSelected: _onTabTapped,
+        height: 72,
+        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+        destinations: [
+          const NavigationDestination(
             icon: Icon(Icons.home_outlined),
-            activeIcon: Icon(Icons.home),
+            selectedIcon: Icon(Icons.home),
             label: 'Nekretnine',
           ),
-          const BottomNavigationBarItem(
+          const NavigationDestination(
             icon: Icon(Icons.calendar_month_outlined),
-            activeIcon: Icon(Icons.calendar_month),
+            selectedIcon: Icon(Icons.calendar_month),
             label: 'Rezervacije',
           ),
-          const BottomNavigationBarItem(
+          const NavigationDestination(
             icon: Icon(Icons.newspaper_outlined),
-            activeIcon: Icon(Icons.newspaper),
+            selectedIcon: Icon(Icons.newspaper),
             label: 'Vijesti',
           ),
-          BottomNavigationBarItem(
+          NavigationDestination(
             icon: Badge(
               isLabelVisible: (widget.inboxUnreadCount ?? _unreadCount) > 0,
               label: Text('${widget.inboxUnreadCount ?? _unreadCount}'),
               child: const Icon(Icons.inbox_outlined),
             ),
-            activeIcon: Badge(
+            selectedIcon: Badge(
               isLabelVisible: (widget.inboxUnreadCount ?? _unreadCount) > 0,
               label: Text('${widget.inboxUnreadCount ?? _unreadCount}'),
               child: const Icon(Icons.inbox),

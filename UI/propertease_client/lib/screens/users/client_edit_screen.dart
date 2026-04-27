@@ -7,10 +7,10 @@ import 'package:intl/intl.dart';
 import 'package:propertease_client/screens/users/change_password_screen.dart';
 import 'package:provider/provider.dart';
 
-import '../../models/application_user.dart';
-import '../../models/city.dart';
-import '../../providers/application_user_provider.dart';
-import '../../widgets/country_city_selector.dart';
+import 'package:propertease_client/models/application_user.dart';
+import 'package:propertease_client/models/city.dart';
+import 'package:propertease_client/providers/application_user_provider.dart';
+import 'package:propertease_client/widgets/country_city_selector.dart';
 
 class UserEditScreen extends StatefulWidget {
   final ApplicationUser? user;

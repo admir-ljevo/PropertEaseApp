@@ -7,6 +7,7 @@ import 'package:propertease_admin/providers/property_type_provider.dart';
 import 'package:propertease_admin/utils/authorization.dart';
 import 'package:propertease_admin/screens/reservation/reservation_detail_screen.dart';
 import 'package:propertease_admin/utils/debounce.dart';
+import 'package:propertease_admin/utils/reservation_status.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/property_type.dart';
@@ -37,7 +38,7 @@ class ReservationListWidgetState extends State<ReservationListWidget> {
   int? _propertyTypeId;
   DateTime? _selectedDateStart;
   DateTime? _selectedDateEnd;
-  bool? _isAvailable;
+  int? _statusFilter;
   PropertyType? _selectedPropertyType;
 
   bool _isLoading = false;
@@ -96,7 +97,7 @@ class ReservationListWidgetState extends State<ReservationListWidget> {
         'dateOccupancyEnded': _formattedEndDate,
         'totalPriceFrom': minPrice,
         'totalPriceTo': maxPrice,
-        'isActive': _isAvailable,
+        if (_statusFilter != null) 'status': _statusFilter,
         'page': _currentPage,
         'pageSize': _pageSize,
         if (Authorization.roleId == 2) 'renterId': Authorization.userId,
@@ -156,10 +157,10 @@ class ReservationListWidgetState extends State<ReservationListWidget> {
           backgroundColor: Colors.green,
         ),
       );
-    } catch (error) {
+    } catch (e) {
       messenger.showSnackBar(
         SnackBar(
-          content: Text('Error deleting reservation: $error'),
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
           backgroundColor: Colors.red,
         ),
       );
@@ -174,7 +175,7 @@ class ReservationListWidgetState extends State<ReservationListWidget> {
         children: [
           _buildHeader(),
           _buildSearch(context),
-          const Divider(thickness: 2, color: Colors.blue),
+          const Divider(height: 1),
           Expanded(child: _buildDataListView()),
         ],
       ),
@@ -182,26 +183,35 @@ class ReservationListWidgetState extends State<ReservationListWidget> {
   }
 
   Widget _buildHeader() {
-    return const Column(
-      children: [
-        Row(
-          children: [
-            SizedBox(width: 100),
-            Text(
-              'Reservation list view',
-              style: TextStyle(
-                fontSize: 30,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF115892),
-              ),
-            ),
-            Spacer(),
-            Icon(Icons.calendar_month, size: 80, color: Color(0xFF115892)),
-            SizedBox(width: 100),
-          ],
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF1565C0), Color(0xFF1976D2)],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
         ),
-        Divider(thickness: 2, color: Colors.blue),
-      ],
+      ),
+      child: const Row(
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Rezervacije',
+                  style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white)),
+              SizedBox(height: 2),
+              Text('Lista i upravljanje rezervacijama',
+                  style: TextStyle(fontSize: 13, color: Colors.white70)),
+            ],
+          ),
+          Spacer(),
+          Icon(Icons.calendar_month, size: 36, color: Colors.white54),
+        ],
+      ),
     );
   }
 
@@ -285,18 +295,18 @@ class ReservationListWidgetState extends State<ReservationListWidget> {
           ),
           const SizedBox(width: 16),
           Expanded(
-            child: DropdownButtonFormField<bool?>(
-              value: _isAvailable,
-              onChanged: (bool? newValue) {
-                setState(() => _isAvailable = newValue);
+            child: DropdownButtonFormField<int?>(
+              value: _statusFilter,
+              onChanged: (int? newValue) {
+                setState(() => _statusFilter = newValue);
                 _fetchReservations();
               },
               items: const [
-                DropdownMenuItem<bool?>(value: null, child: Text('All')),
-                DropdownMenuItem<bool?>(
-                    value: false, child: Text('Available')),
-                DropdownMenuItem<bool?>(
-                    value: true, child: Text('Occupied')),
+                DropdownMenuItem<int?>(value: null, child: Text('All statuses')),
+                DropdownMenuItem<int?>(value: 0, child: Text('Na čekanju')),
+                DropdownMenuItem<int?>(value: 1, child: Text('Potvrđena')),
+                DropdownMenuItem<int?>(value: 2, child: Text('Završena')),
+                DropdownMenuItem<int?>(value: 3, child: Text('Otkazana')),
               ],
               decoration: const InputDecoration(labelText: 'Status'),
             ),
@@ -306,7 +316,7 @@ class ReservationListWidgetState extends State<ReservationListWidget> {
             onPressed: () {
               setState(() {
                 _selectedPropertyType = null;
-                _isAvailable = null;
+                _statusFilter = null;
                 _propertyTypeId = null;
                 _selectedDateStart = null;
                 _selectedDateEnd = null;
@@ -357,11 +367,23 @@ class ReservationListWidgetState extends State<ReservationListWidget> {
     return Column(
       children: [
         Expanded(
-          child: SingleChildScrollView(
-            scrollDirection: Axis.vertical,
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: DataTable(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Card(
+              elevation: 0,
+              color: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(color: Colors.grey.shade200),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.vertical,
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: DataTable(
+          headingRowColor: WidgetStateProperty.all(const Color(0xFFE8EAF6)),
           columns: const [
             DataColumn(
               label: Expanded(
@@ -413,7 +435,6 @@ class ReservationListWidgetState extends State<ReservationListWidget> {
             ),
           ],
           rows: rows.map((PropertyReservation e) {
-            final statusLabel = e.isActive == true ? 'Occupied' : 'Available';
             return DataRow(cells: [
               DataCell(Text(e.property?.name ?? '/')),
               DataCell(Text(e.property?.propertyType?.name ?? '/')),
@@ -423,7 +444,7 @@ class ReservationListWidgetState extends State<ReservationListWidget> {
               DataCell(Text(DateFormat('dd-MM-yyyy')
                   .format(e.dateOfOccupancyEnd ?? DateTime.now()))),
               DataCell(Text(e.totalPrice?.toString() ?? '0')),
-              DataCell(Text(statusLabel)),
+              DataCell(ReservationStatus.chip(e.status)),
               DataCell(Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -458,46 +479,51 @@ class ReservationListWidgetState extends State<ReservationListWidget> {
                       child: const Icon(Icons.edit, color: Colors.blue),
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Tooltip(
-                    message: 'Obriši',
-                    child: InkWell(
-                      onTap: () {
-                        showDialog(
-                          context: context,
-                          builder: (BuildContext ctx) {
-                            return AlertDialog(
-                              title: const Text('Potvrdi brisanje'),
-                              content: const Text(
-                                  'Da li ste sigurni da želite obrisati ovu rezervaciju?'),
-                              actions: [
-                                TextButton(
-                                  child: const Text('Odustani'),
-                                  onPressed: () => Navigator.of(ctx).pop(),
-                                ),
-                                TextButton(
-                                  style: TextButton.styleFrom(
-                                      foregroundColor: Colors.red),
-                                  child: const Text('Obriši'),
-                                  onPressed: () =>
-                                      _handleDeleteReservation(e.id),
-                                ),
-                              ],
-                            );
-                          },
-                        );
-                      },
-                      child: const Icon(Icons.delete_outline, color: Colors.red),
+                  if (e.status == ReservationStatus.completed || e.status == ReservationStatus.cancelled) ...[
+                    const SizedBox(width: 8),
+                    Tooltip(
+                      message: 'Obriši',
+                      child: InkWell(
+                        onTap: () {
+                          showDialog(
+                            context: context,
+                            builder: (BuildContext ctx) {
+                              return AlertDialog(
+                                title: const Text('Potvrdi brisanje'),
+                                content: const Text(
+                                    'Da li ste sigurni da želite obrisati ovu rezervaciju?'),
+                                actions: [
+                                  TextButton(
+                                    child: const Text('Odustani'),
+                                    onPressed: () => Navigator.of(ctx).pop(),
+                                  ),
+                                  TextButton(
+                                    style: TextButton.styleFrom(
+                                        foregroundColor: Colors.red),
+                                    child: const Text('Obriši'),
+                                    onPressed: () =>
+                                        _handleDeleteReservation(e.id),
+                                  ),
+                                ],
+                              );
+                            },
+                          );
+                        },
+                        child: const Icon(Icons.delete_outline, color: Colors.red),
+                      ),
                     ),
-                  ),
+                  ],
                 ],
               )),
             ]);
           }).toList(),
-        ),
-      ),
-    ),
-        ),  // Expanded
+                    ),    // DataTable
+                  ),      // horizontal scroll
+                ),        // vertical scroll
+              ),          // ClipRRect
+            ),            // Card
+          ),              // Padding
+        ),                // Expanded
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 8),
           child: Row(

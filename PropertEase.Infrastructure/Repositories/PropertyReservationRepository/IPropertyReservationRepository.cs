@@ -11,11 +11,8 @@ namespace PropertEase.Infrastructure.Repositories.PropertyReservationRepository
     {
         new Task<List<PropertyReservationDto>> GetAllAsync();
         Task<PropertyReservationDto> GetByIdAsync(int id);
-        Task<List<PropertyReservationDto>> GetByNameAsync(string name);
         Task<PropertEase.Core.Dto.PagedResult<PropertyReservationDto>> GetFiltered(PropertyReservationFilter filter);
         Task<List<PropertyReservationDto>> GetRenterBusinessReportData(ReportSearchObject search);
-        Task<List<PropertyReservationDto>> GetForPaginationAsync(string searchFilter, int pageSize, int offset);
-
         /// <summary>
         /// Returns the minimal data needed by the recommendation engine:
         /// total distinct client count, count of clients who reserved the target property,
@@ -26,7 +23,7 @@ namespace PropertEase.Infrastructure.Repositories.PropertyReservationRepository
             GetRecommendationDataAsync(int propertyId);
 
         /// <summary>
-        /// Sets IsActive = false for all non-deleted reservations whose end date has passed.
+        /// Transitions Confirmed reservations whose end date has passed to Completed.
         /// Executed as a single SQL UPDATE — no rows are loaded into memory.
         /// </summary>
         Task<int> DeactivateExpiredAsync();

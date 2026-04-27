@@ -3,10 +3,16 @@ import 'package:intl/intl.dart';
 import 'package:propertease_client/config/app_config.dart';
 import 'package:provider/provider.dart';
 
-import '../../models/property_reservation.dart';
-import '../../providers/payment_provider.dart';
-import '../../providers/property_reservation_provider.dart';
-import '../users/renter_profile_screen.dart';
+import 'package:propertease_client/models/property_reservation.dart';
+import 'package:propertease_client/models/user_rating.dart';
+import 'package:propertease_client/providers/payment_provider.dart';
+import 'package:propertease_client/providers/property_reservation_provider.dart';
+import 'package:propertease_client/providers/user_rating_provider.dart';
+import 'package:propertease_client/utils/authorization.dart';
+import 'package:propertease_client/utils/reservation_status.dart';
+import 'package:propertease_client/screens/property/reviews/review_list.dart';
+import 'package:propertease_client/screens/users/renter_profile_screen.dart';
+import 'paypal_payment_screen.dart';
 
 class ReservationDetailsScreen extends StatefulWidget {
   final int reservationId;
@@ -21,7 +27,9 @@ class _ReservationDetailScreenState extends State<ReservationDetailsScreen> {
   PropertyReservation? _reservation;
   bool _loading = true;
   bool _cancelling = false;
+  bool _paying = false;
   String? _error;
+  UserRating? _existingUserRating;
 
   @override
   void initState() {
@@ -31,10 +39,86 @@ class _ReservationDetailScreenState extends State<ReservationDetailsScreen> {
 
   bool get _canCancel {
     final r = _reservation;
-    if (r == null || r.isActive != true) return false;
+    if (r == null || r.status != 1) return false;
     final checkIn = r.dateOfOccupancyStart;
     if (checkIn == null) return false;
     return checkIn.difference(DateTime.now()).inDays >= 7;
+  }
+
+  bool get _canPay {
+    final r = _reservation;
+    if (r == null) return false;
+    return r.status == 1 && !(r.isPaid ?? false);
+  }
+
+  bool get _isPending => _reservation?.status == 0;
+
+  Future<void> _payReservation() async {
+    final r = _reservation!;
+    setState(() => _paying = true);
+    try {
+      final paid = await Navigator.of(context).push<bool>(
+        MaterialPageRoute(
+          builder: (_) => PayPalScreen(
+            totalPrice: r.totalPrice ?? 0,
+            reservationData: const {},
+            existingReservationId: r.id,
+            onReservationCreated: (_) {},
+            onReservationError: (err) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content: Text('Plaćanje neuspješno: $err'),
+                  backgroundColor: Colors.red,
+                ));
+              }
+            },
+          ),
+        ),
+      );
+      if (paid == true && mounted) _load();
+    } finally {
+      if (mounted) setState(() => _paying = false);
+    }
+  }
+
+  Future<void> _cancelPending() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Otkazivanje zahtjeva'),
+        content: const Text('Da li ste sigurni da želite povući zahtjev za rezervaciju?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Odustani'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Povuci zahtjev'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    final provider = context.read<PropertyReservationProvider>();
+    setState(() => _cancelling = true);
+    try {
+      await provider.cancelReservation(_reservation!);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Zahtjev povučen.'), backgroundColor: Colors.green),
+      );
+      _load();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Greška: $e'), backgroundColor: Colors.red),
+      );
+    } finally {
+      if (mounted) setState(() => _cancelling = false);
+    }
   }
 
   Future<void> _cancelReservation() async {
@@ -94,12 +178,27 @@ class _ReservationDetailScreenState extends State<ReservationDetailsScreen> {
         _reservation = r;
         _loading = false;
       });
+      // If completed and has a renter, check for an existing user rating
+      if (r.status == 2 && r.renterId != null) {
+        _loadExistingUserRating(r.renterId!);
+      }
     } catch (e) {
       setState(() {
         _error = e.toString();
         _loading = false;
       });
     }
+  }
+
+  Future<void> _loadExistingUserRating(int renterId) async {
+    try {
+      final existing = await context.read<UserRatingProvider>().getByReservation(
+            renterId: renterId,
+            reviewerId: Authorization.userId!,
+            reservationId: widget.reservationId,
+          );
+      if (mounted) setState(() => _existingUserRating = existing);
+    } catch (_) {}
   }
 
   @override
@@ -151,24 +250,7 @@ class _ReservationDetailScreenState extends State<ReservationDetailsScreen> {
                             fontSize: 20, fontWeight: FontWeight.bold),
                       ),
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: r.isActive == true
-                            ? Colors.green.shade100
-                            : Colors.red.shade100,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        r.isActive == true ? 'Active' : 'Inactive',
-                        style: TextStyle(
-                          color: r.isActive == true
-                              ? Colors.green.shade800
-                              : Colors.red.shade800,
-                        ),
-                      ),
-                    ),
+                    ReservationStatus.chip(r.status),
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -210,11 +292,117 @@ class _ReservationDetailScreenState extends State<ReservationDetailsScreen> {
                 const SizedBox(height: 16),
 
                 if (r.description != null && r.description!.isNotEmpty) ...[
-                  _sectionTitle('Additional information'),
+                  _sectionTitle('Napomena'),
                   Text(r.description!,
                       style: const TextStyle(fontSize: 15, height: 1.5)),
                 ],
 
+                // ── Confirmation audit trail ───────────────────────────────
+                if (r.confirmedAt != null) ...[
+                  const SizedBox(height: 16),
+                  _sectionTitle('Historija potvrde'),
+                  if (r.confirmedByName != null && r.confirmedByName!.isNotEmpty)
+                    _row('Potvrdio/la', r.confirmedByName),
+                  _row('Datum potvrde',
+                      DateFormat('dd.MM.yyyy HH:mm').format(r.confirmedAt!)),
+                ],
+
+                // ── Cancellation details ───────────────────────────────────
+                if (r.status == 3) ...[
+                  const SizedBox(height: 16),
+                  _sectionTitle('Detalji otkazivanja'),
+                  if (r.cancelledByName != null && r.cancelledByName!.isNotEmpty)
+                    _row('Otkazao/la', r.cancelledByName),
+                  if (r.cancelledAt != null)
+                    _row('Datum otkazivanja',
+                        DateFormat('dd.MM.yyyy HH:mm').format(r.cancelledAt!)),
+                  if (r.cancellationReason != null && r.cancellationReason!.isNotEmpty)
+                    _row('Razlog', r.cancellationReason),
+                ],
+
+                // ── Pending: awaiting renter confirmation ─────────────────
+                if (_isPending) ...[
+                  const SizedBox(height: 24),
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.shade50,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.orange.shade200),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.hourglass_top, color: Colors.orange),
+                        SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Zahtjev je poslan iznajmljivaču. Čekate njegovu potvrdu.',
+                            style: TextStyle(color: Colors.orange),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: _cancelling
+                        ? const Center(child: CircularProgressIndicator())
+                        : OutlinedButton.icon(
+                            onPressed: _cancelPending,
+                            icon: const Icon(Icons.undo, color: Colors.red),
+                            label: const Text('Povuci zahtjev',
+                                style: TextStyle(color: Colors.red)),
+                            style: OutlinedButton.styleFrom(
+                                side: const BorderSide(color: Colors.red)),
+                          ),
+                  ),
+                ],
+
+                // ── Confirmed + unpaid: prompt client to pay ──────────────
+                if (_canPay) ...[
+                  const SizedBox(height: 24),
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade50,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.green.shade200),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.check_circle_outline, color: Colors.green),
+                        SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Rezervacija je potvrđena! Izvršite plaćanje da biste je finalizirali.',
+                            style: TextStyle(color: Colors.green),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: _paying
+                        ? const Center(child: CircularProgressIndicator())
+                        : ElevatedButton.icon(
+                            onPressed: _payReservation,
+                            icon: const Icon(Icons.payment),
+                            label: const Text('Plati putem PayPal-a'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF115892),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10)),
+                            ),
+                          ),
+                  ),
+                ],
+
+                // ── Confirmed + paid: allow cancel with refund ────────────
                 if (_canCancel)
                   Padding(
                     padding: const EdgeInsets.only(top: 24, bottom: 8),
@@ -235,12 +423,178 @@ class _ReservationDetailScreenState extends State<ReservationDetailsScreen> {
                             ),
                     ),
                   ),
+
+                if (r.status == 2) ...[
+                  const SizedBox(height: 24),
+                  const Text('Rate your experience',
+                      style: TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => ReviewListScreen(
+                                id: r.propertyId,
+                                canReview: true,
+                                reservationId: r.id,
+                              ),
+                            ),
+                          ),
+                          icon: const Icon(Icons.home_outlined),
+                          label: const Text('Rate Property'),
+                        ),
+                      ),
+                      if (r.renterId != null) ...[
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () => _showRenterRatingSheet(
+                                r.renterId!, widget.reservationId),
+                            icon: const Icon(Icons.person_outline),
+                            label: Text(_existingUserRating != null
+                                ? 'Edit Renter Rating'
+                                : 'Rate Renter'),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
               ],
             ),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _showRenterRatingSheet(int renterId, int reservationId) async {
+    int selectedStars =
+        (_existingUserRating?.rating ?? 5).round().clamp(1, 5);
+    final commentCtrl =
+        TextEditingController(text: _existingUserRating?.description ?? '');
+    bool submitting = false;
+    final isUpdate = _existingUserRating != null;
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) => Padding(
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 20,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(isUpdate ? 'Edit Renter Rating' : 'Rate the Renter',
+                  style:
+                      const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  const Text('Stars: '),
+                  const SizedBox(width: 12),
+                  DropdownButton<int>(
+                    value: selectedStars,
+                    items: [1, 2, 3, 4, 5]
+                        .map((n) => DropdownMenuItem(
+                            value: n, child: Text('$n ★')))
+                        .toList(),
+                    onChanged: (v) =>
+                        setSheetState(() => selectedStars = v ?? 5),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: commentCtrl,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  labelText: 'Comment (optional)',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: submitting
+                      ? null
+                      : () async {
+                          setSheetState(() => submitting = true);
+                          try {
+                            final rating = UserRating(
+                              id: _existingUserRating?.id ?? 0,
+                              renterId: renterId,
+                              reviewerId: Authorization.userId,
+                              reviewerName:
+                                  '${Authorization.firstName ?? ''} ${Authorization.lastName ?? ''}'
+                                      .trim(),
+                              rating: selectedStars.toDouble(),
+                              description: commentCtrl.text.trim().isEmpty
+                                  ? null
+                                  : commentCtrl.text.trim(),
+                              reservationId: reservationId,
+                            );
+                            await context
+                                .read<UserRatingProvider>()
+                                .addRating(rating);
+                            if (!ctx.mounted) return;
+                            Navigator.of(ctx).pop();
+                            if (mounted) {
+                              setState(() {
+                                _existingUserRating = rating;
+                              });
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(isUpdate
+                                      ? 'Renter rating updated'
+                                      : 'Renter rated successfully'),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            setSheetState(() => submitting = false);
+                            if (ctx.mounted) {
+                              ScaffoldMessenger.of(ctx).showSnackBar(
+                                SnackBar(
+                                  content: Text('Error: $e'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          }
+                        },
+                  child: submitting
+                      ? const SizedBox(
+                          height: 18,
+                          width: 18,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white),
+                        )
+                      : Text(isUpdate ? 'Update' : 'Submit'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    // Delay disposal until after the dismiss animation so focus events
+    // that fire during sheet close don't hit an already-disposed controller.
+    WidgetsBinding.instance.addPostFrameCallback((_) => commentCtrl.dispose());
   }
 
   Widget _sectionTitle(String title) => Padding(

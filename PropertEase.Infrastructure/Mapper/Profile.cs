@@ -93,8 +93,13 @@ namespace PropertEase.Infrastructure.Mapper
 
             #region PropertyReservation
 
-            CreateMap<PropertyReservation, PropertyReservationDto>().ReverseMap();
-            CreateMap<PropertyReservationDto, PropertyReservationUpsertDto>().ReverseMap();
+            CreateMap<PropertyReservation, PropertyReservationDto>()
+                .ReverseMap()
+                .ForMember(dest => dest.IsActive, opt => opt.Ignore());
+
+            CreateMap<PropertyReservationDto, PropertyReservationUpsertDto>()
+                .ReverseMap()
+                .ForMember(dest => dest.IsActive, opt => opt.Ignore());
 
             #endregion
 

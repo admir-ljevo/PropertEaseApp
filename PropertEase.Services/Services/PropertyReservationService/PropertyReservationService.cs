@@ -1,13 +1,14 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Hosting;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using PropertEase.Core.Dto.Property;
 using PropertEase.Core.Dto.PropertyReservation;
 using PropertEase.Core.Entities;
-using PropertEase.Infrastructure.Messaging;
-using PropertEase.Infrastructure.UnitOfWork;
+using PropertEase.Core.Enumerations;
+using PropertEase.Core.Exceptions;
 using PropertEase.Core.Filters;
 using PropertEase.Core.SearchObjects;
+using PropertEase.Core.StateMachines;
+using PropertEase.Infrastructure.Messaging;
+using PropertEase.Infrastructure.UnitOfWork;
 
 namespace PropertEase.Services.Services.PropertyReservationService
 {
@@ -26,59 +27,52 @@ namespace PropertEase.Services.Services.PropertyReservationService
 
         public async Task<PropertyReservationDto> AddAsync(PropertyReservationDto entityDto)
         {
-            entityDto.IsActive = true;
-            entityDto.ReservationNumber = "#0000"; // placeholder; updated after insert
-            Property property = await unitOfWork.PropertyRepository.GetById(entityDto.PropertyId);
-            if (property.IsDaily)
-                entityDto.TotalPrice = (double)(property.DailyPrice * entityDto.NumberOfDays);
-            if (property.IsMonthly)
-                entityDto.TotalPrice = (double)(property.MonthlyPrice * entityDto.NumberOfMonths);
+            var targetStatus = ReservationStatus.Pending;
+            entityDto.Status = targetStatus;
+            entityDto.ReservationNumber = "#0000";
 
-            // Reject if an active reservation already overlaps the requested dates
+            Property property = await unitOfWork.PropertyRepository.GetById(entityDto.PropertyId);
+
+            // ── Server-side price calculation with ceiling for partial days ───────────
+            var totalHours = (entityDto.DateOfOccupancyEnd - entityDto.DateOfOccupancyStart).TotalHours;
+            var totalDays   = (int)Math.Ceiling(totalHours / 24.0);
+            var totalMonths = (int)Math.Ceiling(totalDays  / 30.0);
+
+            entityDto.NumberOfDays   = Math.Max(totalDays, 1);
+            entityDto.NumberOfMonths = Math.Max(totalMonths, 1);
+
+            if (property.IsDaily)
+                entityDto.TotalPrice = (double)(property.DailyPrice   * entityDto.NumberOfDays);
+            if (property.IsMonthly)
+                entityDto.TotalPrice = (double)(property.MonthlyPrice  * entityDto.NumberOfMonths);
+
+            // ── Overlap check: reject if dates conflict with an already-Confirmed reservation ─
             var db = unitOfWork.GetDatabaseContext();
             var hasOverlap = await db.PropertyReservations
                 .AnyAsync(r => r.PropertyId == entityDto.PropertyId
-                               && r.IsActive
+                               && r.Status == ReservationStatus.Confirmed
                                && !r.IsDeleted
                                && r.DateOfOccupancyStart < entityDto.DateOfOccupancyEnd
-                               && r.DateOfOccupancyEnd > entityDto.DateOfOccupancyStart);
+                               && r.DateOfOccupancyEnd   > entityDto.DateOfOccupancyStart);
             if (hasOverlap)
-                throw new InvalidOperationException(
+                throw new BusinessException(
                     "Odabrani datumi nisu dostupni. Nekretnina je već rezervisana u tom periodu.");
 
             var inserted = await unitOfWork.PropertyReservationRepository.AddAsync(entityDto);
             await unitOfWork.SaveChangesAsync();
 
+            // ── Assign reservation number ─────────────────────────────────────────────
             var reservationNumber = $"#{inserted.Id:D4}";
-            await unitOfWork.GetDatabaseContext().PropertyReservations
+            await db.PropertyReservations
                 .Where(r => r.Id == inserted.Id)
                 .ExecuteUpdateAsync(s => s.SetProperty(r => r.ReservationNumber, reservationNumber));
-            inserted.ReservationNumber = reservationNumber;
-            entityDto.Id = inserted.Id;
+
+            entityDto.Id                = inserted.Id;
             entityDto.ReservationNumber = reservationNumber;
 
+            // ── Publish notifications via RabbitMQ ───────────────────────────────────
             try
             {
-                var client = await db.Users.Include(u => u.Person).FirstOrDefaultAsync(u => u.Id == entityDto.ClientId);
-                var renter = await db.Users.Include(u => u.Person).FirstOrDefaultAsync(u => u.Id == entityDto.RenterId);
-
-                if (client != null && renter != null)
-                {
-                    _publisher.Publish(new
-                    {
-                        ReservationId = entityDto.Id,
-                        ReservationNumber = entityDto.ReservationNumber,
-                        ClientEmail = client.Email ?? string.Empty,
-                        ClientFullName = $"{client.Person?.FirstName} {client.Person?.LastName}".Trim(),
-                        RenterEmail = renter.Email ?? string.Empty,
-                        RenterFullName = $"{renter.Person?.FirstName} {renter.Person?.LastName}".Trim(),
-                        PropertyName = property.Name,
-                        CheckIn = entityDto.DateOfOccupancyStart,
-                        CheckOut = entityDto.DateOfOccupancyEnd,
-                        TotalPrice = (decimal)entityDto.TotalPrice,
-                    }, "reservation.confirmed");
-                }
-
                 var photoUrl = await db.Photos
                     .Where(p => p.PropertyId == entityDto.PropertyId && !p.IsDeleted)
                     .Select(p => p.Url)
@@ -86,22 +80,24 @@ namespace PropertEase.Services.Services.PropertyReservationService
 
                 _publisher.Publish(new ReservationNotificationMessage
                 {
-                    UserId = entityDto.RenterId,
-                    ReservationId = entityDto.Id,
-                    Message = $"Nova rezervacija za nekretninu \"{property.Name}\"",
+                    UserId            = entityDto.RenterId,
+                    ReservationId     = entityDto.Id,
+                    Title             = "Novi zahtjev za rezervaciju",
+                    Message           = $"Novi zahtjev za nekretninu \"{property.Name}\" čeka vašu potvrdu",
                     ReservationNumber = entityDto.ReservationNumber,
-                    PropertyName = property.Name,
-                    PropertyPhotoUrl = photoUrl
+                    PropertyName      = property.Name,
+                    PropertyPhotoUrl  = photoUrl
                 }, "reservation.notification");
 
                 _publisher.Publish(new ReservationNotificationMessage
                 {
-                    UserId = entityDto.ClientId,
-                    ReservationId = entityDto.Id,
-                    Message = $"Vaša rezervacija za nekretninu \"{property.Name}\" je uspješno kreirana",
+                    UserId            = entityDto.ClientId,
+                    ReservationId     = entityDto.Id,
+                    Title             = "Zahtjev poslan",
+                    Message           = $"Vaš zahtjev za nekretninu \"{property.Name}\" je poslan iznajmljivaču na potvrdu",
                     ReservationNumber = entityDto.ReservationNumber,
-                    PropertyName = property.Name,
-                    PropertyPhotoUrl = photoUrl
+                    PropertyName      = property.Name,
+                    PropertyPhotoUrl  = photoUrl
                 }, "reservation.notification");
             }
             catch (Exception ex)
@@ -112,19 +108,116 @@ namespace PropertEase.Services.Services.PropertyReservationService
             return entityDto;
         }
 
-        public async Task<List<PropertyReservationDto>> GetAllAsync()
+        public async Task<PropertyReservationDto> ConfirmReservationAsync(int id, int actorId)
         {
-            return await unitOfWork.PropertyReservationRepository.GetAllAsync();
-        }
+            var db = unitOfWork.GetDatabaseContext();
 
-        public async Task<PropertyReservationDto> GetByIdAsync(int id)
-        {
+            var entity = await db.PropertyReservations.FindAsync(id)
+                ?? throw new NotFoundException("Reservation", id);
+
+            if (entity.Status != ReservationStatus.Pending)
+                throw new BusinessException("Samo rezervacije na čekanju mogu biti potvrđene.");
+
+            // ── Overlap check at confirm time (first-confirm-wins) ───────────────────
+            var hasOverlap = await db.PropertyReservations
+                .AnyAsync(r => r.Id != id
+                               && r.PropertyId == entity.PropertyId
+                               && r.Status == ReservationStatus.Confirmed
+                               && !r.IsDeleted
+                               && r.DateOfOccupancyStart < entity.DateOfOccupancyEnd
+                               && r.DateOfOccupancyEnd   > entity.DateOfOccupancyStart);
+            if (hasOverlap)
+                throw new BusinessException(
+                    "Nekretnina je u međuvremenu postala nedostupna za odabrane datume.");
+
+            ReservationStateMachine.Transition(entity, ReservationStatus.Confirmed, actorId);
+
+            var now = DateTime.UtcNow;
+            entity.ConfirmedAt   = now;
+            entity.ConfirmedById = actorId;
+
+            db.PropertyReservations.Update(entity);
+            await unitOfWork.SaveChangesAsync();
+
+            await SyncPropertyAvailabilityAsync(entity.PropertyId);
+
+            // ── Notify client + renter: reservation confirmed ────────────────────────
+            try
+            {
+                var prop = await db.Properties
+                    .AsNoTracking()
+                    .Where(p => p.Id == entity.PropertyId && !p.IsDeleted)
+                    .Select(p => new { p.Name })
+                    .FirstOrDefaultAsync();
+
+                var photoUrl = await db.Photos
+                    .Where(p => p.PropertyId == entity.PropertyId && !p.IsDeleted)
+                    .Select(p => p.Url)
+                    .FirstOrDefaultAsync();
+
+                var userIds = new[] { entity.ClientId, entity.RenterId, actorId }.Distinct().ToArray();
+                var userInfos = await db.Users
+                    .AsNoTracking()
+                    .Where(u => userIds.Contains(u.Id))
+                    .Select(u => new {
+                        u.Id,
+                        u.Email,
+                        FullName = db.Persons
+                            .Where(p => p.ApplicationUserId == u.Id)
+                            .Select(p => p.FirstName + " " + p.LastName)
+                            .FirstOrDefault() ?? u.UserName
+                    })
+                    .ToDictionaryAsync(u => u.Id);
+
+                userInfos.TryGetValue(actorId,        out var actor);
+                userInfos.TryGetValue(entity.ClientId, out var client);
+                userInfos.TryGetValue(entity.RenterId, out var renter);
+
+                _publisher.Publish(new ReservationConfirmedMessage
+                {
+                    ReservationId    = entity.Id,
+                    ReservationNumber = entity.ReservationNumber,
+                    PropertyName     = prop?.Name ?? string.Empty,
+                    PropertyPhotoUrl = photoUrl,
+                    CheckIn          = entity.DateOfOccupancyStart,
+                    CheckOut         = entity.DateOfOccupancyEnd,
+                    TotalPrice       = (decimal)entity.TotalPrice,
+                    ActorFullName    = actor?.FullName ?? string.Empty,
+                    ClientUserId     = entity.ClientId,
+                    ClientEmail      = client?.Email ?? string.Empty,
+                    ClientFullName   = client?.FullName ?? string.Empty,
+                    RenterEmail      = renter?.Email ?? string.Empty,
+                    RenterFullName   = renter?.FullName ?? string.Empty
+                }, "reservation.confirmed");
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Failed to publish confirm notification for reservation {Id}", id);
+            }
+
             return await unitOfWork.PropertyReservationRepository.GetByIdAsync(id);
         }
 
+        public async Task<List<PropertyReservationDto>> GetAllAsync()
+            => await unitOfWork.PropertyReservationRepository.GetAllAsync();
+
+        public async Task<PropertyReservationDto> GetByIdAsync(int id)
+            => await unitOfWork.PropertyReservationRepository.GetByIdAsync(id);
+
         public async Task RemoveByIdAsync(int id, bool isSoft = true)
         {
-            await unitOfWork.PropertyReservationRepository.RemoveByIdAsync(id, isSoft);
+            var db = unitOfWork.GetDatabaseContext();
+
+            var reservation = await db.PropertyReservations.FindAsync(id);
+            if (reservation == null) return;
+
+            if (reservation.Status == ReservationStatus.Pending || reservation.Status == ReservationStatus.Confirmed)
+                throw new InvalidOperationException("Cannot delete a reservation that is pending or confirmed. Cancel it first.");
+
+            foreach (var n in db.ReservationNotifications.Where(n => n.ReservationId == id && !n.IsDeleted).ToList())
+                n.IsDeleted = true;
+
+            reservation.IsDeleted = true;
             await unitOfWork.SaveChangesAsync();
         }
 
@@ -136,54 +229,249 @@ namespace PropertEase.Services.Services.PropertyReservationService
 
         public async Task<PropertyReservationDto> UpdateAsync(PropertyReservationDto property)
         {
-            // Load the tracked entity directly to avoid mapping navigation properties back to DB
-            var entity = await unitOfWork.PropertyReservationRepository.GetByIdAsync(property.Id, false);
-            if (entity == null)
-                throw new Exception($"Reservation {property.Id} not found");
+            var entity = await unitOfWork.PropertyReservationRepository.GetByIdAsync(property.Id, false)
+                ?? throw new NotFoundException("Reservation", property.Id);
 
-            entity.NumberOfGuests = property.NumberOfGuests;
+            entity.NumberOfGuests       = property.NumberOfGuests;
             entity.DateOfOccupancyStart = property.DateOfOccupancyStart;
-            entity.DateOfOccupancyEnd = property.DateOfOccupancyEnd;
-            entity.IsActive = property.IsActive;
-            entity.Description = property.Description;
-            entity.NumberOfDays = property.NumberOfDays;
-            entity.NumberOfMonths = property.NumberOfMonths;
-            entity.TotalPrice = property.TotalPrice;
-            entity.IsMonthly = property.IsMonthly;
-            entity.IsDaily = property.IsDaily;
+            entity.DateOfOccupancyEnd   = property.DateOfOccupancyEnd;
+            entity.Description          = property.Description;
+            entity.NumberOfDays         = property.NumberOfDays;
+            entity.NumberOfMonths       = property.NumberOfMonths;
+            entity.TotalPrice           = property.TotalPrice;
+            entity.IsMonthly            = property.IsMonthly;
+            entity.IsDaily              = property.IsDaily;
+
+            if (entity.Status != property.Status)
+                ReservationStateMachine.Transition(entity, property.Status,
+                    reason: property.CancellationReason);
 
             await unitOfWork.SaveChangesAsync();
             return property;
         }
 
-        public async Task<PropertEase.Core.Dto.PagedResult<PropertyReservationDto>> GetFiltered(PropertyReservationFilter filter)
+        public async Task<PropertyReservationDto> UpdateWithNotificationAsync(
+            int id,
+            PropertyReservationUpsertDto dto,
+            int? actorId = null)
         {
-            return await unitOfWork.PropertyReservationRepository.GetFiltered(filter);
+            var entity = await unitOfWork.PropertyReservationRepository.GetByIdAsync(id, false)
+                ?? throw new NotFoundException("Reservation", id);
+
+            var db = unitOfWork.GetDatabaseContext();
+
+            // ── Guard: cancelling a paid reservation must go through the refund endpoint ──
+            if (dto.Status == ReservationStatus.Cancelled && entity.Status != ReservationStatus.Cancelled)
+            {
+                var hasPaidPayment = await db.Payments
+                    .AnyAsync(p => p.ReservationId == id
+                                   && p.Status == PaymentStatus.Completed
+                                   && !p.IsDeleted);
+                if (hasPaidPayment)
+                    throw new BusinessException(
+                        "Rezervacija ima izvršenu uplatu. Za otkazanje koristite endpoint za povrat sredstava (refund).");
+            }
+
+            // ── Overlap check when dates are being changed ───────────────────────────
+            if (entity.DateOfOccupancyStart != dto.DateOfOccupancyStart ||
+                entity.DateOfOccupancyEnd   != dto.DateOfOccupancyEnd)
+            {
+                var hasOverlap = await db.PropertyReservations
+                    .AnyAsync(r => r.Id != id
+                                   && r.PropertyId == entity.PropertyId
+                                   && r.Status == ReservationStatus.Confirmed
+                                   && !r.IsDeleted
+                                   && r.DateOfOccupancyStart < dto.DateOfOccupancyEnd
+                                   && r.DateOfOccupancyEnd   > dto.DateOfOccupancyStart);
+                if (hasOverlap)
+                    throw new BusinessException(
+                        "Odabrani datumi nisu dostupni. Nekretnina je već rezervisana u tom periodu.");
+            }
+
+            entity.NumberOfGuests       = dto.NumberOfGuests;
+            entity.DateOfOccupancyStart = dto.DateOfOccupancyStart;
+            entity.DateOfOccupancyEnd   = dto.DateOfOccupancyEnd;
+            entity.Description          = dto.Description;
+            entity.TotalPrice           = dto.TotalPrice;
+            entity.IsMonthly            = dto.IsMonthly;
+            entity.IsDaily              = dto.IsDaily;
+
+            // ── Server-side price recalculation (ceiling for edge cases) ─────────────
+            var totalHours = (entity.DateOfOccupancyEnd - entity.DateOfOccupancyStart).TotalHours;
+            var days   = (int)Math.Ceiling(totalHours / 24.0);
+            var months = (int)Math.Ceiling(days / 30.0);
+            entity.NumberOfDays   = Math.Max(days, 1);
+            entity.NumberOfMonths = Math.Max(months, 1);
+
+            // ── State machine — throws on illegal transitions ─────────────────────────
+            if (entity.Status != dto.Status)
+                ReservationStateMachine.Transition(entity, dto.Status, actorId, dto.CancellationReason);
+
+            await unitOfWork.SaveChangesAsync();
+
+            // ── Keep property availability in sync ───────────────────────────────────
+            await SyncPropertyAvailabilityAsync(entity.PropertyId);
+
+            // ── Publish notification ─────────────────────────────────────────────────
+            try
+            {
+                var prop = await db.Properties
+                    .AsNoTracking()
+                    .Where(p => p.Id == entity.PropertyId && !p.IsDeleted)
+                    .Select(p => new
+                    {
+                        p.Name,
+                        PhotoUrl = p.Images.Where(i => !i.IsDeleted).Select(i => i.Url).FirstOrDefault()
+                    })
+                    .FirstOrDefaultAsync();
+
+                var isCancelled = entity.Status == ReservationStatus.Cancelled;
+
+                if (isCancelled)
+                {
+                    var userIds = new[] { entity.ClientId, entity.RenterId }
+                        .Concat(actorId.HasValue ? new[] { actorId.Value } : Array.Empty<int>())
+                        .Distinct().ToArray();
+
+                    var userInfos = await db.Users
+                        .AsNoTracking()
+                        .Where(u => userIds.Contains(u.Id))
+                        .Select(u => new {
+                            u.Id,
+                            u.Email,
+                            FullName = db.Persons
+                                .Where(p => p.ApplicationUserId == u.Id)
+                                .Select(p => p.FirstName + " " + p.LastName)
+                                .FirstOrDefault() ?? u.UserName
+                        })
+                        .ToDictionaryAsync(u => u.Id);
+
+                    userInfos.TryGetValue(entity.ClientId, out var client);
+                    userInfos.TryGetValue(entity.RenterId, out var renter);
+                    var actorName = actorId.HasValue && userInfos.TryGetValue(actorId.Value, out var actor)
+                        ? actor.FullName ?? string.Empty
+                        : string.Empty;
+
+                    _publisher.Publish(new ReservationCancelledMessage
+                    {
+                        ReservationId      = id,
+                        ReservationNumber  = entity.ReservationNumber,
+                        PropertyName       = prop?.Name ?? string.Empty,
+                        CancellationReason = entity.CancellationReason ?? string.Empty,
+                        CheckIn            = entity.DateOfOccupancyStart,
+                        CheckOut           = entity.DateOfOccupancyEnd,
+                        TotalPrice         = (decimal)entity.TotalPrice,
+                        PropertyPhotoUrl   = prop?.PhotoUrl,
+                        ActorFullName      = actorName,
+                        ClientUserId       = entity.ClientId,
+                        ClientEmail        = client?.Email ?? string.Empty,
+                        ClientFullName     = client?.FullName ?? string.Empty,
+                        RenterUserId       = entity.RenterId > 0 ? entity.RenterId : null,
+                        RenterEmail        = renter?.Email ?? string.Empty,
+                        RenterFullName     = renter?.FullName ?? string.Empty
+                    }, "reservation.cancelled");
+                }
+                else
+                {
+                    _publisher.Publish(new ReservationNotificationMessage
+                    {
+                        UserId            = entity.ClientId,
+                        ReservationId     = id,
+                        Title             = "Rezervacija ažurirana",
+                        Message           = "Vaša rezervacija je ažurirana",
+                        ReservationNumber = entity.ReservationNumber,
+                        PropertyName      = prop?.Name,
+                        PropertyPhotoUrl  = prop?.PhotoUrl
+                    }, "reservation.notification");
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Failed to publish update notification for reservation {Id}", id);
+            }
+
+            return await unitOfWork.PropertyReservationRepository.GetByIdAsync(id);
         }
+
+        /// <inheritdoc/>
+        public async Task SyncPropertyAvailabilityAsync(int propertyId)
+        {
+            var db = unitOfWork.GetDatabaseContext();
+            var hasConfirmedReservation = await db.PropertyReservations
+                .AnyAsync(r => r.PropertyId == propertyId
+                               && r.Status == ReservationStatus.Confirmed
+                               && !r.IsDeleted);
+
+            var property = await db.Properties.FindAsync(propertyId);
+            if (property == null) return;
+
+            property.IsAvailable = !hasConfirmedReservation;
+            await unitOfWork.SaveChangesAsync();
+        }
+
+        public async Task<PropertEase.Core.Dto.PagedResult<PropertyReservationDto>> GetFiltered(PropertyReservationFilter filter)
+            => await unitOfWork.PropertyReservationRepository.GetFiltered(filter);
 
         public async Task<List<PropertyReservationDto>> GetRenterBusinessReportData(ReportSearchObject search)
-        {
-            return await unitOfWork.PropertyReservationRepository.GetRenterBusinessReportData(search);
-        }
+            => await unitOfWork.PropertyReservationRepository.GetRenterBusinessReportData(search);
 
         public async Task<int> GetUpcomingCountByPropertyAsync(int propertyId)
-        {
-            return await unitOfWork.PropertyReservationRepository.GetUpcomingCountByPropertyAsync(propertyId);
-        }
+            => await unitOfWork.PropertyReservationRepository.GetUpcomingCountByPropertyAsync(propertyId);
 
         public async Task<int> DeactivateExpiredAsync()
         {
-            return await unitOfWork.PropertyReservationRepository.DeactivateExpiredAsync();
+            var db = unitOfWork.GetDatabaseContext();
+
+            // Snapshot the reservations that are about to be completed so we can
+            // notify the client after the bulk update.
+            var toComplete = await db.PropertyReservations
+                .Where(r => r.Status == ReservationStatus.Confirmed
+                         && r.DateOfOccupancyEnd <= DateTime.Now
+                         && !r.IsDeleted)
+                .Select(r => new
+                {
+                    r.Id,
+                    r.ClientId,
+                    r.ReservationNumber,
+                    PropertyName = r.Property != null ? r.Property.Name : null,
+                    PhotoUrl = db.Photos
+                        .Where(p => p.PropertyId == r.PropertyId && !p.IsDeleted)
+                        .Select(p => p.Url)
+                        .FirstOrDefault()
+                })
+                .ToListAsync();
+
+            var count = await unitOfWork.PropertyReservationRepository.DeactivateExpiredAsync();
+
+            foreach (var r in toComplete)
+            {
+                try
+                {
+                    _publisher.Publish(new ReservationNotificationMessage
+                    {
+                        UserId            = r.ClientId,
+                        ReservationId     = r.Id,
+                        Title             = "Rezervacija završena",
+                        Message           = $"Vaša rezervacija za \"{r.PropertyName}\" je završena. Ocijenite vaš boravak i iznajmljivača.",
+                        ReservationNumber = r.ReservationNumber,
+                        PropertyName      = r.PropertyName,
+                        PropertyPhotoUrl  = r.PhotoUrl
+                    }, "reservation.notification");
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex,
+                        "Failed to publish completion notification for reservation {Id}.", r.Id);
+                }
+            }
+
+            return count;
         }
 
         public async Task<PropertEase.Core.Dto.PagedResult<ReservationSummaryDto>> GetClientSummariesAsync(int clientId, int page = 1, int pageSize = 10)
-        {
-            return await unitOfWork.PropertyReservationRepository.GetClientSummariesAsync(clientId, page, pageSize);
-        }
+            => await unitOfWork.PropertyReservationRepository.GetClientSummariesAsync(clientId, page, pageSize);
 
         public async Task<PropertEase.Core.Dto.PagedResult<ReservationSummaryDto>> GetRenterSummariesAsync(int renterId, int page = 1, int pageSize = 10)
-        {
-            return await unitOfWork.PropertyReservationRepository.GetRenterSummariesAsync(renterId, page, pageSize);
-        }
+            => await unitOfWork.PropertyReservationRepository.GetRenterSummariesAsync(renterId, page, pageSize);
     }
 }

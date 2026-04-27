@@ -1,12 +1,18 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:intl/intl.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import 'package:propertease_admin/config/app_config.dart';
+import 'package:propertease_admin/models/property_rating.dart';
+import 'package:propertease_admin/providers/application_user_provider.dart';
 import 'package:propertease_admin/providers/image_provider.dart';
 import 'package:propertease_admin/providers/property_provider.dart';
+import 'package:propertease_admin/providers/property_rating_provider.dart';
 import '../../models/photo.dart';
 import '../../models/property.dart';
+import '../users/user_detail_screen.dart';
 import 'property_edit_screen.dart';
 
 class PropertyDetailScreen extends StatefulWidget {
@@ -20,6 +26,11 @@ class PropertyDetailScreen extends StatefulWidget {
 class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
   List<Photo> _images = [];
   List<Property> _recommended = [];
+  List<PropertyRating> _ratings = [];
+  int _ratingsPage = 1;
+  int _ratingsTotalCount = 0;
+  bool _ratingsLoading = false;
+  static const _ratingsPageSize = 5;
   int _currentPage = 0;
   bool _initialized = false;
   bool _loading = true;
@@ -36,9 +47,9 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
     super.didChangeDependencies();
     if (!_initialized) {
       _initialized = true;
-      // Full property (with photos) and recommendations fire in parallel.
       _loadFullProperty();
       _loadRecommendations();
+      _loadRatings();
     }
   }
 
@@ -69,6 +80,50 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
     try {
       final result = await context.read<PropertyProvider>().getRecommendations(widget.property!.id!);
       if (mounted) setState(() => _recommended = result);
+    } catch (_) {}
+  }
+
+  Future<void> _loadRatings({int page = 1}) async {
+    if (widget.property?.id == null) return;
+    setState(() => _ratingsLoading = true);
+    try {
+      final result = await context.read<PropertyRatingProvider>()
+          .getByPropertyPaged(widget.property!.id!, page, _ratingsPageSize);
+      if (mounted) {
+        setState(() {
+          _ratings = result.result;
+          _ratingsTotalCount = result.totalCount;
+          _ratingsPage = page;
+          _ratingsLoading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _ratingsLoading = false);
+    }
+  }
+
+  ImageProvider? _reviewerPhoto(PropertyRating r) {
+    final photo = r.reviewer?.person?.profilePhoto;
+    if (photo != null && photo.isNotEmpty) {
+      return NetworkImage('${AppConfig.serverBase}$photo');
+    }
+    final bytes = r.reviewer?.person?.profilePhotoBytes;
+    if (bytes != null && bytes.isNotEmpty) {
+      try {
+        return MemoryImage(base64Decode(bytes));
+      } catch (_) {}
+    }
+    return null;
+  }
+
+  Future<void> _navigateToReviewer(PropertyRating r) async {
+    if (r.reviewerId == null) return;
+    try {
+      final user = await context.read<UserProvider>().getUserById(r.reviewerId!);
+      if (mounted) {
+        Navigator.push(context,
+            MaterialPageRoute(builder: (_) => UserDetailScreen(user: user)));
+      }
     } catch (_) {}
   }
 
@@ -150,6 +205,10 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
             if (_recommended.isNotEmpty) ...[
               const SizedBox(height: 16),
               _buildRecommendationsSection(),
+            ],
+                    if (_ratingsTotalCount > 0 || _ratingsLoading) ...[
+              const SizedBox(height: 16),
+              _buildReviewsSection(),
             ],
             const SizedBox(height: 32),
           ],
@@ -519,9 +578,10 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
           borderRadius: BorderRadius.circular(8),
           child: FlutterMap(
             options: MapOptions(
-              center: point,
-              zoom: 14.0,
-              interactiveFlags: InteractiveFlag.pinchZoom | InteractiveFlag.drag,
+              initialCenter: point,
+              initialZoom: 14.0,
+              interactionOptions: const InteractionOptions(
+                  flags: InteractiveFlag.pinchZoom | InteractiveFlag.drag),
             ),
             children: [
               TileLayer(
@@ -534,7 +594,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                     point: point,
                     width: 40,
                     height: 40,
-                    builder: (ctx) => const Icon(
+                    child: const Icon(
                       Icons.location_pin,
                       color: Colors.red,
                       size: 40,
@@ -559,6 +619,126 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
         property.description!,
         style: const TextStyle(fontSize: 15, height: 1.5),
       ),
+    );
+  }
+
+  Widget _buildReviewsSection() {
+    final totalPages = (_ratingsTotalCount / _ratingsPageSize).ceil();
+    return _SectionCard(
+      title: 'Recenzije ($_ratingsTotalCount)',
+      child: _ratingsLoading
+          ? const Center(child: Padding(
+              padding: EdgeInsets.all(16),
+              child: CircularProgressIndicator(),
+            ))
+          : Column(
+              children: [
+                ..._ratings.map((r) {
+                  final name = r.reviewerName?.isNotEmpty == true
+                      ? r.reviewerName!
+                      : 'Nepoznat korisnik';
+                  final dateStr = r.createdAt != null
+                      ? DateFormat('dd.MM.yyyy').format(r.createdAt!)
+                      : '';
+                  final photo = _reviewerPhoto(r);
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        CircleAvatar(
+                          radius: 20,
+                          backgroundColor: Colors.blue.shade50,
+                          backgroundImage: photo,
+                          child: photo == null
+                              ? Icon(Icons.person, color: Colors.blue.shade300, size: 22)
+                              : null,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  MouseRegion(
+                                    cursor: r.reviewerId != null
+                                        ? SystemMouseCursors.click
+                                        : MouseCursor.defer,
+                                    child: GestureDetector(
+                                      onTap: r.reviewerId != null
+                                          ? () => _navigateToReviewer(r)
+                                          : null,
+                                      child: Text(
+                                        name,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 13,
+                                          color: r.reviewerId != null
+                                              ? Colors.blue.shade700
+                                              : Colors.black87,
+                                          decoration: r.reviewerId != null
+                                              ? TextDecoration.underline
+                                              : TextDecoration.none,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  if (dateStr.isNotEmpty)
+                                    Text(dateStr,
+                                        style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: List.generate(5, (i) {
+                                  final filled = i < (r.rating ?? 0).round();
+                                  return Icon(
+                                    filled ? Icons.star : Icons.star_border,
+                                    size: 15,
+                                    color: Colors.amber,
+                                  );
+                                }),
+                              ),
+                              if (r.description?.isNotEmpty == true) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  r.description!,
+                                  style: const TextStyle(fontSize: 13, height: 1.4),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+                if (totalPages > 1) ...[
+                  const Divider(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.chevron_left),
+                        onPressed: _ratingsPage > 1
+                            ? () => _loadRatings(page: _ratingsPage - 1)
+                            : null,
+                      ),
+                      Text('$_ratingsPage / $totalPages',
+                          style: const TextStyle(fontSize: 13)),
+                      IconButton(
+                        icon: const Icon(Icons.chevron_right),
+                        onPressed: _ratingsPage < totalPages
+                            ? () => _loadRatings(page: _ratingsPage + 1)
+                            : null,
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
     );
   }
 }

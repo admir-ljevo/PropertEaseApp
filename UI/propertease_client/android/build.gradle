@@ -1,37 +1,7 @@
-buildscript {
-    ext.kotlin_version = '1.9.22'
-    repositories {
-        google()
-        mavenCentral()
-    }
-
-    dependencies {
-        classpath 'com.android.tools.build:gradle:8.1.4'
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
-    }
-}
-
 allprojects {
     repositories {
         google()
         mavenCentral()
-    }
-}
-
-subprojects {
-    afterEvaluate { project ->
-        if (project.plugins.hasPlugin("com.android.library")) {
-            if (project.android.namespace == null) {
-                def manifestFile = project.android.sourceSets.main.manifest.srcFile
-                if (manifestFile.exists()) {
-                    def manifest = new groovy.xml.XmlSlurper().parse(manifestFile)
-                    def pkg = manifest.@package.toString()
-                    if (pkg) {
-                        project.android.namespace = pkg
-                    }
-                }
-            }
-        }
     }
 }
 

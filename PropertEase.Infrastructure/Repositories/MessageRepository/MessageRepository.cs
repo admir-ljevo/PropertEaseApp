@@ -14,16 +14,16 @@ namespace PropertEase.Infrastructure.Repositories.MessageRepository
         {
         }
 
-        public async Task<List<MessageDto>> GetByConversationId(int conversationId)
+        public async Task<List<MessageDto>> GetByConversationId(int conversationId, int page = 1, int pageSize = 30)
         {
-            // ProfilePhotoBytes is intentionally excluded — it is the same 2 photos
-            // repeated for every message row, making payloads huge.
-            // Both clients already receive the participant photos when opening the chat.
+            pageSize = Math.Min(pageSize <= 0 ? 30 : pageSize, 50);
+            page = page <= 0 ? 1 : page;
             return await DatabaseContext.Messages
                 .AsNoTracking()
                 .Where(m => !m.IsDeleted && m.ConversationId == conversationId)
                 .OrderByDescending(m => m.CreatedAt)
-                .Take(100)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .Select(m => new MessageDto
                 {
                     Id = m.Id,

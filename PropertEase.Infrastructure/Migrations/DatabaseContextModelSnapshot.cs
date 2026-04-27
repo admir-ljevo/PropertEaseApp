@@ -17,7 +17,7 @@ namespace PropertEase.Infrastructure.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "7.0.5")
+                .HasAnnotation("ProductVersion", "9.0.4")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -194,7 +194,10 @@ namespace PropertEase.Infrastructure.Migrations
 
                     b.HasIndex("RoleId");
 
-                    b.ToTable("AspNetRoleClaims", (string)null);
+                    b.ToTable("AspNetRoleClaims", null, t =>
+                        {
+                            t.ExcludeFromMigrations();
+                        });
                 });
 
             modelBuilder.Entity("PropertEase.Core.Entities.Identity.ApplicationUser", b =>
@@ -307,7 +310,10 @@ namespace PropertEase.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("AspNetUserClaims", (string)null);
+                    b.ToTable("AspNetUserClaims", null, t =>
+                        {
+                            t.ExcludeFromMigrations();
+                        });
                 });
 
             modelBuilder.Entity("PropertEase.Core.Entities.Identity.ApplicationUserLogin", b =>
@@ -340,7 +346,10 @@ namespace PropertEase.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("AspNetUserLogins", (string)null);
+                    b.ToTable("AspNetUserLogins", null, t =>
+                        {
+                            t.ExcludeFromMigrations();
+                        });
                 });
 
             modelBuilder.Entity("PropertEase.Core.Entities.Identity.ApplicationUserRole", b =>
@@ -401,7 +410,10 @@ namespace PropertEase.Infrastructure.Migrations
 
                     b.HasKey("UserId", "LoginProvider", "Name");
 
-                    b.ToTable("AspNetUserTokens", (string)null);
+                    b.ToTable("AspNetUserTokens", null, t =>
+                        {
+                            t.ExcludeFromMigrations();
+                        });
                 });
 
             modelBuilder.Entity("PropertEase.Core.Entities.Message", b =>
@@ -532,9 +544,8 @@ namespace PropertEase.Infrastructure.Migrations
                     b.Property<int?>("ReservationId")
                         .HasColumnType("int");
 
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
@@ -827,6 +838,9 @@ namespace PropertEase.Infrastructure.Migrations
                     b.Property<double>("Rating")
                         .HasColumnType("float");
 
+                    b.Property<int?>("ReservationId")
+                        .HasColumnType("int");
+
                     b.Property<int>("ReviewerId")
                         .HasColumnType("int");
 
@@ -838,7 +852,13 @@ namespace PropertEase.Infrastructure.Migrations
 
                     b.HasIndex("PropertyId");
 
+                    b.HasIndex("ReservationId");
+
                     b.HasIndex("ReviewerId");
+
+                    b.HasIndex("ReviewerId", "ReservationId")
+                        .IsUnique()
+                        .HasFilter("[ReservationId] IS NOT NULL");
 
                     b.ToTable("PropertyRatings");
                 });
@@ -851,7 +871,22 @@ namespace PropertEase.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("CancellationReason")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("CancelledAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("CancelledById")
+                        .HasColumnType("int");
+
                     b.Property<int>("ClientId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ConfirmedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ConfirmedById")
                         .HasColumnType("int");
 
                     b.Property<DateTime>("CreatedAt")
@@ -865,9 +900,6 @@ namespace PropertEase.Infrastructure.Migrations
 
                     b.Property<string>("Description")
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
 
                     b.Property<bool>("IsDaily")
                         .HasColumnType("bit");
@@ -900,6 +932,9 @@ namespace PropertEase.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
                     b.Property<double>("TotalPrice")
                         .HasColumnType("float");
 
@@ -907,11 +942,11 @@ namespace PropertEase.Infrastructure.Migrations
 
                     b.HasIndex("ClientId");
 
-                    b.HasIndex("IsActive");
-
                     b.HasIndex("PropertyId");
 
                     b.HasIndex("RenterId");
+
+                    b.HasIndex("Status");
 
                     b.HasIndex("DateOfOccupancyStart", "DateOfOccupancyEnd");
 
@@ -980,6 +1015,9 @@ namespace PropertEase.Infrastructure.Migrations
                     b.Property<string>("ReservationNumber")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("Title")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<int>("UserId")
                         .HasColumnType("int");
 
@@ -1020,6 +1058,9 @@ namespace PropertEase.Infrastructure.Migrations
                     b.Property<int>("RenterId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("ReservationId")
+                        .HasColumnType("int");
+
                     b.Property<int>("ReviewerId")
                         .HasColumnType("int");
 
@@ -1031,7 +1072,13 @@ namespace PropertEase.Infrastructure.Migrations
 
                     b.HasIndex("RenterId");
 
+                    b.HasIndex("ReservationId");
+
                     b.HasIndex("ReviewerId");
+
+                    b.HasIndex("ReviewerId", "ReservationId")
+                        .IsUnique()
+                        .HasFilter("[ReservationId] IS NOT NULL");
 
                     b.ToTable("UserRatings");
                 });
@@ -1247,6 +1294,11 @@ namespace PropertEase.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("PropertEase.Core.Entities.PropertyReservation", "Reservation")
+                        .WithMany()
+                        .HasForeignKey("ReservationId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
                     b.HasOne("PropertEase.Core.Entities.Identity.ApplicationUser", "Reviewer")
                         .WithMany()
                         .HasForeignKey("ReviewerId")
@@ -1254,6 +1306,8 @@ namespace PropertEase.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Property");
+
+                    b.Navigation("Reservation");
 
                     b.Navigation("Reviewer");
                 });
@@ -1310,6 +1364,11 @@ namespace PropertEase.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
+                    b.HasOne("PropertEase.Core.Entities.PropertyReservation", "Reservation")
+                        .WithMany()
+                        .HasForeignKey("ReservationId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
                     b.HasOne("PropertEase.Core.Entities.Identity.ApplicationUser", "Reviewer")
                         .WithMany()
                         .HasForeignKey("ReviewerId")
@@ -1317,6 +1376,8 @@ namespace PropertEase.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Renter");
+
+                    b.Navigation("Reservation");
 
                     b.Navigation("Reviewer");
                 });

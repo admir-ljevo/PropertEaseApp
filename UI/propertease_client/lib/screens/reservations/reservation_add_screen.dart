@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_calendar_carousel/flutter_calendar_carousel.dart';
 import 'package:flutter_calendar_carousel/classes/event.dart';
@@ -9,8 +7,7 @@ import 'package:propertease_client/providers/property_reservation_provider.dart'
 import 'package:provider/provider.dart';
 import 'package:propertease_client/utils/authorization.dart';
 
-import '../../models/property.dart';
-import 'paypal_payment_screen.dart';
+import 'package:propertease_client/models/property.dart';
 import 'reservation_detail_screen.dart';
 
 // ── Colours consistent with the rest of the client app ───────────────────────
@@ -63,71 +60,38 @@ class ReservationAddScreenState extends State<ReservationAddScreen> {
 
   Future<void> addReservation() async {
     if (startDate == null || endDate == null) return;
+    setState(() => _isSubmitting = true);
 
-    final completer = Completer<PropertyReservation?>();
-
-    final reservationData = {
-      "propertyId": widget.property!.id,
-      "clientId": userId,
-      "renterId": renterId,
-      "numberOfGuests": selectedGuests,
-      "dateOfOccupancyStart": startDate!.toIso8601String(),
-      "dateOfOccupancyEnd": endDate!.toIso8601String(),
-      "totalPrice": totalPrice,
-      "isMonthly": isMonthly,
-      "isDaily": isDaily,
-      "numberOfMonths": numberOfMonths,
-      "numberOfDays": numberOfDays,
-      "description": _descriptionController.text,
-    };
-
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => PayPalScreen(
-          totalPrice: totalPrice,
-          reservationData: reservationData,
-          onReservationCreated: (r) {
-            if (!completer.isCompleted) completer.complete(r);
-          },
-          onReservationError: (error) {
-            if (!completer.isCompleted) completer.complete(null);
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: Text("Plaćanje neuspješno: $error"),
-                backgroundColor: Colors.red,
-                duration: const Duration(seconds: 5),
-              ));
-            }
-          },
-          onCancelled: () {
-            if (!completer.isCompleted) completer.complete(null);
-          },
-        ),
-      ),
-    );
-
-    if (!mounted) return;
-
-    // PayPalScreen popped. If backend call is still running, show loading.
-    if (!completer.isCompleted) {
-      setState(() => _isSubmitting = true);
-    }
-
-    final reservation = await completer.future.timeout(
-      const Duration(seconds: 30),
-      onTimeout: () => null,
-    );
-
-    if (!mounted) return;
-    setState(() => _isSubmitting = false);
-
-    if (reservation != null) {
+    try {
+      final reservation = await _reservationProvider.createReservation({
+        "propertyId": widget.property!.id,
+        "clientId": userId,
+        "renterId": renterId,
+        "numberOfGuests": selectedGuests,
+        "dateOfOccupancyStart": startDate!.toIso8601String(),
+        "dateOfOccupancyEnd": endDate!.toIso8601String(),
+        "totalPrice": totalPrice,
+        "isMonthly": isMonthly,
+        "isDaily": isDaily,
+        "numberOfMonths": numberOfMonths,
+        "numberOfDays": numberOfDays,
+        "description": _descriptionController.text,
+      });
+      if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
-          builder: (_) =>
-              ReservationDetailsScreen(reservationId: reservation.id!),
+          builder: (_) => ReservationDetailsScreen(reservationId: reservation.id!),
         ),
       );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Greška: $e'),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 5),
+      ));
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
     }
   }
 
@@ -652,9 +616,9 @@ class ReservationAddScreenState extends State<ReservationAddScreen> {
             borderRadius: BorderRadius.circular(14),
           ),
         ),
-        icon: const Icon(Icons.payment),
+        icon: const Icon(Icons.send_outlined),
         label: const Text(
-          'Rezerviši i plati',
+          'Pošalji zahtjev za rezervaciju',
           style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         onPressed: canSubmit ? () async => addReservation() : null,

@@ -9,6 +9,7 @@ namespace PropertEase.Core.Entities
         public ApplicationUser? User { get; set; }
         public int? ReservationId { get; set; }
         public PropertyReservation? Reservation { get; set; }
+        public string? Title { get; set; }
         public string Message { get; set; } = string.Empty;
         public bool IsSeen { get; set; } = false;
         public string? ReservationNumber { get; set; }

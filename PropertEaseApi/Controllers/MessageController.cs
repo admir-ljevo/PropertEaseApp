@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
@@ -11,6 +12,7 @@ using PropertEase.Shared.Hubs;
 namespace PropertEase.Controllers
 {
 
+    [Authorize]
     public class MessageController : BaseController<MessageDto, MessageUpsertDto, MessageUpsertDto, BaseSearchObject>
     {
         private readonly IMessageService messageService;
@@ -25,9 +27,12 @@ namespace PropertEase.Controllers
         }
 
         [HttpGet("GetByConversationId/{conversationId}")]
-        public async Task<IActionResult> GetByConversationId(int conversationId)
+        public async Task<IActionResult> GetByConversationId(
+            int conversationId,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 30)
         {
-            List<MessageDto> messages = await messageService.GetByConversationId(conversationId);
+            var messages = await messageService.GetByConversationId(conversationId, page, pageSize);
             return Ok(messages);
         }
 
@@ -41,7 +46,7 @@ namespace PropertEase.Controllers
         [HttpPut("MarkAsRead/{conversationId}")]
         public async Task<IActionResult> MarkAsRead(int conversationId, [FromQuery] int recipientId)
         {
-            await messageService.MarkConversationAsRead(conversationId, recipientId);
+            await messageService.MarkConversationAsRead(conversationId, recipientId, hubContext);
             return Ok();
         }
 

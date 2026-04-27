@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_paypal/flutter_paypal.dart';
 import 'package:provider/provider.dart';
-import '../../models/property_reservation.dart';
-import '../../providers/payment_provider.dart';
+import 'package:webview_flutter/webview_flutter.dart';
+import 'package:propertease_client/models/property_reservation.dart';
+import 'package:propertease_client/providers/payment_provider.dart';
+
+const _returnUrl = 'https://propertease.app/payment/success';
+const _cancelUrl  = 'https://propertease.app/payment/cancel';
 
 class PayPalScreen extends StatefulWidget {
   final double totalPrice;
@@ -11,13 +14,17 @@ class PayPalScreen extends StatefulWidget {
   final void Function(String error)? onReservationError;
   final VoidCallback? onCancelled;
 
+  /// When set, pays for an existing confirmed reservation instead of creating a new one.
+  final int? existingReservationId;
+
   const PayPalScreen({
     super.key,
-    required this.totalPrice,
+    this.totalPrice = 0,
     required this.reservationData,
     this.onReservationCreated,
     this.onReservationError,
     this.onCancelled,
+    this.existingReservationId,
   });
 
   @override
@@ -25,78 +32,104 @@ class PayPalScreen extends StatefulWidget {
 }
 
 class _PayPalScreenState extends State<PayPalScreen> {
-  String? _clientId;
-  String? _secretKey;
-  bool _loadingConfig = true;
+  WebViewController? _webController;
+  bool _loadingOrder   = true;
   bool _processingPayment = false;
   String? _error;
-  // Captured early while context is valid — PayPalScreen is replaced (not
-  // pushed) by CompletePayment, so context is deactivated before onSuccess fires.
   late PaymentProvider _paymentProvider;
 
   @override
   void initState() {
     super.initState();
-    _loadConfig();
+    _paymentProvider = context.read<PaymentProvider>();
+    _createOrder();
   }
 
-  Future<void> _loadConfig() async {
+  Future<void> _createOrder() async {
     try {
-      _paymentProvider = context.read<PaymentProvider>();
-      final config = await _paymentProvider.getPayPalConfig();
+      if (widget.existingReservationId == null) throw Exception('Reservation ID required');
+      final order = await _paymentProvider.createPayPalOrder(widget.existingReservationId!);
+      final approvalUrl = order['approvalUrl'] as String?;
+      if (approvalUrl == null) throw Exception('No approval URL returned');
+
+      final controller = WebViewController()
+        ..setJavaScriptMode(JavaScriptMode.unrestricted)
+        ..setNavigationDelegate(NavigationDelegate(
+          onNavigationRequest: _handleNavigation,
+        ))
+        ..loadRequest(Uri.parse(approvalUrl));
+
       if (!mounted) return;
       setState(() {
-        _clientId = config['clientId'] as String?;
-        _secretKey = config['secretKey'] as String?;
-        _loadingConfig = false;
+        _webController  = controller;
+        _loadingOrder   = false;
       });
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = e.toString();
-        _loadingConfig = false;
+        _error      = e.toString();
+        _loadingOrder = false;
       });
     }
   }
 
-  // Synchronous — flutter_paypal does NOT await onSuccess callbacks and
-  // may auto-pop this route before the callback returns. We must NOT guard
-  // on `mounted` here, because the route may already be gone by the time
-  // flutter_paypal fires onSuccess. All UI work is done via callbacks that
-  // close over the still-live reservation_add_screen context.
-  void _onPaymentSuccess(Map params) {
-    debugPrint('[PayPal] onSuccess fired. params=$params');
-    if (_processingPayment) {
-      debugPrint('[PayPal] already processing, ignoring');
-      return;
+  NavigationDecision _handleNavigation(NavigationRequest request) {
+    final url = request.url;
+
+    if (url.startsWith(_cancelUrl)) {
+      widget.onCancelled?.call();
+      if (mounted) Navigator.of(context).pop(false);
+      return NavigationDecision.prevent;
     }
-    _processingPayment = true;
-    _completeReservation(params, _paymentProvider);
+
+    if (url.startsWith(_returnUrl)) {
+      final uri      = Uri.parse(url);
+      final paymentId = uri.queryParameters['paymentId'];
+      final payerId   = uri.queryParameters['PayerID'];
+
+      if (paymentId == null || payerId == null) {
+        widget.onReservationError?.call('PayPal redirect missing paymentId or PayerID');
+        if (mounted) Navigator.of(context).pop(false);
+        return NavigationDecision.prevent;
+      }
+
+      _completeReservation(paymentId, payerId);
+      return NavigationDecision.prevent;
+    }
+
+    return NavigationDecision.navigate;
   }
 
-  Future<void> _completeReservation(Map params, PaymentProvider provider) async {
+  Future<void> _completeReservation(String paymentId, String payerId) async {
+    if (_processingPayment) return;
+    if (mounted) setState(() => _processingPayment = true);
+
     try {
-      debugPrint('[PayPal] calling backend CompleteReservation...');
-      final result = await provider.completeReservation({
-        ...widget.reservationData,
-        "payPalPaymentId": params["paymentId"],
-        // PayPal URL param is "PayerID" (capital D)
-        "payPalPayerId": params["PayerID"] ?? params["payerID"] ?? "",
-        "amount": widget.totalPrice,
-      });
-      debugPrint('[PayPal] reservation created, id=${result.id}');
-      // Fire the caller's callback — its context is still mounted.
+      final PropertyReservation result;
+      if (widget.existingReservationId != null) {
+        result = await _paymentProvider.payForReservation({
+          'reservationId':  widget.existingReservationId,
+          'payPalPaymentId': paymentId,
+          'payPalPayerId':   payerId,
+          'amount':          widget.totalPrice,
+        });
+      } else {
+        result = await _paymentProvider.completeReservation({
+          ...widget.reservationData,
+          'payPalPaymentId': paymentId,
+          'payPalPayerId':   payerId,
+          'amount':          widget.totalPrice,
+        });
+      }
       widget.onReservationCreated?.call(result);
+      if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
-      debugPrint('[PayPal] ERROR: $e');
-      // Fire the caller's error callback so the error is visible even when
-      // this screen is already unmounted.
       widget.onReservationError?.call(e.toString());
       if (mounted) {
         setState(() => _processingPayment = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to create reservation: $e'),
+            content: Text('Payment failed: $e'),
             backgroundColor: Colors.red,
             duration: const Duration(seconds: 5),
           ),
@@ -107,69 +140,33 @@ class _PayPalScreenState extends State<PayPalScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_loadingConfig) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    if (_loadingOrder) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
     }
 
-    if (_error != null || _clientId == null || _secretKey == null) {
+    if (_error != null || _webController == null) {
       return Scaffold(
         appBar: AppBar(title: const Text('Payment')),
         body: Center(child: Text(_error ?? 'PayPal configuration unavailable')),
       );
     }
 
-    final priceStr = widget.totalPrice.toStringAsFixed(2);
-
     return Stack(
       children: [
-        UsePaypal(
-          sandboxMode: true,
-          clientId: _clientId!,
-          secretKey: _secretKey!,
-          returnURL: "https://success.snippetcoder.com",
-          cancelURL: "https://cancel.snippetcoder.com",
-          transactions: [
-            {
-              "amount": {
-                "total": priceStr,
-                "currency": "USD",
-                "details": {
-                  "subtotal": priceStr,
-                  "shipping": "0",
-                  "shipping_discount": 0,
-                },
+        Scaffold(
+          appBar: AppBar(
+            title: const Text('PayPal Payment'),
+            leading: IconButton(
+              icon: const Icon(Icons.close),
+              onPressed: () {
+                widget.onCancelled?.call();
+                Navigator.of(context).pop(false);
               },
-              "description": "Property reservation payment",
-              "item_list": {
-                "items": [
-                  {
-                    "name": "Property Reservation",
-                    "quantity": 1,
-                    "price": priceStr,
-                    "currency": "USD",
-                  }
-                ],
-              },
-            }
-          ],
-          note: "Contact us for any questions on your order.",
-          onSuccess: _onPaymentSuccess,
-          onError: (error) {
-            debugPrint('[PayPal] onError: $error');
-            widget.onReservationError?.call('PayPal error: $error');
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Payment error: $error'),
-                  backgroundColor: Colors.red,
-                ),
-              );
-            }
-          },
-          onCancel: (params) {
-            widget.onCancelled?.call();
-            if (mounted) Navigator.of(context).pop(false);
-          },
+            ),
+          ),
+          body: WebViewWidget(controller: _webController!),
         ),
         if (_processingPayment)
           const Scaffold(

@@ -10,6 +10,8 @@ namespace PropertEase.Services.Services.ApplicationUserRolesService
 {
     public interface IApplicationUserRolesService : IBaseService<ApplicationUserRoleDto>
     {
-        Task<IEnumerable<ApplicationUserRoleDto>> GetByUserId(int pUserId);
+        Task<IEnumerable<ApplicationUserRoleDto>> GetByUserId(int userId);
+        Task AssignRoleAsync(int userId, int roleId);
+        Task RemoveRoleAsync(int userId, int roleId);
     }
 }

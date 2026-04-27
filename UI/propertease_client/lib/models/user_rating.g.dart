@@ -20,6 +20,7 @@ UserRating _$UserRatingFromJson(Map<String, dynamic> json) => UserRating(
       reviewerName: json['reviewerName'] as String?,
       rating: (json['rating'] as num?)?.toDouble(),
       description: json['description'] as String?,
+      reservationId: json['reservationId'] as int?,
     )..reviewer = json['reviewer'] == null
         ? null
         : ApplicationUser.fromJson(json['reviewer'] as Map<String, dynamic>);
@@ -36,4 +37,5 @@ Map<String, dynamic> _$UserRatingToJson(UserRating instance) =>
       'reviewerName': instance.reviewerName,
       'rating': instance.rating,
       'description': instance.description,
+      'reservationId': instance.reservationId,
     };

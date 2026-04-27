@@ -123,6 +123,52 @@ class _PropertyEditScreenState extends State<PropertyEditScreen> {
     }
   }
 
+  Future<void> _deleteCurrentImage() async {
+    if (_images.isEmpty) return;
+    final photo = _images[_currentPage];
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Ukloni sliku'),
+        content: const Text('Jeste li sigurni da želite ukloniti ovu sliku?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Odustani'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Ukloni'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      await _photoProvider.deletePhoto(photo.id!);
+      final updated = List<Photo>.from(_images)..removeAt(_currentPage);
+      if (mounted) {
+        setState(() {
+          _images = updated;
+          _currentPage = updated.isEmpty ? 0 : _currentPage.clamp(0, updated.length - 1);
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Slika uklonjena'), backgroundColor: Colors.green),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Greška pri uklanjanju slike'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
   Future<void> _saveProperty() async {
     if (!_formKey.currentState!.validate()) return;
     final p = _property;
@@ -365,6 +411,12 @@ class _PropertyEditScreenState extends State<PropertyEditScreen> {
                     ),
                   ),
                 ],
+                if (_images.isNotEmpty)
+                  Positioned(
+                    top: 8,
+                    left: 8,
+                    child: _deleteImageButton(),
+                  ),
                 Positioned(
                   top: 8,
                   right: 8,
@@ -398,6 +450,20 @@ class _PropertyEditScreenState extends State<PropertyEditScreen> {
           padding: const EdgeInsets.all(6),
           child: Icon(icon, color: Colors.white, size: 24),
         ),
+      ),
+    );
+  }
+
+  Widget _deleteImageButton() {
+    return ElevatedButton.icon(
+      onPressed: _deleteCurrentImage,
+      icon: const Icon(Icons.delete_outline, size: 18),
+      label: const Text('Ukloni'),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.red.shade700,
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     );
   }
@@ -676,8 +742,8 @@ class _PropertyEditScreenState extends State<PropertyEditScreen> {
             borderRadius: BorderRadius.circular(12),
             child: FlutterMap(
               options: MapOptions(
-                center: _pickedLocation ?? LatLng(44.0, 17.5),
-                zoom: _pickedLocation != null ? 13.0 : 7.0,
+                initialCenter: _pickedLocation ?? LatLng(44.0, 17.5),
+                initialZoom: _pickedLocation != null ? 13.0 : 7.0,
                 onTap: (tapPosition, point) {
                   setState(() {
                     _pickedLocation = point;
@@ -698,7 +764,7 @@ class _PropertyEditScreenState extends State<PropertyEditScreen> {
                         point: _pickedLocation!,
                         width: 40,
                         height: 40,
-                        builder: (ctx) => const Icon(
+                        child: const Icon(
                           Icons.location_pin,
                           color: Colors.red,
                           size: 40,

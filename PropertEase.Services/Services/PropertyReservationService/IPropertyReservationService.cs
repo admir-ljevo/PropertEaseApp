@@ -18,5 +18,12 @@ namespace PropertEase.Services.Services.PropertyReservationService
         public Task<int> GetUpcomingCountByPropertyAsync(int propertyId);
         public Task<PropertEase.Core.Dto.PagedResult<ReservationSummaryDto>> GetClientSummariesAsync(int clientId, int page = 1, int pageSize = 10);
         public Task<PropertEase.Core.Dto.PagedResult<ReservationSummaryDto>> GetRenterSummariesAsync(int renterId, int page = 1, int pageSize = 10);
+        public Task<PropertyReservationDto> UpdateWithNotificationAsync(int id, PropertyReservationUpsertDto dto, int? actorId = null);
+        public Task<PropertyReservationDto> ConfirmReservationAsync(int id, int actorId);
+        /// <summary>
+        /// Synchronises <see cref="PropertEase.Core.Entities.Property.IsAvailable"/> with the
+        /// current set of active reservations for the given property.
+        /// </summary>
+        public Task SyncPropertyAvailabilityAsync(int propertyId);
     }
 }

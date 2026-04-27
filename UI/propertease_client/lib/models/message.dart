@@ -19,6 +19,7 @@ class Message {
   Conversation? conversation;
   int? conversationId;
   String? content;
+  bool? isRead;
 
   // Constructor
   Message({
@@ -34,6 +35,7 @@ class Message {
     this.conversation,
     this.conversationId,
     this.content,
+    this.isRead = false,
   });
 
   // Factory constructor to create an instance from a JSON object

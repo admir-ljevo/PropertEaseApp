@@ -52,6 +52,15 @@ class UserProvider with ChangeNotifier {
     }
   }
 
+  Future<ApplicationUser> getUserById(int id) async {
+    final url = '$_baseUrl$_endpoint/$id';
+    final response = await http.get(Uri.parse(url), headers: createHeaders());
+    if (isValidResponse(response)) {
+      return ApplicationUser.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+    }
+    throw Exception('Failed to get user');
+  }
+
   Future<List<ApplicationUser>> getAllUsers() async {
     var url = '$_baseUrl$_endpoint/GetAllUsers';
     var uri = Uri.parse(url);
@@ -213,88 +222,82 @@ class UserProvider with ChangeNotifier {
   }
 
   Future<void> addClient(ApplicationUser client, String password) async {
-    try {
-      final url = Uri.parse('${AppConfig.apiBase}Clients/Add');
-      final request = http.MultipartRequest('POST', url);
-      request.fields['Id'] = client.id.toString();
-      request.fields['Email'] = client.email ?? '';
-      request.fields['UserName'] = client.userName ?? '';
-      request.fields['FirstName'] = client.person?.firstName ?? '';
-      request.fields['LastName'] = client.person?.lastName ?? '';
-      request.fields['BirthDate'] =
-          client.person?.birthDate?.toIso8601String() ?? '';
-      request.fields['Gender'] = client.person?.gender?.toString() ?? '';
-      request.fields['ProfilePhoto'] = client.person?.profilePhoto ?? '';
-      request.fields['ProfilePhotoThumbnail'] =
-          client.person?.profilePhotoThumbnail ?? '';
-      request.fields['BirthPlaceId'] =
-          client.person?.birthPlaceId?.toString() ?? '';
-      request.fields['Jmbg'] = client.person?.jmbg ?? '';
-      request.fields['PlaceOfResidenceId'] =
-          client.person?.placeOfResidenceId?.toString() ?? '';
-
-      request.fields['Address'] = client.person?.address ?? '';
-      request.fields['PostCode'] = client.person?.postCode ?? '';
-      request.fields['PhoneNumber'] = client.phoneNumber ?? '';
-      request.fields['Password'] = password;
-      if (client.file != null) {
-        request.files.add(
-          await http.MultipartFile.fromPath('File', client.file!.path,
-              contentType: http_parser.MediaType('image', 'jpeg')),
-        );
-      }
-      final response = await request.send();
-      if (response.statusCode != 200) {
-        print('Error: ${response.statusCode} ${response.toString()}');
-      }
-    } catch (e) {
-      print('Err: ${e.toString()}');
+    final url = Uri.parse('${AppConfig.apiBase}Clients/Add');
+    final request = http.MultipartRequest('POST', url);
+    _attachAuth(request);
+    request.fields['Id'] = client.id.toString();
+    request.fields['Email'] = client.email ?? '';
+    request.fields['UserName'] = client.userName ?? '';
+    request.fields['FirstName'] = client.person?.firstName ?? '';
+    request.fields['LastName'] = client.person?.lastName ?? '';
+    request.fields['BirthDate'] =
+        client.person?.birthDate?.toIso8601String() ?? '';
+    request.fields['Gender'] = client.person?.gender?.toString() ?? '';
+    request.fields['ProfilePhoto'] = client.person?.profilePhoto ?? '';
+    request.fields['ProfilePhotoThumbnail'] =
+        client.person?.profilePhotoThumbnail ?? '';
+    request.fields['BirthPlaceId'] =
+        client.person?.birthPlaceId?.toString() ?? '';
+    request.fields['Jmbg'] = client.person?.jmbg ?? '';
+    request.fields['PlaceOfResidenceId'] =
+        client.person?.placeOfResidenceId?.toString() ?? '';
+    request.fields['Address'] = client.person?.address ?? '';
+    request.fields['PostCode'] = client.person?.postCode ?? '';
+    request.fields['PhoneNumber'] = client.phoneNumber ?? '';
+    request.fields['Password'] = password;
+    if (client.file != null) {
+      request.files.add(
+        await http.MultipartFile.fromPath('File', client.file!.path,
+            contentType: http_parser.MediaType('image', 'jpeg')),
+      );
+    }
+    final response = await request.send();
+    if (response.statusCode != 200) {
+      final body = await response.stream.bytesToString();
+      throw Exception(_extractMessage(body, response.statusCode));
     }
   }
 
   Future<void> addEmployee(ApplicationUser employee, String password,
       {int? roleId}) async {
-    try {
-      final url = Uri.parse('${AppConfig.apiBase}Employee/Add');
-      final request = http.MultipartRequest('POST', url);
-      request.fields['Id'] = employee.id.toString();
-      request.fields['Email'] = employee.email ?? '';
-      request.fields['UserName'] = employee.userName ?? '';
-      request.fields['FirstName'] = employee.person?.firstName ?? '';
-      request.fields['LastName'] = employee.person?.lastName ?? '';
-      request.fields['BirthDate'] =
-          employee.person?.birthDate?.toIso8601String() ?? '';
-      request.fields['Gender'] = employee.person?.gender?.toString() ?? '';
-      request.fields['ProfilePhoto'] = employee.person?.profilePhoto ?? '';
-      request.fields['ProfilePhotoThumbnail'] =
-          employee.person?.profilePhotoThumbnail ?? '';
-      request.fields['BirthPlaceId'] =
-          employee.person?.birthPlaceId?.toString() ?? '';
-      request.fields['Jmbg'] = employee.person?.jmbg ?? '';
-      request.fields['PlaceOfResidenceId'] =
-          employee.person?.placeOfResidenceId?.toString() ?? '';
-      request.fields['MarriageStatus'] =
-          employee.person?.marriageStatus?.toString() ?? '';
-      request.fields['Nationality'] = employee.person?.nationality ?? '';
-      request.fields['Citizenship'] = employee.person?.citizenship ?? '';
-      request.fields['Address'] = employee.person?.address ?? '';
-      request.fields['PostCode'] = employee.person?.postCode ?? '';
-      request.fields['PhoneNumber'] = employee.phoneNumber ?? '';
-      request.fields['Password'] = password;
-      if (roleId != null) request.fields['RoleId'] = roleId.toString();
-
-      if (employee.file != null) {
-        request.files.add(
-          await http.MultipartFile.fromPath('File', employee.file!.path,
-              contentType: http_parser.MediaType('image', 'jpeg')),
-        );
-      }
-      final response = await request.send();
-      if (response.statusCode != 200) {
-        print('Error: ${response.statusCode} ${response.toString()}');
-      }
-    } catch (e) {
-      print('Err: ${e.toString()}');
+    final url = Uri.parse('${AppConfig.apiBase}Employee/Add');
+    final request = http.MultipartRequest('POST', url);
+    _attachAuth(request);
+    request.fields['Id'] = employee.id.toString();
+    request.fields['Email'] = employee.email ?? '';
+    request.fields['UserName'] = employee.userName ?? '';
+    request.fields['FirstName'] = employee.person?.firstName ?? '';
+    request.fields['LastName'] = employee.person?.lastName ?? '';
+    request.fields['BirthDate'] =
+        employee.person?.birthDate?.toIso8601String() ?? '';
+    request.fields['Gender'] = employee.person?.gender?.toString() ?? '';
+    request.fields['ProfilePhoto'] = employee.person?.profilePhoto ?? '';
+    request.fields['ProfilePhotoThumbnail'] =
+        employee.person?.profilePhotoThumbnail ?? '';
+    request.fields['BirthPlaceId'] =
+        employee.person?.birthPlaceId?.toString() ?? '';
+    request.fields['Jmbg'] = employee.person?.jmbg ?? '';
+    request.fields['PlaceOfResidenceId'] =
+        employee.person?.placeOfResidenceId?.toString() ?? '';
+    request.fields['MarriageStatus'] =
+        employee.person?.marriageStatus?.toString() ?? '';
+    request.fields['Nationality'] = employee.person?.nationality ?? '';
+    request.fields['Citizenship'] = employee.person?.citizenship ?? '';
+    request.fields['Address'] = employee.person?.address ?? '';
+    request.fields['PostCode'] = employee.person?.postCode ?? '';
+    request.fields['PhoneNumber'] = employee.phoneNumber ?? '';
+    request.fields['Password'] = password;
+    if (roleId != null) request.fields['RoleId'] = roleId.toString();
+    if (employee.file != null) {
+      request.files.add(
+        await http.MultipartFile.fromPath('File', employee.file!.path,
+            contentType: http_parser.MediaType('image', 'jpeg')),
+      );
+    }
+    final response = await request.send();
+    if (response.statusCode != 200) {
+      final body = await response.stream.bytesToString();
+      throw Exception(_extractMessage(body, response.statusCode));
     }
   }
 
@@ -302,6 +305,7 @@ class UserProvider with ChangeNotifier {
     try {
       final url = Uri.parse('${AppConfig.apiBase}Clients/Edit/$id');
       final request = http.MultipartRequest('PUT', url);
+      _attachAuth(request);
       request.fields['Id'] = client.id.toString();
       request.fields['Email'] = client.email ?? '';
       request.fields['UserName'] = client.userName ?? '';
@@ -342,7 +346,7 @@ class UserProvider with ChangeNotifier {
     try {
       final url = Uri.parse('${AppConfig.apiBase}Employee/Edit/$id');
       final request = http.MultipartRequest('PUT', url);
-
+      _attachAuth(request);
       request.fields['Id'] = employee.id.toString();
       request.fields['Email'] = employee.email ?? '';
       request.fields['UserName'] = employee.userName ?? '';
@@ -486,6 +490,23 @@ class UserProvider with ChangeNotifier {
     if (response.statusCode != 200) {
       throw Exception('Failed to reset password: ${response.statusCode}');
     }
+  }
+
+  void _attachAuth(http.MultipartRequest request) {
+    final token = Authorization.token;
+    if (token != null && token.isNotEmpty) {
+      request.headers['Authorization'] = 'Bearer $token';
+    }
+  }
+
+  String _extractMessage(String body, int statusCode) {
+    try {
+      final decoded = jsonDecode(body);
+      if (decoded is Map) {
+        return (decoded['message'] ?? decoded['title'] ?? decoded['detail'] ?? 'Greška ($statusCode)').toString();
+      }
+    } catch (_) {}
+    return body.isNotEmpty ? body : 'Greška ($statusCode)';
   }
 
   String getQueryString(Map params, {String prefix = '&'}) {

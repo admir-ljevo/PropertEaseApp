@@ -3,9 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../config/app_config.dart';
-import '../../models/property.dart';
-import '../../providers/property_provider.dart';
+import 'package:propertease_client/config/app_config.dart';
+import 'package:propertease_client/models/property.dart';
+import 'package:propertease_client/providers/property_provider.dart';
 
 class PropertyCompareScreen extends StatefulWidget {
   final Property propertyA;

@@ -44,6 +44,7 @@ using PropertEase.Shared.Constants;
 using PropertEase.Shared.Models;
 using PropertEase.Shared.Services.Crypto;
 using PropertEase.Shared.Services.LoggedUserData;
+using PropertEase.Shared.Services.TokenBlacklist;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.DataProtection.AuthenticatedEncryption;
@@ -59,11 +60,29 @@ using PropertEase.Services.Services.ReservationNotificationService;
 using PropertEase.Services.Services.CountryService;
 using PropertEase.Infrastructure.Repositories.CityRepository;
 using PropertEase.Services.Services.CityService;
+using Microsoft.AspNetCore.SignalR;
+using PropertEase.Api.Hubs;
+using PropertEase.Api.Workers;
 using PropertEase.Shared.Hubs;
 using Swashbuckle.AspNetCore.Filters;
 using System.Text;
+using PropertEase.Api.Middleware;
+
+// Load .env file for local development — Docker already injects these as real env vars
+var envFile = Path.Combine(Directory.GetCurrentDirectory(), "..", ".env");
+if (File.Exists(envFile))
+{
+    foreach (var line in File.ReadAllLines(envFile))
+    {
+        if (string.IsNullOrWhiteSpace(line) || line.TrimStart().StartsWith('#')) continue;
+        var parts = line.Split('=', 2);
+        if (parts.Length == 2)
+            Environment.SetEnvironmentVariable(parts[0].Trim(), parts[1].Trim());
+    }
+}
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Configuration.AddEnvironmentVariables();
 
 // ─── DATABASE ────────────────────────────────────────────────────────────────
 builder.Services.AddDbContext<DatabaseContext>(options =>
@@ -81,10 +100,13 @@ builder.Services.AddValidatorsFromAssemblyContaining<PropertyReservationValidato
 // ─── HTTP / API ──────────────────────────────────────────────────────────────
 builder.Services.AddSession();
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddHttpClient();
 builder.Services.AddControllers()
     .AddNewtonsoftJson(opt =>
         opt.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore);
 builder.Services.AddSignalR();
+builder.Services.AddSingleton<IUserIdProvider, NotificationUserIdProvider>();
+builder.Services.AddHostedService<NotificationPushWorker>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.Configure<FormOptions>(o =>
 {
@@ -99,6 +121,7 @@ builder.Services.AddSingleton<IRabbitMQPublisher, RabbitMQPublisher>();
 
 // ─── CUSTOM SERVICES ─────────────────────────────────────────────────────────
 builder.Services.AddScoped<ILoggedUserData, LoggedUserData>();
+builder.Services.AddSingleton<ITokenBlacklistService, TokenBlacklistService>();
 builder.Services.AddScoped<IAccessManager, AccessManager>();
 builder.Services.AddSingleton<ICrypto, Crypto>();
 builder.Services.AddScoped<IFileManager, FileManager>();
@@ -166,6 +189,7 @@ builder.Services.Configure<CookiePolicyOptions>(options =>
     options.Secure = CookieSecurePolicy.SameAsRequest;
     options.HttpOnly = Microsoft.AspNetCore.CookiePolicy.HttpOnlyPolicy.Always;
 });
+builder.Services.AddMemoryCache();
 builder.Services.AddDistributedMemoryCache();
 
 builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
@@ -216,6 +240,30 @@ builder.Services.AddAuthentication(x =>
         ValidateAudience = false,
         ValidateLifetime = true
     };
+    // SignalR passes the token as ?access_token= in the query string, not in the header
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            var path = context.HttpContext.Request.Path;
+            if (!path.StartsWithSegments("/hubs/messageHub"))
+                return Task.CompletedTask;
+
+            // signalr_core (Flutter) sends the token as Authorization: Bearer for
+            // negotiate (HTTP) and as ?access_token= for WebSocket upgrade; handle both.
+            var accessToken = context.Request.Query["access_token"].ToString();
+            if (string.IsNullOrEmpty(accessToken))
+            {
+                var auth = context.Request.Headers.Authorization.ToString();
+                if (auth.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+                    accessToken = auth["Bearer ".Length..];
+            }
+            if (!string.IsNullOrEmpty(accessToken))
+                context.Token = accessToken;
+
+            return Task.CompletedTask;
+        }
+    };
 });
 
 // ─── CORS ────────────────────────────────────────────────────────────────────
@@ -238,10 +286,24 @@ builder.Logging.AddConsole();
 var app = builder.Build();
 
 // ─── MIGRATE + SEED DATABASE ─────────────────────────────────────────────────
-using (var scope = app.Services.CreateScope())
 {
-    var db = scope.ServiceProvider.GetRequiredService<PropertEase.Infrastructure.DatabaseContext>();
-    db.Database.Migrate();
+    const int maxRetries = 10;
+    for (int attempt = 1; attempt <= maxRetries; attempt++)
+    {
+        using var scope = app.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<PropertEase.Infrastructure.DatabaseContext>();
+        try
+        {
+            db.Database.Migrate();
+            break;
+        }
+        catch (Exception ex) when (attempt < maxRetries)
+        {
+            var startupLogger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+            startupLogger.LogWarning("Migration attempt {Attempt}/{Max} failed: {Message}. Retrying in 5s...", attempt, maxRetries, ex.Message);
+            Thread.Sleep(5000);
+        }
+    }
 }
 await DatabaseSeeder.SeedAsync(app.Services);
 
@@ -250,8 +312,9 @@ app.UseSwagger();
 app.UseSwaggerUI(c =>
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "PropertEase API V1"));
 
-if (app.Environment.IsDevelopment())
-    app.UseDeveloperExceptionPage();
+app.UseMiddleware<RequestLoggingMiddleware>();
+app.UseMiddleware<ExceptionHandlingMiddleware>();
+app.UseMiddleware<TokenBlacklistMiddleware>();
 
 if (!app.Environment.IsDevelopment())
     app.UseHttpsRedirection();

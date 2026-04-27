@@ -60,6 +60,19 @@ namespace PropertEase.Infrastructure.Repositories.ApplicationUserRolesRepository
             await DatabaseContext.SaveChangesAsync();
         }
 
+        public async Task RemoveUserRoleByUserAndRoleAsync(int userId, int roleId)
+        {
+            var entity = await DatabaseContext.UserRoles
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(ur => ur.UserId == userId && ur.RoleId == roleId);
+
+            if (entity == null) throw new KeyNotFoundException("Role assignment not found.");
+            entity.IsDeleted = true;
+            entity.ModifiedAt = DateTime.Now;
+            DatabaseContext.UserRoles.Update(entity);
+            await DatabaseContext.SaveChangesAsync();
+        }
+
         public override async Task RemoveByIdAsync(int id, bool isSoft = true)
         {
             await RemoveUserRoleAsync(id);

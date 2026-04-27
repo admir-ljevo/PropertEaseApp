@@ -15,8 +15,8 @@ namespace PropertEase.Infrastructure.Repositories.UserRatingRepository
 
         public async new Task<List<UserRatingDto>> GetAllAsync()
         {
-            return await GetFiltered(new UserRatingFilter { PageSize = int.MaxValue })
-                .ContinueWith(t => t.Result.Items);
+            var result = await GetFiltered(new UserRatingFilter { PageSize = 100 });
+            return result.Items;
         }
 
         public async Task<UserRatingDto> GetByRatingIdAsync(int id)
@@ -33,6 +33,7 @@ namespace PropertEase.Infrastructure.Repositories.UserRatingRepository
                     ReviewerName = r.ReviewerName,
                     Rating = r.Rating,
                     Description = r.Description,
+                    ReservationId = r.ReservationId,
                 })
                 .FirstOrDefaultAsync() ?? new UserRatingDto();
         }
@@ -46,17 +47,20 @@ namespace PropertEase.Infrastructure.Repositories.UserRatingRepository
 
         public async Task<PagedResult<UserRatingDto>> GetFiltered(UserRatingFilter filter)
         {
+            var pageSize = Math.Min(filter.PageSize, 100);
             var query = DatabaseContext.UserRatings
                 .AsNoTracking()
                 .Where(r => !r.IsDeleted &&
-                    (!filter.RenterId.HasValue || r.RenterId == filter.RenterId));
+                    (!filter.RenterId.HasValue || r.RenterId == filter.RenterId) &&
+                    (!filter.ReviewerId.HasValue || r.ReviewerId == filter.ReviewerId) &&
+                    (!filter.ReservationId.HasValue || r.ReservationId == filter.ReservationId));
 
             var totalCount = await query.CountAsync();
 
             var items = await query
                 .OrderByDescending(r => r.CreatedAt)
-                .Skip((filter.Page - 1) * filter.PageSize)
-                .Take(filter.PageSize)
+                .Skip((filter.Page - 1) * pageSize)
+                .Take(pageSize)
                 .Select(r => new UserRatingDto
                 {
                     Id = r.Id,
@@ -68,6 +72,7 @@ namespace PropertEase.Infrastructure.Repositories.UserRatingRepository
                     ReviewerName = r.ReviewerName,
                     Rating = r.Rating,
                     Description = r.Description,
+                    ReservationId = r.ReservationId,
                     Reviewer = r.Reviewer == null ? null : new Core.Dto.ApplicationUser.ApplicationUserDto
                     {
                         Id = r.Reviewer.Id,
@@ -76,7 +81,7 @@ namespace PropertEase.Infrastructure.Repositories.UserRatingRepository
                             Id = r.Reviewer.Person.Id,
                             FirstName = r.Reviewer.Person.FirstName,
                             LastName = r.Reviewer.Person.LastName,
-                            ProfilePhotoBytes = r.Reviewer.Person.ProfilePhotoBytes,
+                            ProfilePhoto = r.Reviewer.Person.ProfilePhoto,
                         }
                     }
                 })

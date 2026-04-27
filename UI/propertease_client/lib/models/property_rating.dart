@@ -18,6 +18,7 @@ class PropertyRating {
   String? reviewerName;
   double? rating;
   String? description;
+  int? reservationId;
 
   PropertyRating({
     this.id = 0,
@@ -30,6 +31,7 @@ class PropertyRating {
     this.reviewerName,
     this.rating,
     this.description,
+    this.reservationId,
   });
 
   factory PropertyRating.fromJson(Map<String, dynamic> json) =>

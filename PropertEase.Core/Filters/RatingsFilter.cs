@@ -9,6 +9,8 @@ namespace PropertEase.Core.Filters
     public class RatingsFilter
     {
         public int? PropertyId { get; set; }
+        public int? ReviewerId { get; set; }
+        public int? ReservationId { get; set; }
         public DateTime? CreatedFrom { get; set;}
         public DateTime? CreatedTo { get; set; }
         public int Page { get; set; } = 1;

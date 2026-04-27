@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/http.dart';
 import 'package:propertease_admin/config/app_config.dart';
 import 'package:propertease_admin/models/search_result.dart';
+import 'package:propertease_admin/utils/app_navigator.dart';
 import 'package:propertease_admin/utils/authorization.dart';
 
 abstract class BaseProvider<T> with ChangeNotifier {
@@ -78,7 +79,7 @@ abstract class BaseProvider<T> with ChangeNotifier {
 
     var response =
         await http.post(Uri.parse(url), headers: headers, body: requestBody);
-    print(response.statusCode);
+    debugPrint("POST ${response.statusCode}: ${response.body}");
     if (isValidResponse(response)) {
       return fromJson(jsonDecode(response.body));
     } else {
@@ -88,22 +89,21 @@ abstract class BaseProvider<T> with ChangeNotifier {
   }
 
   Future<void> deleteById(int? id) async {
-    var url = "$_baseUrl$_endpoint/$id";
-    final headers = createHeaders();
+    final url = "$_baseUrl$_endpoint/$id";
+    final response = await http.delete(Uri.parse(url), headers: createHeaders());
 
-    final response = await http.delete(Uri.parse(url), headers: headers);
-    print(url);
-    if (response.statusCode == 200) {
-      // Successful deletion
-      print("Property deleted successfully");
-    } else if (response.statusCode == 404) {
-      // Property not found, handle as needed
-      throw Exception("Property not found");
-    } else {
-      // Handle other error cases
-      throw Exception(
-          "Failed to delete property. Status code: ${response.statusCode}");
+    if (response.statusCode == 200) return;
+
+    // Extract the server's reason from { "message": "..." } if present
+    String reason;
+    try {
+      final body = jsonDecode(response.body);
+      reason = (body['message'] as String?)?.trim() ?? response.body;
+    } catch (_) {
+      reason = response.body.isNotEmpty ? response.body : 'HTTP ${response.statusCode}';
     }
+
+    throw Exception(reason);
   }
 
   Future<SearchResult<T>> getFiltered({dynamic filter}) async {
@@ -148,7 +148,9 @@ abstract class BaseProvider<T> with ChangeNotifier {
     if (response.statusCode < 299) {
       return true;
     } else if (response.statusCode == 401) {
-      throw Exception("Wrong credentials");
+      Authorization.clear();
+      onUnauthorized?.call();
+      throw Exception("Sesija je istekla. Prijavite se ponovo.");
     } else {
       debugPrint("API Error ${response.statusCode}: ${response.body}");
       throw Exception("HTTP ${response.statusCode}: ${response.body}");

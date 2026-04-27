@@ -8,5 +8,6 @@ namespace PropertEase.Infrastructure.Repositories.ReservationNotificationReposit
         Task<List<ReservationNotificationDto>> GetByUserAsync(int userId, int page, int pageSize);
         Task<int> GetUnseenCountAsync(int userId);
         Task MarkAllSeenAsync(int userId);
+        Task MarkSeenAsync(int notificationId);
     }
 }

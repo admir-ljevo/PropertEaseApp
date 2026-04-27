@@ -14,7 +14,7 @@ class Authorization {
   static String? profilePhotoBytes;
 
   static bool get isLoggedIn => token != null && token!.isNotEmpty;
-  static bool get isAdmin => roleId == 1;
+  static bool get isAdmin => role == 'Admin';
 
   static String get displayName {
     final parts = [firstName, lastName]

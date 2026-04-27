@@ -1,5 +1,6 @@
 ﻿
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
 using PropertEase.Core.Dto.Message;
 using PropertEase.Infrastructure.UnitOfWork;
 using PropertEase.Shared.Hubs;
@@ -31,7 +32,7 @@ namespace PropertEase.Services.Services.MessageService
             await Task.WhenAll(
                 unitOfWork.ConversationRepository.UpdateLastMessageAsync(
                     entityDto.ConversationId, entityDto.Content),
-                hubContext.Clients.All.SendAsync("newMessage", entityDto)
+                hubContext.Clients.User(entityDto.RecipientId.ToString()).SendAsync("newMessage", entityDto)
             );
 
             return entityDto;
@@ -46,14 +47,9 @@ namespace PropertEase.Services.Services.MessageService
             return entityDto;
         }
 
-        public Task<List<MessageDto>> GetAllAsync()
+        public async Task<List<MessageDto>> GetByConversationId(int conversationId, int page = 1, int pageSize = 30)
         {
-            throw new NotImplementedException();
-        }
-
-        public async Task<List<MessageDto>> GetByConversationId(int conversationId)
-        {
-            return await unitOfWork.MessageRepository.GetByConversationId(conversationId);
+            return await unitOfWork.MessageRepository.GetByConversationId(conversationId, page, pageSize);
         }
 
         public async Task<MessageDto> GetByIdAsync(int id)
@@ -80,9 +76,23 @@ namespace PropertEase.Services.Services.MessageService
             return entity;
         }
 
-        public async Task MarkConversationAsRead(int conversationId, int recipientId)
+        public async Task MarkConversationAsRead(int conversationId, int recipientId, IHubContext<MessageHub> hub)
         {
             await unitOfWork.MessageRepository.MarkConversationAsRead(conversationId, recipientId);
+
+            var db = unitOfWork.GetDatabaseContext();
+            var conv = await db.Conversations
+                .AsNoTracking()
+                .Where(c => c.Id == conversationId && !c.IsDeleted)
+                .Select(c => new { c.ClientId, c.RenterId })
+                .FirstOrDefaultAsync();
+
+            if (conv != null)
+            {
+                var senderId = conv.ClientId == recipientId ? conv.RenterId : conv.ClientId;
+                await hub.Clients.User(senderId.ToString())
+                    .SendAsync("messagesRead", new { conversationId });
+            }
         }
 
         public async Task<int> GetUnreadCount(int recipientId)

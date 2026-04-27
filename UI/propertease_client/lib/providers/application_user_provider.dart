@@ -89,8 +89,7 @@ class UserProvider with ChangeNotifier {
     }
   }
 
-  Future<String?> changePassword(
-      String oldPassword, String newPassword, String userId) async {
+  Future<String?> changePassword(String oldPassword, String newPassword) async {
     final url = Uri.parse('${_baseUrl}Access/ChangePassword');
     try {
       final response = await _ioClient.post(
@@ -99,19 +98,66 @@ class UserProvider with ChangeNotifier {
         body: jsonEncode({
           'currentPassword': oldPassword,
           'newPassword': newPassword,
-          'userId': userId,
+          // userId is extracted from JWT on the server — never sent from client
         }),
       );
-      if (response.statusCode == 200) return 'Password changed successfully';
+      if (response.statusCode == 200) return null; // null = success
       final body = jsonDecode(response.body);
       if (body is List && body.isNotEmpty) {
         final code = body.first['code'] as String? ?? '';
-        if (code == 'PasswordMismatch') return 'PasswordMismatch';
-        return body.first['description'] as String? ?? 'Error changing password';
+        if (code == 'PasswordMismatch') return 'Trenutna lozinka nije ispravna.';
+        return body.first['description'] as String? ?? 'Greška pri promjeni lozinke.';
       }
-      return 'Error changing password';
+      return 'Greška pri promjeni lozinke.';
     } catch (e) {
-      return 'Network error: $e';
+      return 'Greška mreže: $e';
+    }
+  }
+
+  /// Returns null on success, or an error message string on failure.
+  Future<String?> forgotPassword(String email) async {
+    final url = Uri.parse('${_baseUrl}Access/ForgotPassword');
+    try {
+      final response = await _ioClient.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email}),
+      );
+      if (response.statusCode == 200) return null;
+      return 'Greška: ${response.statusCode}';
+    } catch (e) {
+      return 'Greška mreže: $e';
+    }
+  }
+
+  /// Returns null on success, or an error message string on failure.
+  Future<String?> resetPassword(
+      String email, String otp, String newPassword) async {
+    final url = Uri.parse('${_baseUrl}Access/ResetPassword');
+    try {
+      final response = await _ioClient.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': email,
+          'otp': otp,
+          'newPassword': newPassword,
+        }),
+      );
+      if (response.statusCode == 200) return null;
+      final body = jsonDecode(response.body);
+      if (body is Map && body['errors'] != null) {
+        final errors = body['errors'] as List;
+        return errors.isNotEmpty
+            ? errors.first['description'] as String? ?? 'Greška'
+            : 'Greška';
+      }
+      if (body is List && body.isNotEmpty) {
+        return body.first['description'] as String? ?? 'Greška';
+      }
+      return body['message'] as String? ?? 'Greška pri resetovanju lozinke.';
+    } catch (e) {
+      return 'Greška mreže: $e';
     }
   }
 

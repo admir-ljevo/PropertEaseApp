@@ -55,6 +55,7 @@ Property _$PropertyFromJson(Map<String, dynamic> json) => Property(
           ? null
           : DateTime.parse(json['availableFrom'] as String)
       ..firstPhotoUrl = json['firstPhotoUrl'] as String?
+      ..reason = json['reason'] as String?
       ..propertyType = json['propertyType'] == null
           ? null
           : PropertyType.fromJson(json['propertyType'] as Map<String, dynamic>)

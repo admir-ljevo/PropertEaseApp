@@ -62,7 +62,21 @@ class AuthProvider with ChangeNotifier {
     return false;
   }
 
-  void logout() {
+  Future<void> logout() async {
+    final token = Authorization.token;
+    if (token != null && token.isNotEmpty) {
+      try {
+        await http.post(
+          Uri.parse('${_baseUrl}Access/Logout'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+        );
+      } catch (_) {
+        // Server-side revocation failed — still clear locally.
+      }
+    }
     Authorization.clear();
     notifyListeners();
   }

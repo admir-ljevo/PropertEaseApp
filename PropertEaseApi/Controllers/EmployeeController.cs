@@ -1,14 +1,17 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using PropertEase.Core.Dto.ApplicationUser;
 using PropertEase.Services.FileManager;
 using PropertEase.Services.Services.ApplicationUsersService;
-using PropertEase.Core.Dto.ApplicationUser;
+using PropertEase.Core.Filters;
+using PropertEase.Shared.Constants;
 
 namespace PropertEase.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class EmployeeController : ControllerBase
     {
         private readonly IFileManager _fileManager;
@@ -20,6 +23,7 @@ namespace PropertEase.Controllers
 
         }
 
+        [Authorize(Roles = AppRoles.Admin)]
         [HttpPost("Add")]
         public async Task<IActionResult> Add([FromForm] EmployeeInsertDto entity)
         {
@@ -31,6 +35,7 @@ namespace PropertEase.Controllers
             return Ok(await ApplicationUsersService.AddEmployeeAsync(entity));
         }
 
+        [Authorize(Roles = AppRoles.Admin)]
         [HttpPut("Edit/{id}")]
         public async Task<IActionResult> Put(int id, [FromForm] EmployeeUpdateDto entity)
         {
@@ -43,16 +48,13 @@ namespace PropertEase.Controllers
         }
 
 
-        [HttpGet("Get")]
-        public async Task<IActionResult> Get()
-        {
-            return Ok(await ApplicationUsersService.GetEmployees());
-        }
-
         [HttpGet("GetRenters")]
-        public async Task<IActionResult> GetRenters()
+        public async Task<IActionResult> GetRenters([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
         {
-            return Ok(await ApplicationUsersService.GetRenters());
+            pageSize = Paging.Clamp(pageSize);
+            var result = await ApplicationUsersService.GetFiltered(
+                new UserFilter { Page = page, PageSize = pageSize, Role = "Renter" });
+            return Ok(result.Items);
         }
 
         [HttpGet("{id:int}")]

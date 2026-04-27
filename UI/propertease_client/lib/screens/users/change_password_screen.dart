@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:propertease_client/providers/application_user_provider.dart';
 import 'package:provider/provider.dart';
 
-import '../../models/application_user.dart';
+import 'package:propertease_client/models/application_user.dart';
 
 class ChangePasswordScreen extends StatefulWidget {
   final ApplicationUser? user;
@@ -42,13 +42,12 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
     try {
-      final result = await _userProvider.changePassword(
+      final error = await _userProvider.changePassword(
         _oldPasswordController.text,
         _newPasswordController.text,
-        widget.user!.id!.toString(),
       );
       if (!mounted) return;
-      if (result == 'Password changed successfully') {
+      if (error == null) {
         _oldPasswordController.clear();
         _newPasswordController.clear();
         _confirmPasswordController.clear();
@@ -57,8 +56,8 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
           backgroundColor: Colors.green,
         ));
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Trenutna lozinka nije ispravna'),
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(error),
           backgroundColor: Colors.red,
         ));
       }

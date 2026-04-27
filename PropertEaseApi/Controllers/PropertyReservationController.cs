@@ -1,138 +1,63 @@
 using AutoMapper;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using PropertEase.Core.Dto.PropertyReservation;
 using PropertEase.Core.SearchObjects;
-using PropertEase.Infrastructure;
-using PropertEase.Infrastructure.Messaging;
 using PropertEase.Services.Services.PropertyReservationService;
 using PropertEase.Core.Filters;
+using PropertEase.Shared.Constants;
+using System.Security.Claims;
 
 namespace PropertEase.Controllers
 {
+    [Authorize]
     public class PropertyReservationController : BaseController<PropertyReservationDto, PropertyReservationUpsertDto, PropertyReservationUpsertDto, BaseSearchObject>
     {
-        private readonly IPropertyReservationService propertyReservationService;
-        private readonly IRabbitMQPublisher _publisher;
-        private readonly DatabaseContext _db;
+        private readonly IPropertyReservationService _reservationService;
 
         public PropertyReservationController(
             IPropertyReservationService baseService,
-            IMapper mapper,
-            IRabbitMQPublisher publisher,
-            DatabaseContext db)
+            IMapper mapper)
             : base(baseService, mapper)
         {
-            propertyReservationService = baseService;
-            _publisher = publisher;
-            _db = db;
+            _reservationService = baseService;
         }
 
         [HttpGet("GetFilteredData")]
         public async Task<IActionResult> GetDataByFilter([FromQuery] PropertyReservationFilter filter)
         {
-            try
-            {
-                var propertyReservations = await propertyReservationService.GetFiltered(filter);
-                return Ok(propertyReservations);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
-            }
+            var propertyReservations = await _reservationService.GetFiltered(filter);
+            return Ok(propertyReservations);
         }
 
         [HttpGet("client/{clientId}/summary")]
         public async Task<IActionResult> GetClientSummaries(int clientId, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
         {
-            try
-            {
-                var result = await propertyReservationService.GetClientSummariesAsync(clientId, page, pageSize);
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
-            }
+            var result = await _reservationService.GetClientSummariesAsync(clientId, page, pageSize);
+            return Ok(result);
         }
 
         [HttpGet("renter/{renterId}/summary")]
         public async Task<IActionResult> GetRenterSummaries(int renterId, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
         {
-            try
-            {
-                var result = await propertyReservationService.GetRenterSummariesAsync(renterId, page, pageSize);
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
-            }
-        }
-
-        [HttpPost]
-        public override async Task<PropertyReservationDto> Post([FromBody] PropertyReservationUpsertDto insertEntity)
-        {
-            try
-            {
-                return await base.Post(insertEntity);
-            }
-            catch (InvalidOperationException ex)
-            {
-                HttpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
-                await HttpContext.Response.WriteAsJsonAsync(new { message = ex.Message });
-                return null!;
-            }
+            var result = await _reservationService.GetRenterSummariesAsync(renterId, page, pageSize);
+            return Ok(result);
         }
 
         [HttpPut("{id}")]
-        public override async Task<PropertyReservationDto> Put(int id, [FromBody] PropertyReservationUpsertDto updateEntity)
+        public override async Task<PropertyReservationDto> Put(int id, [FromBody] PropertyReservationUpsertDto dto)
         {
-            var existing = await propertyReservationService.GetByIdAsync(id);
-            if (existing == null)
-                throw new Exception($"Reservation {id} not found");
+            var actorId = int.TryParse(User.FindFirstValue("Id"), out var parsed) ? parsed : (int?)null;
+            return await _reservationService.UpdateWithNotificationAsync(id, dto, actorId);
+        }
 
-            existing.NumberOfGuests = updateEntity.NumberOfGuests;
-            existing.DateOfOccupancyStart = updateEntity.DateOfOccupancyStart;
-            existing.DateOfOccupancyEnd = updateEntity.DateOfOccupancyEnd;
-            existing.IsActive = updateEntity.IsActive;
-            existing.Description = updateEntity.Description;
-            existing.TotalPrice = updateEntity.TotalPrice;
-            existing.IsMonthly = updateEntity.IsMonthly;
-            existing.IsDaily = updateEntity.IsDaily;
-
-            var days = (int)(existing.DateOfOccupancyEnd - existing.DateOfOccupancyStart).TotalDays;
-            existing.NumberOfDays = Math.Max(days, 0);
-            existing.NumberOfMonths = (int)(Math.Max(days, 0) / 30.0);
-
-            var result = await propertyReservationService.UpdateAsync(existing);
-
-            // Notify client that reservation was updated (best-effort via RabbitMQ)
-            try
-            {
-                var prop = await _db.Properties
-                    .AsNoTracking()
-                    .Where(p => p.Id == existing.PropertyId && !p.IsDeleted)
-                    .Select(p => new
-                    {
-                        p.Name,
-                        PhotoUrl = p.Images.Where(i => !i.IsDeleted).Select(i => i.Url).FirstOrDefault()
-                    })
-                    .FirstOrDefaultAsync();
-
-                _publisher.Publish(new ReservationNotificationMessage
-                {
-                    UserId = existing.ClientId,
-                    ReservationId = id,
-                    Message = "Vaša rezervacija je ažurirana",
-                    ReservationNumber = existing.ReservationNumber,
-                    PropertyName = prop?.Name,
-                    PropertyPhotoUrl = prop?.PhotoUrl
-                }, "reservation.notification");
-            }
-            catch { /* notification failure is non-critical */ }
-
-            return result;
+        [HttpPost("{id}/confirm")]
+        [Authorize(Roles = AppRoles.Renter + "," + AppRoles.Admin)]
+        public async Task<IActionResult> Confirm(int id)
+        {
+            var actorId = int.TryParse(User.FindFirstValue("Id"), out var parsed) ? parsed : 0;
+            var result = await _reservationService.ConfirmReservationAsync(id, actorId);
+            return Ok(result);
         }
     }
 }

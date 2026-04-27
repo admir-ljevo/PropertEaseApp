@@ -66,9 +66,16 @@ style='background:#ffffff;border-radius:10px;overflow:hidden;box-shadow:0 4px 12
         string reservationNumber,
         DateTime checkIn,
         DateTime checkOut,
-        decimal totalPrice)
+        decimal totalPrice,
+        string actorFullName = "")
     {
         var subject = $"Potvrda rezervacije {reservationNumber}";
+
+        var actorRow = string.IsNullOrEmpty(actorFullName) ? string.Empty : $@"
+<tr style='background:#f7f9fc'>
+<td style='font-weight:bold'>Potvrdio/la</td>
+<td>{actorFullName}</td>
+</tr>";
 
         var content = $@"
 <h2 style='margin-top:0'>Poštovani/a {clientName},</h2>
@@ -102,7 +109,7 @@ style='border-collapse:collapse;margin-top:20px'>
 <td style='font-weight:bold'>Ukupna cijena</td>
 <td style='font-weight:bold;color:#2f80ed'>{totalPrice:C}</td>
 </tr>
-
+{actorRow}
 </table>
 
 <p style='margin-top:30px'>
@@ -123,9 +130,16 @@ Hvala što koristite <b>PropertEase</b>.
         string clientName,
         string propertyName,
         string reservationNumber,
-        string reason)
+        string reason,
+        string actorFullName = "")
     {
         var subject = $"Otkazivanje rezervacije {reservationNumber}";
+
+        var actorRow = string.IsNullOrEmpty(actorFullName) ? string.Empty : $@"
+<tr>
+<td style='font-weight:bold'>Otkazao/la</td>
+<td>{actorFullName}</td>
+</tr>";
 
         var content = $@"
 <h2 style='margin-top:0'>Poštovani/a {clientName},</h2>
@@ -144,7 +158,7 @@ style='border-collapse:collapse;margin-top:20px'>
 <td style='font-weight:bold'>Nekretnina</td>
 <td>{propertyName}</td>
 </tr>
-
+{actorRow}
 <tr style='background:#f7f9fc'>
 <td style='font-weight:bold'>Razlog</td>
 <td>{reason}</td>
@@ -298,6 +312,30 @@ Provjerite detalje rezervacije u vašem PropertEase dashboardu.
     }
 
 
+
+    public async Task SendPasswordResetAsync(string to, string fullName, string otp)
+    {
+        var subject = "PropertEase – Resetovanje lozinke";
+
+        var content = $@"
+<p>Poštovani/a <strong>{fullName}</strong>,</p>
+<p>Primili smo zahtjev za resetovanje lozinke za vaš PropertEase nalog.</p>
+
+<div style='margin:24px 0;text-align:center;'>
+  <div style='display:inline-block;background:#115892;color:#fff;font-size:32px;
+              font-weight:bold;letter-spacing:8px;padding:16px 32px;
+              border-radius:10px;'>
+    {otp}
+  </div>
+</div>
+
+<p>Unesite ovaj kod u aplikaciju kako biste postavili novu lozinku.</p>
+<p style='color:#e74c3c;'><strong>Kod važi 15 minuta.</strong></p>
+<p>Ako niste tražili resetovanje lozinke, možete ignorisati ovaj email.</p>";
+
+        var body = BuildEmailTemplate("Resetovanje lozinke", content, "#115892");
+        await SendGenericEmailAsync(to, subject, body);
+    }
 
     public async Task SendGenericEmailAsync(string to, string subject, string htmlBody)
     {

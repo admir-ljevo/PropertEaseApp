@@ -292,13 +292,34 @@ namespace PropertEase.Services.Services.ApplicationUsersService
 
         public async Task RemoveByIdAsync(int id, bool isSoft = true)
         {
-            await _unitOfWork.ApplicationUsersRepository.RemoveByIdAsync(id, isSoft);
-            await _unitOfWork.SaveChangesAsync();
-        }
+            var db = _unitOfWork.GetDatabaseContext();
 
-        public void Update(ApplicationUserDto entity)
-        {
-            throw new NotImplementedException();
+            var hasActiveReservations = db.PropertyReservations.Any(r =>
+                !r.IsDeleted &&
+                (r.RenterId == id || r.ClientId == id) &&
+                (r.Status == ReservationStatus.Pending || r.Status == ReservationStatus.Confirmed));
+            if (hasActiveReservations)
+                throw new InvalidOperationException("Cannot delete a user that has active or pending reservations.");
+
+            // Cascade: Notifications (ephemeral, owned by user)
+            foreach (var n in db.Notifications.Where(n => n.UserId == id && !n.IsDeleted).ToList())
+                n.IsDeleted = true;
+            foreach (var n in db.ReservationNotifications.Where(n => n.UserId == id && !n.IsDeleted).ToList())
+                n.IsDeleted = true;
+
+            // UserRoles junction table has no IsDeleted — hard-remove the rows
+            db.UserRoles.RemoveRange(db.UserRoles.Where(ur => ur.UserId == id).ToList());
+
+            // Person is 1:1 owned by the user
+            var person = db.Persons.FirstOrDefault(p => p.ApplicationUserId == id && !p.IsDeleted);
+            if (person != null) person.IsDeleted = true;
+
+            // Reservations, payments, messages and ratings are preserved for history.
+
+            var user = await db.Users.FindAsync(id);
+            if (user != null) user.IsDeleted = true;
+
+            await _unitOfWork.SaveChangesAsync();
         }
 
         public async Task<ApplicationUserDto> UpdateAsync(ApplicationUserDto entityDto)

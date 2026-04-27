@@ -11,6 +11,7 @@ import '../../models/person.dart';
 import '../../models/search_result.dart';
 import '../../providers/application_user_provider.dart';
 import '../../providers/city_provider.dart';
+import '../../utils/validators.dart';
 
 class RenterAddScreen extends StatefulWidget {
   const RenterAddScreen({super.key});
@@ -80,27 +81,36 @@ class RenterAddScreenState extends State<RenterAddScreen> {
     if (!_formKey.currentState!.validate()) return;
     newUser.id = 0;
     newUser.person = Person();
-    newUser.person?.firstName = _firstNameController.text;
-    newUser.person?.lastName = _lastNameController.text;
-    newUser.userName = _userNameController.text;
-    newUser.email = _emailController.text;
-    newUser.phoneNumber = _phoneNumberController.text;
-    newUser.person?.address = _addressController.text;
-    newUser.person?.postCode = _postalCodeController.text;
-    newUser.person?.jmbg = _jmbgController.text;
+    newUser.person?.firstName = _firstNameController.text.trim();
+    newUser.person?.lastName = _lastNameController.text.trim();
+    newUser.userName = _userNameController.text.trim();
+    newUser.email = _emailController.text.trim();
+    newUser.phoneNumber = _phoneNumberController.text.trim();
+    newUser.person?.address = _addressController.text.trim();
+    newUser.person?.postCode = _postalCodeController.text.trim();
+    newUser.person?.jmbg = _jmbgController.text.trim();
     newUser.person?.gender = selectedGender;
     newUser.person?.birthDate = selectedDate;
-    newUser.person?.placeOfResidenceId = selectedCity!.id;
-    newUser.person?.citizenship = _citizenShipController.text;
-    newUser.person?.nationality = _nationalityController.text;
-    await _userProvider.addEmployee(newUser, _passwordController.text);
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(
-            'Izdavač ${newUser.person?.firstName} ${newUser.person?.lastName} uspješno dodan'),
-        backgroundColor: Colors.green,
-      ));
-      Navigator.of(context).pop();
+    newUser.person?.placeOfResidenceId = selectedCity?.id;
+    newUser.person?.citizenship = _citizenShipController.text.trim();
+    newUser.person?.nationality = _nationalityController.text.trim();
+    try {
+      await _userProvider.addEmployee(newUser, _passwordController.text);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(
+              'Izdavač ${newUser.person?.firstName} ${newUser.person?.lastName} uspješno dodan'),
+          backgroundColor: Colors.green,
+        ));
+        Navigator.of(context).pop();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Greška pri dodavanju izdavača: $e'),
+          backgroundColor: Colors.red,
+        ));
+      }
     }
   }
 
@@ -175,14 +185,14 @@ class RenterAddScreenState extends State<RenterAddScreen> {
                   children: [
                     Row(children: [
                       Expanded(child: _field('Ime', _firstNameController,
-                          validator: (v) => (v == null || v.trim().length < 2) ? 'Ime mora imati najmanje 2 znaka' : null)),
+                          validator: (v) => AppValidators.name(v, label: 'Ime'))),
                       const SizedBox(width: 16),
                       Expanded(child: _field('Prezime', _lastNameController,
-                          validator: (v) => (v == null || v.trim().length < 2) ? 'Prezime mora imati najmanje 2 znaka' : null)),
+                          validator: (v) => AppValidators.name(v, label: 'Prezime'))),
                     ]),
                     const SizedBox(height: 16),
                     Row(children: [
-                      Expanded(child: _field('JMBG', _jmbgController, validator: _validateJmbg)),
+                      Expanded(child: _field('JMBG', _jmbgController, validator: AppValidators.jmbg)),
                       const SizedBox(width: 16),
                       Expanded(
                         child: InkWell(
@@ -259,24 +269,27 @@ class RenterAddScreenState extends State<RenterAddScreen> {
                 child: Column(
                   children: [
                     Row(children: [
-                      Expanded(child: _field('Korisničko ime', _userNameController, validator: _validateUsername)),
+                      Expanded(child: _field('Korisničko ime', _userNameController,
+                          validator: AppValidators.username)),
                       const SizedBox(width: 16),
-                      Expanded(child: _field('Email', _emailController, validator: _validateEmail)),
+                      Expanded(child: _field('Email', _emailController,
+                          validator: AppValidators.email)),
                     ]),
                     const SizedBox(height: 16),
-                    _field('Telefon', _phoneNumberController, validator: _validatePhone),
+                    _field('Telefon', _phoneNumberController,
+                        validator: AppValidators.phone),
                     const SizedBox(height: 16),
                     Row(children: [
                       Expanded(
                         child: TextFormField(
                           controller: _passwordController,
                           obscureText: _obscurePassword,
-                          validator: (v) => (v == null || v.isEmpty)
-                              ? 'Obavezno polje'
-                              : null,
+                          validator: AppValidators.password,
                           decoration: InputDecoration(
                             labelText: 'Lozinka',
                             border: const OutlineInputBorder(),
+                            helperText: 'Min. 6 znakova, veliko/malo slovo, cifra',
+                            helperMaxLines: 2,
                             suffixIcon: IconButton(
                               icon: Icon(_obscurePassword
                                   ? Icons.visibility_off
@@ -292,15 +305,8 @@ class RenterAddScreenState extends State<RenterAddScreen> {
                         child: TextFormField(
                           controller: _confirmPasswordController,
                           obscureText: _obscureConfirm,
-                          validator: (v) {
-                            if (v == null || v.isEmpty) {
-                              return 'Obavezno polje';
-                            }
-                            if (v != _passwordController.text) {
-                              return 'Lozinke se ne poklapaju';
-                            }
-                            return null;
-                          },
+                          validator: AppValidators.confirmPassword(
+                              () => _passwordController.text),
                           decoration: InputDecoration(
                             labelText: 'Potvrdi lozinku',
                             border: const OutlineInputBorder(),
@@ -366,29 +372,6 @@ class RenterAddScreenState extends State<RenterAddScreen> {
     );
   }
 
-  static String? _validateEmail(String? v) {
-    if (v == null || v.isEmpty) return 'Obavezno polje';
-    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(v)) return 'Unesite ispravan email';
-    return null;
-  }
-
-  static String? _validatePhone(String? v) {
-    if (v == null || v.isEmpty) return 'Obavezno polje';
-    if (!RegExp(r'^\+?[\d\s\-]{6,20}$').hasMatch(v)) return 'Unesite ispravan broj telefona';
-    return null;
-  }
-
-  static String? _validateJmbg(String? v) {
-    if (v == null || v.isEmpty) return 'Obavezno polje';
-    if (!RegExp(r'^\d{13}$').hasMatch(v)) return 'JMBG mora imati tačno 13 cifara';
-    return null;
-  }
-
-  static String? _validateUsername(String? v) {
-    if (v == null || v.trim().isEmpty) return 'Obavezno polje';
-    if (v.trim().length < 3) return 'Korisničko ime mora imati najmanje 3 znaka';
-    return null;
-  }
 }
 
 class _SectionCard extends StatelessWidget {

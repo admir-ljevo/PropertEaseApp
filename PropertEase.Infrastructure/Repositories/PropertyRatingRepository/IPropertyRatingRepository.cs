@@ -20,7 +20,5 @@ namespace PropertEase.Infrastructure.Repositories.PropertyRatingRepository
         Task<List<PropertyRatingDto>> GetByPropertyId(int id);
         Task<double> GetAverageRatingAsync(int propertyId);
         Task<PagedResult<PropertyRatingDto>> GetFiltered(RatingsFilter filter);
-        Task<List<PropertyRatingDto>> GetForPaginationAsync(string searchFilter, int pageSize, int offeset)
-                  => throw new NotImplementedException();
     }
 }

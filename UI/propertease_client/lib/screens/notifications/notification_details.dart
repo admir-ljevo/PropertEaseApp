@@ -1,7 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../../models/new.dart';
+import 'package:propertease_client/config/app_config.dart';
+import 'package:propertease_client/models/new.dart';
 
 const _kPrimary = Color(0xFF115892);
 
@@ -105,13 +106,23 @@ class NotificationDetailScreen extends StatelessWidget {
         );
       } catch (_) {}
     }
-    return Container(
-      color: _kPrimary.withOpacity(0.15),
-      child: const Center(
-        child: Icon(Icons.newspaper, size: 72, color: Colors.white54),
-      ),
-    );
+    if (n.image != null && n.image!.isNotEmpty) {
+      return Image.network(
+        '${AppConfig.serverBase}/${n.image}',
+        fit: BoxFit.cover,
+        width: double.infinity,
+        errorBuilder: (_, __, ___) => _imagePlaceholder(),
+      );
+    }
+    return _imagePlaceholder();
   }
+
+  Widget _imagePlaceholder() => Container(
+        color: _kPrimary.withOpacity(0.15),
+        child: const Center(
+          child: Icon(Icons.newspaper, size: 72, color: Colors.white54),
+        ),
+      );
 }
 
 class _MetaChip extends StatelessWidget {

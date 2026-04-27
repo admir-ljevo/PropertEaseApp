@@ -55,11 +55,6 @@ namespace PropertEase.Services.Services.ConversationService
             await unitOfOfWork.SaveChangesAsync();
         }
 
-        public void Update(ConversationDto entity)
-        {
-            throw new NotImplementedException();
-        }
-
         public async Task<List<ConversationDto>> GetAdminConversations(int userId)
         {
             return await unitOfOfWork.ConversationRepository.GetAdminConversations(userId);

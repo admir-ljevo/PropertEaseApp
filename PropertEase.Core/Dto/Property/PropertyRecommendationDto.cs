@@ -15,5 +15,6 @@ namespace PropertEase.Core.Dto.Property
         public bool IsDaily { get; set; }
         public bool IsAvailable { get; set; }
         public string FirstPhotoUrl { get; set; }
+        public string? Reason { get; set; }
     }
 }

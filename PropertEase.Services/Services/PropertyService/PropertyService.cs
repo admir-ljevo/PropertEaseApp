@@ -1,4 +1,5 @@
 ﻿using PropertEase.Core.Dto.Property;
+using PropertEase.Core.Enumerations;
 using PropertEase.Core.Filters;
 using PropertEase.Infrastructure.UnitOfWork;
 using PropertEase.Services.Recommendations;
@@ -51,8 +52,36 @@ namespace PropertEase.Services.Services.PropertyService
 
         public async Task RemoveByIdAsync(int id, bool isSoft = true)
         {
-            await unitOfWork.PropertyRepository.RemoveByIdAsync(id, isSoft);
+            var db = unitOfWork.GetDatabaseContext();
+
+            var hasActiveReservations = db.PropertyReservations.Any(r =>
+                r.PropertyId == id && !r.IsDeleted &&
+                (r.Status == ReservationStatus.Pending || r.Status == ReservationStatus.Confirmed));
+            if (hasActiveReservations)
+                throw new InvalidOperationException("Cannot delete a property that has active or pending reservations.");
+
+            // Cascade: Messages → Conversations (FK order, meaningless without the property)
+            var conversationIds = db.Conversations
+                .Where(c => c.PropertyId == id && !c.IsDeleted)
+                .Select(c => c.Id).ToList();
+            SoftDeleteRange(db.Messages.Where(m => conversationIds.Contains(m.ConversationId) && !m.IsDeleted));
+            SoftDeleteRange(db.Conversations.Where(c => conversationIds.Contains(c.Id) && !c.IsDeleted));
+
+            // Cascade: PropertyRatings and Photos (owned by this property)
+            SoftDeleteRange(db.PropertyRatings.Where(r => r.PropertyId == id && !r.IsDeleted));
+            SoftDeleteRange(db.Photos.Where(p => p.PropertyId == id && !p.IsDeleted));
+
+            // Completed/cancelled reservations and their payments/ratings are preserved for history.
+
+            var property = await db.Properties.FindAsync(id);
+            if (property != null) property.IsDeleted = true;
+
             await unitOfWork.SaveChangesAsync();
+        }
+
+        private static void SoftDeleteRange<T>(IQueryable<T> query) where T : PropertEase.Core.Entities.Base.BaseEntity
+        {
+            foreach (var e in query.ToList()) e.IsDeleted = true;
         }
 
         public void Update(PropertyDto entity)
@@ -69,9 +98,22 @@ namespace PropertEase.Services.Services.PropertyService
 
         public async Task<List<PropertyRecommendationDto>> GetRecommendedPropertiesAsync(int propertyId)
         {
-            var recommendedIds = await _recommendationEngine.GetRecommendationsByPropertyAsync(propertyId);
-            if (recommendedIds.Count == 0) return new List<PropertyRecommendationDto>();
-            return await unitOfWork.PropertyRepository.GetByIdsAsync(recommendedIds);
+            var recommended = await _recommendationEngine.GetRecommendationsByPropertyAsync(propertyId);
+            if (recommended.Count == 0) return new List<PropertyRecommendationDto>();
+
+            var ids = recommended.Select(r => r.PropertyId).ToList();
+            var properties = await unitOfWork.PropertyRepository.GetByIdsAsync(ids);
+
+            var confidenceMap = recommended.ToDictionary(r => r.PropertyId, r => r.Confidence);
+            foreach (var prop in properties)
+            {
+                if (confidenceMap.TryGetValue(prop.Id, out var conf))
+                {
+                    var pct = (int)Math.Round(conf * 100);
+                    prop.Reason = $"{pct}% korisnika koji su rezervirali ovu nekretninu rezerviralo je i ovu";
+                }
+            }
+            return properties;
         }
     }
 }

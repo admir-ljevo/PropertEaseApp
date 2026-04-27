@@ -2,9 +2,10 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import '../../models/new.dart';
-import '../../providers/notification_provider.dart';
-import '../../widgets/master_screen.dart';
+import 'package:propertease_client/config/app_config.dart';
+import 'package:propertease_client/models/new.dart';
+import 'package:propertease_client/providers/notification_provider.dart';
+import 'package:propertease_client/widgets/master_screen.dart';
 import 'notification_details.dart';
 
 const _kPrimary = Color(0xFF115892);
@@ -360,12 +361,21 @@ class _NewsCard extends StatelessWidget {
         return Image.memory(base64Decode(n.imageBytes!), fit: BoxFit.cover);
       } catch (_) {}
     }
-    return Container(
-      color: Colors.grey.shade100,
-      child: const Center(
-          child: Icon(Icons.newspaper, size: 48, color: Colors.grey)),
-    );
+    if (n.image != null && n.image!.isNotEmpty) {
+      return Image.network(
+        '${AppConfig.serverBase}/${n.image}',
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => _placeholder(),
+      );
+    }
+    return _placeholder();
   }
+
+  Widget _placeholder() => Container(
+        color: Colors.grey.shade100,
+        child: const Center(
+            child: Icon(Icons.newspaper, size: 48, color: Colors.grey)),
+      );
 }
 
 // ── Date chip ──────────────────────────────────────────────────────────────────

@@ -11,6 +11,7 @@ import 'package:propertease_admin/utils/authorization.dart';
 import 'package:provider/provider.dart';
 
 import '../../config/app_config.dart';
+import '../../utils/validators.dart';
 import '../../widgets/country_city_selector.dart';
 
 class ProfileEditScreen extends StatefulWidget {
@@ -306,7 +307,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                                   controller: _firstNameController,
                                   label: 'Ime',
                                   icon: Icons.badge,
-                                  required: true,
+                                  validator: (v) =>
+                                      AppValidators.name(v, label: 'Ime'),
                                 ),
                               ),
                               const SizedBox(width: 12),
@@ -315,7 +317,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                                   controller: _lastNameController,
                                   label: 'Prezime',
                                   icon: Icons.badge_outlined,
-                                  required: true,
+                                  validator: (v) =>
+                                      AppValidators.name(v, label: 'Prezime'),
                                 ),
                               ),
                             ]),
@@ -327,13 +330,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                                   label: 'JMBG',
                                   icon: Icons.fingerprint,
                                   keyboardType: TextInputType.number,
-                                  validator: (v) {
-                                    if (v == null || v.isEmpty) return 'Obavezno polje';
-                                    if (!RegExp(r'^\d{13}$').hasMatch(v)) {
-                                      return 'JMBG mora imati 13 cifara';
-                                    }
-                                    return null;
-                                  },
+                                  validator: (v) =>
+                                      AppValidators.jmbg(v, required: false),
                                 ),
                               ),
                               const SizedBox(width: 12),
@@ -385,8 +383,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                               controller: _emailController,
                               label: 'E-mail',
                               icon: Icons.email,
-                              required: true,
                               keyboardType: TextInputType.emailAddress,
+                              validator: AppValidators.email,
                             ),
                             const SizedBox(height: 12),
                             _field(
@@ -394,6 +392,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                               label: 'Broj telefona',
                               icon: Icons.phone,
                               keyboardType: TextInputType.phone,
+                              validator: AppValidators.phone,
                             ),
                             const SizedBox(height: 12),
                             CountryCitySelector(
@@ -434,7 +433,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                               controller: _userNameController,
                               label: 'Korisničko ime',
                               icon: Icons.alternate_email,
-                              required: true,
+                              validator: AppValidators.username,
                             ),
                           ],
                         ),
@@ -564,7 +563,6 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     required TextEditingController controller,
     required String label,
     required IconData icon,
-    bool required = false,
     TextInputType keyboardType = TextInputType.text,
     String? Function(String?)? validator,
   }) {
@@ -576,10 +574,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         prefixIcon: Icon(icon),
         border: const OutlineInputBorder(),
       ),
-      validator: validator ??
-          (required
-              ? (v) => (v == null || v.trim().isEmpty) ? 'Obavezno polje' : null
-              : null),
+      validator: validator,
     );
   }
 

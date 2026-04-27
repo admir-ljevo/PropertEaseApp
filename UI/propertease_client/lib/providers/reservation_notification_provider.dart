@@ -55,4 +55,9 @@ class ReservationNotificationProvider with ChangeNotifier {
     final url = '${_baseUrl}ReservationNotification/mark-seen/$userId';
     await _http.put(Uri.parse(url), headers: _headers());
   }
+
+  Future<void> markSeen(int notificationId) async {
+    final url = '${_baseUrl}ReservationNotification/mark-seen-single/$notificationId';
+    await _http.put(Uri.parse(url), headers: _headers());
+  }
 }

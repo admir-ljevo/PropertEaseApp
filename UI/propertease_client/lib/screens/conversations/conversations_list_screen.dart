@@ -1,7 +1,5 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:http/io_client.dart';
 import 'package:intl/intl.dart';
 import 'package:propertease_client/models/conversation.dart';
 import 'package:propertease_client/config/app_config.dart';
@@ -31,24 +29,23 @@ class ConvesrationListScreenState extends State<ConversationListScreen> {
       _conversations.fold(0, (sum, c) => sum + (c.unreadCount ?? 0));
 
   void initSignalRConnection() async {
+    final token = Authorization.token;
+    if (token == null) return;
     try {
       signalR = signalr.HubConnectionBuilder()
           .withUrl(
             '${AppConfig.serverBase}/hubs/messageHub',
             signalr.HttpConnectionOptions(
-              client: IOClient(
-                HttpClient()..badCertificateCallback = (x, y, z) => true,
-              ),
+              accessTokenFactory: () async => Authorization.token ?? token,
               logging: (level, message) {},
             ),
           )
+          .withAutomaticReconnect()
           .build();
 
       signalR.on('newMessage', (_) => refreshConversations());
       await signalR.start();
-    } catch (e) {
-      debugPrint('SignalR error: $e');
-    }
+    } catch (_) {}
   }
 
   @override

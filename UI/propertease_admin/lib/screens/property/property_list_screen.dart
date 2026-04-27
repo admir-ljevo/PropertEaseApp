@@ -5,7 +5,7 @@ import 'package:propertease_admin/models/property_type.dart';
 import 'package:propertease_admin/models/search_result.dart';
 import 'package:propertease_admin/providers/city_provider.dart';
 
-import 'package:propertease_admin/providers/property_provider.dart' show PropertyProvider, UpcomingReservationsException;
+import 'package:propertease_admin/providers/property_provider.dart';
 import 'package:propertease_admin/providers/property_type_provider.dart';
 import 'package:propertease_admin/utils/authorization.dart';
 import 'package:propertease_admin/utils/debounce.dart';
@@ -132,31 +132,10 @@ class PropertyListWidgetState extends State<PropertyListWidget> {
       messenger.showSnackBar(const SnackBar(
           content: Text('Nekretnina uspješno obrisana.'),
           backgroundColor: Colors.green));
-    } on UpcomingReservationsException catch (e) {
-      nav.pop(); // close the first confirmation dialog
-      _showForceDeleteDialog(id, e.count);
-    } catch (_) {
+    } catch (e) {
       nav.pop();
-      messenger.showSnackBar(const SnackBar(
-          content: Text('Greška pri brisanju.'),
-          backgroundColor: Colors.red));
-    }
-  }
-
-  Future<void> _forceDeleteProperty(int id) async {
-    final nav = Navigator.of(context);
-    final messenger = ScaffoldMessenger.of(context);
-    try {
-      await _propertyProvider.forceDeleteById(id);
-      nav.pop();
-      await _fetchProperties();
-      messenger.showSnackBar(const SnackBar(
-          content: Text('Nekretnina uspješno obrisana.'),
-          backgroundColor: Colors.green));
-    } catch (_) {
-      nav.pop();
-      messenger.showSnackBar(const SnackBar(
-          content: Text('Greška pri brisanju.'),
+      messenger.showSnackBar(SnackBar(
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
           backgroundColor: Colors.red));
     }
   }
@@ -177,25 +156,47 @@ class PropertyListWidgetState extends State<PropertyListWidget> {
   }
 
   Widget _buildHeader() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-      child: Row(children: [
-        const Text('Lista nekretnina',
-            style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF115892))),
-        const Spacer(),
-        ElevatedButton.icon(
-          onPressed: () async {
-            await Navigator.of(context)
-                .push(MaterialPageRoute(builder: (_) => PropertyAddScreen()));
-            await _fetchProperties(); // auto-refresh after add
-          },
-          icon: const Icon(Icons.add),
-          label: const Text('Dodaj nekretninu'),
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF1565C0), Color(0xFF1976D2)],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
         ),
-      ]),
+      ),
+      child: Row(
+        children: [
+          const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Nekretnine',
+                  style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white)),
+              SizedBox(height: 2),
+              Text('Lista i upravljanje nekretninama',
+                  style: TextStyle(fontSize: 13, color: Colors.white70)),
+            ],
+          ),
+          const Spacer(),
+          ElevatedButton.icon(
+            onPressed: () async {
+              await Navigator.of(context)
+                  .push(MaterialPageRoute(builder: (_) => PropertyAddScreen()));
+              await _fetchProperties();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: const Color(0xFF1565C0),
+            ),
+            icon: const Icon(Icons.add),
+            label: const Text('Dodaj nekretninu'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -321,12 +322,23 @@ class PropertyListWidgetState extends State<PropertyListWidget> {
     return Column(
       children: [
         Expanded(
-          child: SingleChildScrollView(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: DataTable(
-                headingRowColor:
-                    MaterialStateProperty.all(const Color(0xFFE3F2FD)),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Card(
+              elevation: 0,
+              color: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(color: Colors.grey.shade200),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: SingleChildScrollView(
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: DataTable(
+                      headingRowColor:
+                          WidgetStateProperty.all(const Color(0xFFE8EAF6)),
                 columns: const [
                   DataColumn(label: Text('Tip')),
                   DataColumn(label: Text('Naziv')),
@@ -367,10 +379,13 @@ class PropertyListWidgetState extends State<PropertyListWidget> {
                     DataCell(_buildActions(e)),
                   ]);
                 }).toList(),
-              ),
-            ),
-          ),
-        ),
+                    ),      // DataTable
+                  ),        // SingleChildScrollView horizontal
+                ),          // SingleChildScrollView vertical
+              ),            // ClipRRect
+            ),              // Card
+          ),                // Padding
+        ),                  // Expanded
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 8),
           child: Row(
@@ -422,29 +437,6 @@ class PropertyListWidgetState extends State<PropertyListWidget> {
           onPressed: () => Navigator.of(context).push(MaterialPageRoute(
               builder: (_) => PropertyDetailScreen(property: e)))),
     ]);
-  }
-
-  void _showForceDeleteDialog(int id, int upcomingCount) {
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Nekretnina ima rezervacije'),
-        content: Text(
-            'Ova nekretnina ima $upcomingCount nadolazećih rezervacija. '
-            'Brisanje će sakriti nekretninu, ali rezervacije će ostati sačuvane. '
-            'Želite li nastaviti?'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Odustani')),
-          TextButton(
-            onPressed: () => _forceDeleteProperty(id),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Obriši svejedno'),
-          ),
-        ],
-      ),
-    );
   }
 
   void _showDeleteDialog(Property e) {

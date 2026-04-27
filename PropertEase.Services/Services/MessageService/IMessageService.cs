@@ -12,9 +12,9 @@ namespace PropertEase.Services.Services.MessageService
 {
     public interface IMessageService: IBaseService<MessageDto>
     {
-        Task<List<MessageDto>> GetByConversationId(int conversationId);
+        Task<List<MessageDto>> GetByConversationId(int conversationId, int page = 1, int pageSize = 30);
         Task<MessageDto> AddAsyncSignalR(MessageDto entityDto, IHubContext<MessageHub> hubContext);
-        Task MarkConversationAsRead(int conversationId, int recipientId);
+        Task MarkConversationAsRead(int conversationId, int recipientId, IHubContext<MessageHub> hub);
         Task<int> GetUnreadCount(int recipientId);
     }
 }

@@ -25,10 +25,17 @@ class PropertyReservation {
   bool? isMonthly;
   bool? isDaily;
   bool? isActive;
+  bool? isPaid;
+  int? status;
   String? reservationNumber;
   ApplicationUser? client;
   ApplicationUser? renter;
   String? description;
+  String? cancellationReason;
+  DateTime? cancelledAt;
+  String? cancelledByName;
+  DateTime? confirmedAt;
+  String? confirmedByName;
 
   PropertyReservation({
     this.id,
@@ -46,10 +53,17 @@ class PropertyReservation {
     this.isMonthly = true,
     this.isDaily = false,
     this.isActive = true,
+    this.isPaid = false,
+    this.status,
     this.reservationNumber = '',
     this.client,
     this.renter,
     this.description,
+    this.cancellationReason,
+    this.cancelledAt,
+    this.cancelledByName,
+    this.confirmedAt,
+    this.confirmedByName,
   });
 
   factory PropertyReservation.fromJson(Map<String, dynamic> json) =>

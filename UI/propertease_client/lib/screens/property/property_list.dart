@@ -8,9 +8,9 @@ import 'package:propertease_client/providers/property_type_provider.dart';
 import 'package:propertease_client/widgets/master_screen.dart';
 import 'package:provider/provider.dart';
 
-import '../../models/city.dart';
-import '../../models/property.dart';
-import '../../models/property_type.dart';
+import 'package:propertease_client/models/city.dart';
+import 'package:propertease_client/models/property.dart';
+import 'package:propertease_client/models/property_type.dart';
 import 'property_details.dart';
 
 class PropertyListWidget extends StatefulWidget {

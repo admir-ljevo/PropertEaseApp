@@ -54,6 +54,53 @@ class PropertyReservationProvider extends BaseProvider<PropertyReservation> {
   @override
   Map<String, dynamic> toJson(PropertyReservation data) => data.toJson();
 
+  Future<void> cancelReservation(PropertyReservation r, {String? reason}) async {
+    final url = Uri.parse('${BaseProvider.baseUrl}PropertyReservation/${r.id}');
+    final body = jsonEncode({
+      'id': r.id,
+      'propertyId': r.propertyId,
+      'reservationNumber': r.reservationNumber ?? '',
+      'description': r.description,
+      'renterId': r.renterId ?? 0,
+      'clientId': r.clientId ?? 0,
+      'numberOfGuests': r.numberOfGuests ?? 1,
+      'dateOfOccupancyStart': r.dateOfOccupancyStart?.toIso8601String(),
+      'dateOfOccupancyEnd': r.dateOfOccupancyEnd?.toIso8601String(),
+      'numberOfDays': r.numberOfDays ?? 0,
+      'numberOfMonths': r.numberOfMonths ?? 0,
+      'totalPrice': r.totalPrice ?? 0,
+      'isMonthly': r.isMonthly ?? false,
+      'isDaily': r.isDaily ?? false,
+      'status': 3, // Cancelled
+      'cancellationReason': reason ?? 'Otkazano od strane klijenta',
+    });
+    final response = await http.put(url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${Authorization.token}',
+        },
+        body: body);
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      throw Exception('Otkazivanje neuspješno: ${response.statusCode} ${response.body}');
+    }
+  }
+
+  Future<PropertyReservation> createReservation(Map<String, dynamic> data) async {
+    final url = Uri.parse('${BaseProvider.baseUrl}PropertyReservation');
+    final response = await http.post(url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${Authorization.token}',
+        },
+        body: jsonEncode(data));
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return PropertyReservation.fromJson(
+          jsonDecode(response.body) as Map<String, dynamic>);
+    }
+    throw Exception(
+        'Kreiranje rezervacije neuspješno: ${response.statusCode} ${response.body}');
+  }
+
   Future<SummaryPage> getClientSummaries(int clientId,
           {int page = 1, int pageSize = 10}) =>
       _fetchSummaries('client/$clientId/summary', page, pageSize);
@@ -61,6 +108,23 @@ class PropertyReservationProvider extends BaseProvider<PropertyReservation> {
   Future<SummaryPage> getRenterSummaries(int renterId,
           {int page = 1, int pageSize = 10}) =>
       _fetchSummaries('renter/$renterId/summary', page, pageSize);
+
+  Future<List<PropertyReservation>> getCompletedBetween(
+      int clientId, int renterId) async {
+    final url = Uri.parse(
+        '${BaseProvider.baseUrl}PropertyReservation/GetFilteredData'
+        '?clientId=$clientId&renterId=$renterId&status=2&pageSize=100');
+    final response = await http.get(url, headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ${Authorization.token}',
+    });
+    if (response.statusCode != 200) return [];
+    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    final items = (body['items'] as List? ?? body['result'] as List? ?? []);
+    return items
+        .map((e) => PropertyReservation.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
 
   Future<SummaryPage> _fetchSummaries(
       String path, int page, int pageSize) async {

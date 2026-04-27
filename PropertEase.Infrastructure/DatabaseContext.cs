@@ -33,6 +33,13 @@ namespace PropertEase.Infrastructure
         {
             base.OnModelCreating(modelBuilder);
 
+            // These four Identity tables are never written to by this application.
+            // ExcludeFromMigrations prevents EF from recreating them after they are dropped.
+            modelBuilder.Entity<ApplicationUserClaim>().ToTable("AspNetUserClaims", t => t.ExcludeFromMigrations());
+            modelBuilder.Entity<ApplicationUserLogin>().ToTable("AspNetUserLogins", t => t.ExcludeFromMigrations());
+            modelBuilder.Entity<ApplicationRoleClaim>().ToTable("AspNetRoleClaims", t => t.ExcludeFromMigrations());
+            modelBuilder.Entity<ApplicationUserToken>().ToTable("AspNetUserTokens", t => t.ExcludeFromMigrations());
+
             modelBuilder.ApplyConfigurationsFromAssembly(typeof(BaseEntityTypeConfiguration<>).Assembly);
 
             // Indexes for frequently filtered/joined FK columns
@@ -49,7 +56,8 @@ namespace PropertEase.Infrastructure
             {
                 e.HasIndex(r => r.PropertyId);
                 e.HasIndex(r => r.ClientId);
-                e.HasIndex(r => r.IsActive);
+                e.HasIndex(r => r.RenterId);
+                e.HasIndex(r => r.Status);
                 e.HasIndex(r => new { r.DateOfOccupancyStart, r.DateOfOccupancyEnd });
             });
 
@@ -57,12 +65,24 @@ namespace PropertEase.Infrastructure
             {
                 e.HasIndex(r => r.PropertyId);
                 e.HasIndex(r => r.ReviewerId);
+                e.HasIndex(r => r.ReservationId);
+                e.HasIndex(r => new { r.ReviewerId, r.ReservationId })
+                    .IsUnique()
+                    .HasFilter("[ReservationId] IS NOT NULL");
+                e.HasOne(r => r.Reservation)
+                    .WithMany()
+                    .HasForeignKey(r => r.ReservationId)
+                    .OnDelete(DeleteBehavior.NoAction);
             });
 
             modelBuilder.Entity<UserRating>(e =>
             {
                 e.HasIndex(r => r.RenterId);
                 e.HasIndex(r => r.ReviewerId);
+                e.HasIndex(r => r.ReservationId);
+                e.HasIndex(r => new { r.ReviewerId, r.ReservationId })
+                    .IsUnique()
+                    .HasFilter("[ReservationId] IS NOT NULL");
                 e.HasOne(r => r.Renter)
                     .WithMany()
                     .HasForeignKey(r => r.RenterId)
@@ -70,6 +90,10 @@ namespace PropertEase.Infrastructure
                 e.HasOne(r => r.Reviewer)
                     .WithMany()
                     .HasForeignKey(r => r.ReviewerId)
+                    .OnDelete(DeleteBehavior.NoAction);
+                e.HasOne(r => r.Reservation)
+                    .WithMany()
+                    .HasForeignKey(r => r.ReservationId)
                     .OnDelete(DeleteBehavior.NoAction);
             });
 

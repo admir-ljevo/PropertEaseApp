@@ -1,15 +1,11 @@
-﻿using AutoMapper;
+using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using PropertEase.Core.Dto.Notification;
-using PropertEase.Core.Dto.PropertyReservation;
 using PropertEase.Core.Entities;
 using PropertEase.Infrastructure.Repositories.BaseRepository;
 using PropertEase.Core.Filters;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using PropertEase.Core.Dto.ApplicationUser;
+using PropertEase.Core.Dto.Person;
 
 namespace PropertEase.Infrastructure.Repositories.NotificationRepository
 {
@@ -21,21 +17,54 @@ namespace PropertEase.Infrastructure.Repositories.NotificationRepository
 
         public async Task<NotificationDto> GetByIdAsync(int id)
         {
-            return await ProjectToSingleOrDefaultAsync<NotificationDto>(DatabaseContext.Notifications.Where(n => n.Id == id && !n.IsDeleted)); 
+            return await ProjectToSingleOrDefaultAsync<NotificationDto>(
+                DatabaseContext.Notifications.Where(n => n.Id == id && !n.IsDeleted));
         }
 
         public async Task<List<NotificationDto>> GetByNameAsync(string name)
         {
-            return await ProjectToListAsync<NotificationDto>(DatabaseContext.Notifications.Where(n=>n.Name.ToLower().Contains(name.ToLower())));    
+            return await DatabaseContext.Notifications
+                .AsNoTracking()
+                .Where(n => n.Name.ToLower().Contains(name.ToLower()) && !n.IsDeleted)
+                .Take(100)
+                .Select(n => new NotificationDto
+                {
+                    Id = n.Id,
+                    CreatedAt = n.CreatedAt,
+                    ModifiedAt = n.ModifiedAt,
+                    IsDeleted = n.IsDeleted,
+                    Name = n.Name,
+                    UserId = n.UserId,
+                    Image = n.Image,
+                    Text = n.Text,
+                })
+                .ToListAsync();
         }
 
         public async Task<List<NotificationDto>> GetAllAsync()
         {
-            return await ProjectToListAsync<NotificationDto>(DatabaseContext.Notifications.Where(n => !n.IsDeleted));
+            return await DatabaseContext.Notifications
+                .AsNoTracking()
+                .Where(n => !n.IsDeleted)
+                .OrderByDescending(n => n.CreatedAt)
+                .Take(100)
+                .Select(n => new NotificationDto
+                {
+                    Id = n.Id,
+                    CreatedAt = n.CreatedAt,
+                    ModifiedAt = n.ModifiedAt,
+                    IsDeleted = n.IsDeleted,
+                    Name = n.Name,
+                    UserId = n.UserId,
+                    Image = n.Image,
+                    Text = n.Text,
+                })
+                .ToListAsync();
         }
-        //    
+
         public async Task<PropertEase.Core.Dto.PagedResult<NotificationDto>> GetFiltered(NotificationFilter filter)
         {
+            var pageSize = Math.Min(filter.PageSize, 100);
             var query = DatabaseContext.Notifications
                 .Where(n =>
                     (string.IsNullOrEmpty(filter.Name) || n.Name.Contains(filter.Name)) &&
@@ -46,8 +75,32 @@ namespace PropertEase.Infrastructure.Repositories.NotificationRepository
                 .OrderByDescending(n => n.CreatedAt);
 
             var totalCount = await query.CountAsync();
-            var items = await ProjectToListAsync<NotificationDto>(
-                query.Skip((filter.Page - 1) * filter.PageSize).Take(filter.PageSize));
+            var items = await query
+                .AsNoTracking()
+                .Skip((filter.Page - 1) * pageSize)
+                .Take(pageSize)
+                .Select(n => new NotificationDto
+                {
+                    Id = n.Id,
+                    CreatedAt = n.CreatedAt,
+                    ModifiedAt = n.ModifiedAt,
+                    IsDeleted = n.IsDeleted,
+                    Name = n.Name,
+                    UserId = n.UserId,
+                    Image = n.Image,
+                    ImageBytes = n.ImageBytes,
+                    Text = n.Text,
+                    User = n.User == null ? null : new ApplicationUserDto
+                    {
+                        Id = n.User.Id,
+                        Person = n.User.Person == null ? null : new PersonDto
+                        {
+                            FirstName = n.User.Person.FirstName,
+                            LastName = n.User.Person.LastName,
+                        }
+                    }
+                })
+                .ToListAsync();
 
             return new PropertEase.Core.Dto.PagedResult<NotificationDto> { Items = items, TotalCount = totalCount };
         }

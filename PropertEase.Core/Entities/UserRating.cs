@@ -12,5 +12,7 @@ namespace PropertEase.Core.Entities
         public string ReviewerName { get; set; }
         public double Rating { get; set; }
         public string? Description { get; set; }
+        public int? ReservationId { get; set; }
+        public PropertyReservation? Reservation { get; set; }
     }
 }

@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:propertease_admin/config/app_config.dart';
@@ -11,7 +10,6 @@ import 'package:propertease_admin/screens/users/user_profile_screen.dart';
 import 'package:propertease_admin/utils/authorization.dart';
 import 'package:provider/provider.dart';
 import 'package:signalr_core/signalr_core.dart';
-import 'package:http/io_client.dart';
 
 class MessageListScreen extends StatefulWidget {
   final int? conversationId;
@@ -66,18 +64,18 @@ class MessageListScreenState extends State<MessageListScreen> {
           .withUrl(
             '${AppConfig.serverBase}/hubs/messageHub',
             HttpConnectionOptions(
-              client: IOClient(
-                  HttpClient()..badCertificateCallback = (x, y, z) => true),
+              accessTokenFactory: () async => Authorization.token ?? '',
               logging: (level, message) {},
             ),
           )
+          .withAutomaticReconnect()
           .build();
 
-      // Incoming message: sync list silently + mark as read — no blocking spinner
       signalR.on('newMessage', (_) {
         _syncMessages();
         _markAsReadSilent();
       });
+      signalR.on('messagesRead', (_) => _syncMessages());
       await signalR.start();
     } catch (e) {
       debugPrint('SignalR init error: $e');

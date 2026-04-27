@@ -36,16 +36,16 @@ class UserListWidgetState extends State<UserListWidget> {
   @override
   Widget build(BuildContext context) {
     return MasterScreenWidget(
-        titleWidget: const Text("Korisnici"),
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              _buildContent(),
-              _buildSearchBar(),
-              _buildDataListView(),
-            ],
-          ),
-        ));
+      titleWidget: const Text('Korisnici'),
+      child: Column(
+        children: [
+          _buildContent(),
+          _buildSearchBar(),
+          const Divider(height: 1),
+          Expanded(child: _buildDataListView()),
+        ],
+      ),
+    );
   }
 
   @override
@@ -57,178 +57,125 @@ class UserListWidgetState extends State<UserListWidget> {
   }
 
   Widget _buildContent() {
-    return Column(
-      children: [
-        const Row(
-          children: [
-            SizedBox(
-              width: 100,
-            ),
-            Text(
-              "Users",
-              style: TextStyle(
-                  fontSize: 30,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF115892)),
-            ),
-            Spacer(),
-            Icon(
-              Icons.person,
-              size: 80,
-              color: Color(0xFF115892),
-            ),
-            SizedBox(
-              width: 100,
-            ),
-          ],
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF1565C0), Color(0xFF1976D2)],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
         ),
-        const Divider(
-          thickness: 2,
-          color: Colors.blue,
-        ),
-        const SizedBox(
-          height: 50,
-        ),
-        Row(
-          children: [
-            const SizedBox(
-              width: 100,
+      ),
+      child: Row(
+        children: [
+          const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Korisnici',
+                  style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white)),
+              SizedBox(height: 2),
+              Text('Lista i upravljanje korisnicima',
+                  style: TextStyle(fontSize: 13, color: Colors.white70)),
+            ],
+          ),
+          const Spacer(),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.of(context)
+                  .push(MaterialPageRoute(
+                      builder: (context) => const UserAddScreen()))
+                  .then((_) => fetchUsers());
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: const Color(0xFF1565C0),
             ),
-            const Text(
-              "Users list view",
-              style: TextStyle(
-                  fontSize: 30,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF115892)),
-            ),
-            const Spacer(),
-            Container(
-              height: 50,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => const UserAddScreen(),
-                    ),
-                  ).then((_) => fetchUsers());
-                },
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.add),
-                    SizedBox(width: 8),
-                    Text("Dodaj korisnika"),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(
-              width: 100,
-            ),
-          ],
-        ),
-        const SizedBox(
-          height: 50,
-        ),
-        const Divider(
-          thickness: 2,
-          color: Colors.blue,
-        ),
-      ],
+            icon: const Icon(Icons.person_add_outlined),
+            label: const Text('Dodaj korisnika'),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildSearchBar() {
     return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Wrap(
+        spacing: 12,
+        runSpacing: 8,
+        crossAxisAlignment: WrapCrossAlignment.center,
         children: [
-          TextField(
-            controller: _searchController,
-            onChanged: (value) async {
-              setState(() => _currentPage = 1);
-              await fetchUsers();
-            },
-            decoration: const InputDecoration(
-              hintText: 'Search by user name or email',
-              prefixIcon: Icon(Icons.search), // Add a search icon
+          SizedBox(
+            width: 240,
+            child: TextField(
+              controller: _searchController,
+              onChanged: (value) async {
+                setState(() => _currentPage = 1);
+                await fetchUsers();
+              },
+              decoration: const InputDecoration(
+                hintText: 'Pretraži po imenu ili emailu',
+                prefixIcon: Icon(Icons.search),
+                isDense: true,
+              ),
             ),
           ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: DropdownButtonFormField<String>(
-                  value: selectedRole,
-                  onChanged: (value) {
-                    setState(() { selectedRole = value; _currentPage = 1; });
-                    fetchUsers();
-                  },
-                  items: <String>['Client', 'Employee'].map((String value) {
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(value),
-                    );
-                  }).toList(),
-                  decoration: const InputDecoration(
-                    labelText: 'Select Role',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: DropdownButtonFormField<City?>(
-                  value: selectedCity,
-                  onChanged: (City? newValue) async {
-                    setState(() {
-                      selectedCity = newValue;
-                      cityId = newValue?.id;
-                      _currentPage = 1;
-                    });
-                    await fetchUsers();
-                  },
-                  items:
-                      (cities ?? []).map<DropdownMenuItem<City?>>((City? city) {
-                    if (city != null && city.name != null) {
-                      return DropdownMenuItem<City?>(
-                        value: city,
-                        child: Text(city.name!),
-                      );
-                    } else {
-                      return const DropdownMenuItem<City?>(
-                        value: null,
-                        child: Text('Undefined'),
-                      );
-                    }
-                  }).toList(),
-                  decoration: const InputDecoration(
-                    labelText: 'City',
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
-              ElevatedButton(
-                onPressed: () {
-                  setState(() {
-                    _searchController.text = '';
-                    selectedCity = null;
-                    cityId = null;
-                    selectedRole = null;
-                    _currentPage = 1;
-                  });
-                  fetchUsers();
-                },
-                child: const Row(
-                  children: [
-                    Icon(Icons.close), // Close (X) icon
-                    SizedBox(width: 8), // Adjust the width as needed
-                    Text('Clear filters'),
-                  ],
-                ),
-              )
-            ],
+          SizedBox(
+            width: 160,
+            child: DropdownButtonFormField<String?>(
+              value: selectedRole,
+              isExpanded: true,
+              onChanged: (value) {
+                setState(() { selectedRole = value; _currentPage = 1; });
+                fetchUsers();
+              },
+              items: const [
+                DropdownMenuItem<String?>(value: null, child: Text('Sve uloge')),
+                DropdownMenuItem<String?>(value: 'Client', child: Text('Klijent')),
+                DropdownMenuItem<String?>(value: 'Employee', child: Text('Izdavač')),
+              ],
+              decoration: const InputDecoration(labelText: 'Uloga', isDense: true),
+            ),
+          ),
+          SizedBox(
+            width: 160,
+            child: DropdownButtonFormField<City?>(
+              value: selectedCity,
+              isExpanded: true,
+              onChanged: (City? newValue) async {
+                setState(() {
+                  selectedCity = newValue;
+                  cityId = newValue?.id;
+                  _currentPage = 1;
+                });
+                await fetchUsers();
+              },
+              items: [
+                const DropdownMenuItem<City?>(value: null, child: Text('Svi gradovi')),
+                ...cities.where((c) => c.name != null).map(
+                    (c) => DropdownMenuItem<City?>(value: c, child: Text(c.name!))),
+              ],
+              decoration: const InputDecoration(labelText: 'Grad', isDense: true),
+            ),
+          ),
+          TextButton.icon(
+            onPressed: () {
+              setState(() {
+                _searchController.text = '';
+                selectedCity = null;
+                cityId = null;
+                selectedRole = null;
+                _currentPage = 1;
+              });
+              fetchUsers();
+            },
+            icon: const Icon(Icons.clear),
+            label: const Text('Očisti'),
           ),
         ],
       ),
@@ -236,156 +183,17 @@ class UserListWidgetState extends State<UserListWidget> {
   }
 
   Widget _buildDataListView() {
+    if (users.isEmpty) {
+      return const Center(child: Text('Nema pronađenih korisnika.'));
+    }
     final totalPages = (_totalCount / _pageSize).ceil();
     return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: DataTable(
-            columns: const [
-              DataColumn(
-                label: Expanded(
-                  child: Text(
-                    "User name",
-                    style: TextStyle(fontStyle: FontStyle.italic),
-                  ),
-                ),
-              ),
-              DataColumn(
-                label: Expanded(
-                  child: Text(
-                    "Role",
-                    style: TextStyle(fontStyle: FontStyle.italic),
-                  ),
-                ),
-              ),
-              DataColumn(
-                label: Expanded(
-                  child: Text(
-                    "Email",
-                    style: TextStyle(fontStyle: FontStyle.italic),
-                  ),
-                ),
-              ),
-              DataColumn(
-                label: Expanded(
-                  child: Text(
-                    "City",
-                    style: TextStyle(fontStyle: FontStyle.italic),
-                  ),
-                ),
-              ),
-              DataColumn(
-                label: Expanded(
-                  child: Text(
-                    "Phone number",
-                    style: TextStyle(fontStyle: FontStyle.italic),
-                  ),
-                ),
-              ),
-              DataColumn(
-                label: Expanded(
-                  child: Text(
-                    "Address",
-                    style: TextStyle(fontStyle: FontStyle.italic),
-                  ),
-                ),
-              ),
-              DataColumn(
-                label: Expanded(
-                  child: Text(
-                    "Actions",
-                    style: TextStyle(fontStyle: FontStyle.italic),
-                  ),
-                ),
-              ),
-            ],
-            rows: users
-                    .map((ApplicationUser e) => DataRow(cells: [
-                          DataCell(Text(e.userName ?? '')),
-                          DataCell(
-                            Text(e.userRoles != null && e.userRoles!.isNotEmpty
-                                ? e.userRoles![0].role?.name ?? ''
-                                : ''),
-                          ),
-                          DataCell(Text(e.email ?? '')),
-                          DataCell(
-                              Text(e.person?.placeOfResidence?.name ?? '')),
-                          DataCell(Text(e.phoneNumber ?? '')),
-                          DataCell(Text(e.person?.address ?? '')),
-                          DataCell(
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                InkWell(
-                                  onTap: () {
-                                    Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder: (context) => UserDetailScreen(
-                                          user: e,
-                                        ),
-                                      ),
-                                    ).then((_) => fetchUsers());
-                                  },
-                                  child: const Icon(Icons.info),
-                                ),
-                                const SizedBox(width: 16),
-                                InkWell(
-                                  onTap: () {
-                                    Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder: (context) => UserEditScreen(
-                                          user: e,
-                                        ),
-                                      ),
-                                    ).then((_) => fetchUsers());
-                                  },
-                                  child: const Icon(Icons.edit),
-                                ),
-                                const SizedBox(width: 16),
-                                InkWell(
-                                  onTap: () => _showResetPasswordDialog(e),
-                                  child: const Tooltip(
-                                    message: 'Reset password',
-                                    child: Icon(Icons.lock_reset,
-                                        color: Colors.orange),
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                GestureDetector(
-                                  onTap: () {
-                                    showDialog(
-                                      context: context,
-                                      builder: (BuildContext ctx) {
-                                        return AlertDialog(
-                                          title: const Text("Confirm Delete"),
-                                          content: const Text(
-                                              "Are you sure you want to delete this user?"),
-                                          actions: <Widget>[
-                                            TextButton(
-                                              child: const Text("Cancel"),
-                                              onPressed: () =>
-                                                  Navigator.of(ctx).pop(),
-                                            ),
-                                            TextButton(
-                                              child: const Text("Delete"),
-                                              onPressed: () async {
-                                                _handleDeleteUser(e.id);
-                                              },
-                                            ),
-                                          ],
-                                        );
-                                      },
-                                    );
-                                  },
-                                  child: const Icon(Icons.delete),
-                                ),
-                              ],
-                            ),
-                          )
-                        ]))
-                    .toList(),
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.only(top: 8, bottom: 8),
+            itemCount: users.length,
+            itemBuilder: (_, i) => _buildUserCard(users[i]),
           ),
         ),
         Padding(
@@ -396,26 +204,147 @@ class UserListWidgetState extends State<UserListWidget> {
               IconButton(
                 icon: const Icon(Icons.chevron_left),
                 onPressed: _currentPage > 1
-                    ? () {
-                        setState(() => _currentPage--);
-                        fetchUsers();
-                      }
+                    ? () { setState(() => _currentPage--); fetchUsers(); }
                     : null,
               ),
               Text('$_currentPage / ${totalPages > 0 ? totalPages : 1}'),
               IconButton(
                 icon: const Icon(Icons.chevron_right),
                 onPressed: _currentPage < totalPages
-                    ? () {
-                        setState(() => _currentPage++);
-                        fetchUsers();
-                      }
+                    ? () { setState(() => _currentPage++); fetchUsers(); }
                     : null,
               ),
             ],
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildUserCard(ApplicationUser e) {
+    final cs = Theme.of(context).colorScheme;
+    final roleName = e.userRoles != null && e.userRoles!.isNotEmpty
+        ? e.userRoles![0].role?.name ?? ''
+        : '';
+    final initials = [e.person?.firstName, e.person?.lastName]
+        .where((s) => s != null && s.isNotEmpty)
+        .map((s) => s![0].toUpperCase())
+        .join();
+
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
+      elevation: 0,
+      color: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.grey.shade200),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 24,
+              backgroundColor: cs.primaryContainer,
+              child: Text(
+                initials.isNotEmpty ? initials : '?',
+                style: TextStyle(
+                    color: cs.primary,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(e.userName ?? '',
+                          style: const TextStyle(
+                              fontWeight: FontWeight.w600, fontSize: 15)),
+                      const SizedBox(width: 8),
+                      if (roleName.isNotEmpty)
+                        Chip(
+                          label: Text(roleName,
+                              style: const TextStyle(fontSize: 11)),
+                          backgroundColor: cs.primaryContainer,
+                          side: BorderSide.none,
+                          labelStyle: TextStyle(color: cs.primary),
+                          padding: EdgeInsets.zero,
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(e.email ?? '',
+                      style: TextStyle(
+                          color: Colors.grey.shade600, fontSize: 12)),
+                  if ((e.person?.placeOfResidence?.name ?? '').isNotEmpty ||
+                      (e.phoneNumber ?? '').isNotEmpty)
+                    Text(
+                      [
+                        if ((e.person?.placeOfResidence?.name ?? '').isNotEmpty)
+                          e.person!.placeOfResidence!.name!,
+                        if ((e.phoneNumber ?? '').isNotEmpty) e.phoneNumber!,
+                      ].join(' · '),
+                      style: TextStyle(
+                          color: Colors.grey.shade500, fontSize: 12),
+                    ),
+                ],
+              ),
+            ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: Icon(Icons.info_outline, size: 20, color: cs.primary),
+                  tooltip: 'Detalji',
+                  onPressed: () => Navigator.of(context)
+                      .push(MaterialPageRoute(
+                          builder: (_) => UserDetailScreen(user: e)))
+                      .then((_) => fetchUsers()),
+                ),
+                IconButton(
+                  icon: Icon(Icons.edit_outlined, size: 20, color: cs.primary),
+                  tooltip: 'Uredi',
+                  onPressed: () => Navigator.of(context)
+                      .push(MaterialPageRoute(
+                          builder: (_) => UserEditScreen(user: e)))
+                      .then((_) => fetchUsers()),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.lock_reset, size: 20, color: Colors.orange),
+                  tooltip: 'Resetuj lozinku',
+                  onPressed: () => _showResetPasswordDialog(e),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline, size: 20, color: Colors.red),
+                  tooltip: 'Obriši',
+                  onPressed: () => showDialog(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: const Text('Potvrdi brisanje'),
+                      content: Text(
+                          'Jeste li sigurni da želite obrisati "${e.userName ?? "ovog korisnika"}"?'),
+                      actions: [
+                        TextButton(
+                            onPressed: () => Navigator.of(ctx).pop(),
+                            child: const Text('Odustani')),
+                        TextButton(
+                          style: TextButton.styleFrom(foregroundColor: Colors.red),
+                          onPressed: () => _handleDeleteUser(e.id),
+                          child: const Text('Obriši'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 

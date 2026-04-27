@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:propertease_admin/providers/auth_provider.dart';
+import 'package:propertease_admin/utils/app_navigator.dart';
 import 'package:propertease_admin/providers/city_provider.dart';
 import 'package:propertease_admin/providers/image_provider.dart';
 import 'package:propertease_admin/providers/notification_provider.dart';
@@ -8,17 +9,23 @@ import 'package:propertease_admin/providers/property_reservation_provider.dart';
 import 'package:propertease_admin/providers/property_type_provider.dart';
 import 'package:propertease_admin/screens/property/property_list_screen.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
 import 'providers/application_role_provider.dart';
 import 'providers/application_user_provider.dart';
 import 'providers/conversation_provider.dart';
 import 'providers/country_provider.dart';
 import 'providers/message_provider.dart';
 import 'providers/payment_provider.dart';
+import 'providers/property_rating_provider.dart';
 import 'providers/reservation_notification_provider.dart';
+import 'providers/user_rating_provider.dart';
 
 void main() {
+  onUnauthorized = () {
+    appNavigatorKey.currentState?.pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginWidget()),
+      (_) => false,
+    );
+  };
   runApp(MultiProvider(
     providers: [
       ChangeNotifierProvider(create: (_) => AuthProvider()),
@@ -35,6 +42,8 @@ void main() {
       ChangeNotifierProvider(create: (_) => MessageProvider()),
       ChangeNotifierProvider(create: (_) => ReservationNotificationProvider()),
       ChangeNotifierProvider(create: (_) => PaymentProvider()),
+      ChangeNotifierProvider(create: (_) => PropertyRatingProvider()),
+      ChangeNotifierProvider(create: (_) => UserRatingProvider()),
     ],
     child: const MyApp(),
   ));
@@ -45,13 +54,44 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const seed = Color(0xFF1565C0);
     return MaterialApp(
+      navigatorKey: appNavigatorKey,
       title: 'PropertEase',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        primarySwatch: Colors.blue,
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: seed,
+          brightness: Brightness.light,
+        ),
         inputDecorationTheme: const InputDecorationTheme(
           border: OutlineInputBorder(),
           contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+          isDense: true,
+        ),
+        cardTheme: CardThemeData(
+          elevation: 1,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
+        ),
+        scaffoldBackgroundColor: const Color(0xFFF0F2F5),
+        appBarTheme: const AppBarTheme(
+          scrolledUnderElevation: 1,
+          centerTitle: false,
+          backgroundColor: Color(0xFF1565C0),
+          foregroundColor: Colors.white,
+          iconTheme: IconThemeData(color: Colors.white),
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          ),
+        ),
+        chipTheme: ChipThemeData(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
         ),
       ),
       home: const LoginWidget(),

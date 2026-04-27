@@ -3,6 +3,8 @@ using Microsoft.Extensions.Logging;
 using PropertEase.Core.Dto;
 using PropertEase.Core.Dto.Property;
 using PropertEase.Core.Dto.PropertyRating;
+using PropertEase.Core.Enumerations;
+using PropertEase.Core.Exceptions;
 using PropertEase.Core.Entities;
 using PropertEase.Core.Entities.Identity;
 using PropertEase.Infrastructure;
@@ -28,8 +30,50 @@ namespace PropertEase.Services.Services.PropertyRatingService
         }
         public async Task<PropertyRatingDto> AddAsync(PropertyRatingDto entityDto)
         {
-            await unitOfWork.PropertyRatingRepository.AddAsync(entityDto);
-            await unitOfWork.SaveChangesAsync();
+            var db = unitOfWork.GetDatabaseContext();
+
+            if (entityDto.ReservationId.HasValue)
+            {
+                var reservationOk = await db.PropertyReservations
+                    .AnyAsync(r => r.Id       == entityDto.ReservationId
+                                   && r.PropertyId == entityDto.PropertyId
+                                   && r.ClientId   == entityDto.ReviewerId
+                                   && r.Status     == ReservationStatus.Completed
+                                   && !r.IsDeleted);
+                if (!reservationOk)
+                    throw new BusinessException("Ocjenu možete dati samo nakon završetka rezervacije.");
+
+                var existing = await db.PropertyRatings
+                    .FirstOrDefaultAsync(r => r.ReviewerId    == entityDto.ReviewerId
+                                              && r.ReservationId == entityDto.ReservationId
+                                              && !r.IsDeleted);
+                if (existing != null)
+                {
+                    existing.Rating      = entityDto.Rating;
+                    existing.Description = entityDto.Description;
+                    existing.ModifiedAt  = DateTime.UtcNow;
+                    await unitOfWork.SaveChangesAsync();
+                    entityDto.Id = existing.Id;
+                }
+                else
+                {
+                    await unitOfWork.PropertyRatingRepository.AddAsync(entityDto);
+                    await unitOfWork.SaveChangesAsync();
+                }
+            }
+            else
+            {
+                var hasCompleted = await db.PropertyReservations
+                    .AnyAsync(r => r.PropertyId == entityDto.PropertyId
+                                   && r.ClientId == entityDto.ReviewerId
+                                   && r.Status   == ReservationStatus.Completed
+                                   && !r.IsDeleted);
+                if (!hasCompleted)
+                    throw new BusinessException("Ocjenu možete dati samo nakon završetka rezervacije.");
+
+                await unitOfWork.PropertyRatingRepository.AddAsync(entityDto);
+                await unitOfWork.SaveChangesAsync();
+            }
 
             var average = await unitOfWork.PropertyRatingRepository.GetAverageRatingAsync(entityDto.PropertyId);
             await unitOfWork.PropertyRepository.UpdateAverageRating(entityDto.PropertyId, average);
@@ -61,22 +105,6 @@ namespace PropertEase.Services.Services.PropertyRatingService
         {
             await unitOfWork.PropertyRatingRepository.RemoveByIdAsync(id, isSoft);
             await unitOfWork.SaveChangesAsync();
-        }
-
-        public void Update(PropertyRatingDto entity)
-        {
-            double oldRating = entity.Rating;
-            unitOfWork.PropertyRatingRepository.Update(entity);
-
-            unitOfWork.SaveChanges();
-            if (oldRating != entity.Rating)
-            {
-                var property = unitOfWork.PropertyRepository.GetByIdAsync(entity.PropertyId);
-                var ratingsByProperty = unitOfWork.PropertyRatingRepository.GetByPropertyId(property.Id);
-                property.Result.AverageRating = GetAverageRating(ratingsByProperty.Result);
-                unitOfWork.PropertyRepository.Update(property);
-                unitOfWork.SaveChanges();
-            }
         }
 
         public async Task<PropertyRatingDto> UpdateAsync(PropertyRatingDto entity)

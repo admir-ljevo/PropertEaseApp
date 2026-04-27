@@ -5,6 +5,7 @@ import 'package:propertease_client/models/property_reservation.dart';
 import 'package:propertease_client/models/search_result.dart';
 import 'package:propertease_client/providers/property_reservation_provider.dart';
 import 'package:propertease_client/utils/authorization.dart';
+import 'package:propertease_client/utils/reservation_status.dart';
 import 'package:propertease_client/widgets/master_screen.dart';
 import 'package:provider/provider.dart';
 import 'reservation_detail_screen.dart';
@@ -32,7 +33,7 @@ class ReservationListScreenState extends State<ReservationListScreen> {
   final TextEditingController _maxPriceController = TextEditingController();
   DateTime? _selectedDateStart;
   DateTime? _selectedDateEnd;
-  bool? _isActive;
+  int? _selectedStatus;
 
   int? get userId => Authorization.userId;
 
@@ -56,7 +57,7 @@ class ReservationListScreenState extends State<ReservationListScreen> {
         'totalPriceTo': _maxPriceController.text.isNotEmpty ? double.tryParse(_maxPriceController.text) : null,
         'dateOccupancyStartedStart': _selectedDateStart,
         'dateOccupancyStartedEnd': _selectedDateEnd,
-        'isActive': _isActive,
+        'status': _selectedStatus,
         'page': page,
         'pageSize': _pageSize,
       });
@@ -140,15 +141,17 @@ class ReservationListScreenState extends State<ReservationListScreen> {
                   ),
                 ],
               ),
-              DropdownButtonFormField<bool?>(
-                value: _isActive,
+              DropdownButtonFormField<int?>(
+                value: _selectedStatus,
                 decoration: const InputDecoration(labelText: 'Status'),
                 items: const [
                   DropdownMenuItem(value: null, child: Text('All')),
-                  DropdownMenuItem(value: true, child: Text('Active')),
-                  DropdownMenuItem(value: false, child: Text('Inactive')),
+                  DropdownMenuItem(value: 0, child: Text('Pending')),
+                  DropdownMenuItem(value: 1, child: Text('Confirmed')),
+                  DropdownMenuItem(value: 2, child: Text('Completed')),
+                  DropdownMenuItem(value: 3, child: Text('Cancelled')),
                 ],
-                onChanged: (v) => setState(() => _isActive = v),
+                onChanged: (v) => setState(() => _selectedStatus = v),
               ),
             ],
           ),
@@ -162,7 +165,7 @@ class ReservationListScreenState extends State<ReservationListScreen> {
               setState(() {
                 _selectedDateStart = null;
                 _selectedDateEnd = null;
-                _isActive = null;
+                _selectedStatus = null;
               });
               Navigator.of(ctx).pop();
               _fetchReservations();
@@ -280,25 +283,7 @@ class ReservationListScreenState extends State<ReservationListScreen> {
                               fontSize: 17, fontWeight: FontWeight.bold),
                         ),
                       ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: r.isActive == true
-                              ? Colors.green.shade100
-                              : Colors.red.shade100,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          r.isActive == true ? 'Active' : 'Inactive',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: r.isActive == true
-                                ? Colors.green.shade800
-                                : Colors.red.shade800,
-                          ),
-                        ),
-                      ),
+                      ReservationStatus.chip(r.status),
                     ],
                   ),
                   const SizedBox(height: 4),

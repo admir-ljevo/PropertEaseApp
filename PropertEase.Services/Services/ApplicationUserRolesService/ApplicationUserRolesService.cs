@@ -27,19 +27,19 @@ namespace PropertEase.Services.Services.ApplicationUserRolesService
             return entity;
         }
 
-        public Task<List<ApplicationUserRoleDto>> GetAllAsync()
+        public Task<IEnumerable<ApplicationUserRoleDto>> GetByUserId(int userId)
         {
-            throw new NotImplementedException();
+            return _unitOfWork.ApplicationUserRolesRepository.GetByUserId(userId);
         }
 
-        public Task<ApplicationUserRoleDto> GetByIdAsync(int id)
+        public Task AssignRoleAsync(int userId, int roleId)
         {
-            throw new NotImplementedException();
+            return _unitOfWork.ApplicationUserRolesRepository.AddUserRoleAsync(userId, roleId);
         }
 
-        public Task<IEnumerable<ApplicationUserRoleDto>> GetByUserId(int pUserId)
+        public Task RemoveRoleAsync(int userId, int roleId)
         {
-            return _unitOfWork.ApplicationUserRolesRepository.GetByUserId(pUserId);
+            return _unitOfWork.ApplicationUserRolesRepository.RemoveUserRoleByUserAndRoleAsync(userId, roleId);
         }
 
         public async Task RemoveByIdAsync(int id, bool isSoft = true)
@@ -47,10 +47,6 @@ namespace PropertEase.Services.Services.ApplicationUserRolesService
             await _unitOfWork.ApplicationUserRolesRepository.RemoveUserRoleAsync(id);
         }
 
-        public void Update(ApplicationUserRoleDto entity)
-        {
-            throw new NotImplementedException();
-        }
         public void UpdateRange(IEnumerable<ApplicationUserRoleDto> entitiesDto)
         {
             _unitOfWork.ApplicationUserRolesRepository.UpdateRange(entitiesDto);

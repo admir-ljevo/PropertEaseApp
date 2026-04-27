@@ -14,5 +14,6 @@ namespace PropertEase.Infrastructure.Repositories.ApplicationUserRolesRepository
         public Task<IEnumerable<ApplicationUserRoleDto>> GetByUserId(int userId);
         public Task AddUserRoleAsync(int userId, int roleId);
         public Task RemoveUserRoleAsync(int userRoleId);
+        public Task RemoveUserRoleByUserAndRoleAsync(int userId, int roleId);
     }
 }

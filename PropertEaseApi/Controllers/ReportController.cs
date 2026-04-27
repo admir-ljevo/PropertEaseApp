@@ -1,12 +1,13 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PropertEase.Services.Reports;
+using PropertEase.Shared.Constants;
 
 namespace PropertEase.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
-[Authorize(Roles = "1,2")]
+[Authorize(Roles = $"{AppRoles.Admin},{AppRoles.Renter}")]
 public class ReportController : ControllerBase
 {
     private readonly IReportService _reportService;

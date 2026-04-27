@@ -1,5 +1,6 @@
 using PropertEase.Core.Entities.Base;
 using PropertEase.Core.Entities.Identity;
+using PropertEase.Core.Enumerations;
 
 namespace PropertEase.Core.Entities
 {
@@ -13,7 +14,7 @@ namespace PropertEase.Core.Entities
         public string PayPalPayerId { get; set; }
         public double Amount { get; set; }
         public string Currency { get; set; } = "USD";
-        public string Status { get; set; }
+        public PaymentStatus Status { get; set; } = PaymentStatus.Pending;
         public string? Description { get; set; }
     }
 }

@@ -46,6 +46,7 @@ namespace PropertEase.Infrastructure.Repositories.PropertyRatingRepository
                     ReviewerName = pr.ReviewerName,
                     Rating = pr.Rating,
                     Description = pr.Description,
+                    ReservationId = pr.ReservationId,
                     Reviewer = pr.Reviewer == null ? null : new Core.Dto.ApplicationUser.ApplicationUserDto
                     {
                         Id = pr.Reviewer.Id,
@@ -77,6 +78,7 @@ namespace PropertEase.Infrastructure.Repositories.PropertyRatingRepository
                     ReviewerName = pr.ReviewerName,
                     Rating = pr.Rating,
                     Description = pr.Description,
+                    ReservationId = pr.ReservationId,
                     Reviewer = pr.Reviewer == null ? null : new Core.Dto.ApplicationUser.ApplicationUserDto
                     {
                         Id = pr.Reviewer.Id,
@@ -104,8 +106,10 @@ namespace PropertEase.Infrastructure.Repositories.PropertyRatingRepository
             var query = DatabaseContext.PropertyRatings
                 .AsNoTracking()
                 .Where(pr =>
-                    pr.PropertyId == filter.PropertyId
+                    (!filter.PropertyId.HasValue || pr.PropertyId == filter.PropertyId)
                     && !pr.IsDeleted
+                    && (!filter.ReviewerId.HasValue || pr.ReviewerId == filter.ReviewerId)
+                    && (!filter.ReservationId.HasValue || pr.ReservationId == filter.ReservationId)
                     && (!filter.CreatedFrom.HasValue || filter.CreatedFrom <= pr.CreatedAt)
                     && (!filter.CreatedTo.HasValue || filter.CreatedTo >= pr.CreatedAt));
 
@@ -131,6 +135,7 @@ namespace PropertEase.Infrastructure.Repositories.PropertyRatingRepository
                     ReviewerName = pr.ReviewerName,
                     Rating = pr.Rating,
                     Description = pr.Description,
+                    ReservationId = pr.ReservationId,
                     Reviewer = pr.Reviewer == null ? null : new Core.Dto.ApplicationUser.ApplicationUserDto
                     {
                         Id = pr.Reviewer.Id,

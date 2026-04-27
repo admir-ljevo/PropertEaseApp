@@ -68,6 +68,14 @@ class PhotoProvider with ChangeNotifier {
     }
   }
 
+  Future<void> deletePhoto(int id) async {
+    final url = Uri.parse('$_baseUrl${_endpoint}/$id');
+    final response = await http.delete(url, headers: createHeaders());
+    if (response.statusCode >= 300) {
+      throw Exception('Failed to delete photo. Status: ${response.statusCode}');
+    }
+  }
+
   Future<Image> getFirstImageByPropertyId(int? propertyId) async {
     var url = "$_baseUrl$_endpoint/GetFirstImage/propertyId/$propertyId";
 

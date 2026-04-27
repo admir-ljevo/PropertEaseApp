@@ -58,17 +58,17 @@ namespace PropertEase.Infrastructure.Repositories.ConversationRepository
 
         public async Task<List<ConversationDto>> GetByPropertyAndRenter(int? propertyId, int renterId)
         {
-            // Always restrict to property conversations (PropertyId != null)
-            var query = DatabaseContext.Conversations
+            var baseQuery = DatabaseContext.Conversations
+                .AsNoTracking()
                 .Where(c => c.RenterId == renterId && !c.IsDeleted && c.PropertyId != null);
 
             if (propertyId.HasValue)
-            {
-                query = query.Where(c => c.PropertyId == propertyId);
-            }
+                baseQuery = baseQuery.Where(c => c.PropertyId == propertyId);
 
-            return await ProjectToListAsync<ConversationDto>(
-                query.Select(c => new ConversationDto
+            var conversations = await baseQuery
+                .OrderByDescending(c => c.LastSent)
+                .Take(100)
+                .Select(c => new ConversationDto
                 {
                     PropertyId = c.PropertyId,
                     Property = new PropertyDto { Name = c.Property.Name },
@@ -77,16 +77,13 @@ namespace PropertEase.Infrastructure.Repositories.ConversationRepository
                     RenterId = c.RenterId,
                     LastMessage = c.LastMessage,
                     LastSent = c.LastSent,
-                    UnreadCount = DatabaseContext.Messages.Count(m =>
-                        m.ConversationId == c.Id && m.RecipientId == renterId &&
-                        !m.IsRead && !m.IsDeleted),
                     Client = new ApplicationUserDto
                     {
                         Person = new PersonDto
                         {
                             FirstName = c.Client.Person.FirstName,
                             LastName = c.Client.Person.LastName,
-                            ProfilePhotoBytes = c.Client.Person.ProfilePhotoBytes
+                            ProfilePhoto = c.Client.Person.ProfilePhoto,
                         },
                         UserName = c.Client.UserName,
                     },
@@ -96,13 +93,26 @@ namespace PropertEase.Infrastructure.Repositories.ConversationRepository
                         {
                             FirstName = c.Renter.Person.FirstName,
                             LastName = c.Renter.Person.LastName,
-                            ProfilePhotoBytes = c.Renter.Person.ProfilePhotoBytes,
-                            ProfilePhoto = c.Renter.Person.ProfilePhoto
+                            ProfilePhoto = c.Renter.Person.ProfilePhoto,
                         },
                         UserName = c.Renter.UserName,
                     }
-                }).OrderByDescending(x => x.LastSent)
-            );
+                })
+                .ToListAsync();
+
+            if (conversations.Count == 0) return conversations;
+
+            var ids = conversations.Select(c => c.Id).ToList();
+            var unreadCounts = await DatabaseContext.Messages
+                .Where(m => ids.Contains(m.ConversationId) && m.RecipientId == renterId && !m.IsRead && !m.IsDeleted)
+                .GroupBy(m => m.ConversationId)
+                .Select(g => new { ConversationId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.ConversationId, x => x.Count);
+
+            foreach (var c in conversations)
+                c.UnreadCount = unreadCounts.GetValueOrDefault(c.Id, 0);
+
+            return conversations;
         }
 
         public async Task<List<ConversationDto>> GetByPropertyId(int id)
@@ -110,6 +120,8 @@ namespace PropertEase.Infrastructure.Repositories.ConversationRepository
             return await DatabaseContext.Conversations
                 .AsNoTracking()
                 .Where(c => c.PropertyId == id && !c.IsDeleted)
+                .OrderByDescending(c => c.LastSent)
+                .Take(100)
                 .Select(c => new ConversationDto
                 {
                     Id = c.Id,
@@ -125,7 +137,7 @@ namespace PropertEase.Infrastructure.Repositories.ConversationRepository
                         {
                             FirstName = c.Client.Person.FirstName,
                             LastName = c.Client.Person.LastName,
-                            ProfilePhotoBytes = c.Client.Person.ProfilePhotoBytes
+                            ProfilePhoto = c.Client.Person.ProfilePhoto,
                         },
                         UserName = c.Client.UserName,
                     },
@@ -135,8 +147,7 @@ namespace PropertEase.Infrastructure.Repositories.ConversationRepository
                         {
                             FirstName = c.Renter.Person.FirstName,
                             LastName = c.Renter.Person.LastName,
-                            ProfilePhotoBytes = c.Renter.Person.ProfilePhotoBytes,
-                            ProfilePhoto = c.Renter.Person.ProfilePhoto
+                            ProfilePhoto = c.Renter.Person.ProfilePhoto,
                         },
                         UserName = c.Renter.UserName,
                     }
@@ -146,49 +157,52 @@ namespace PropertEase.Infrastructure.Repositories.ConversationRepository
 
         public async Task<List<ConversationDto>> GetAllAsync()
         {
-            return await ProjectToListAsync<ConversationDto>(
-                DatabaseContext.Conversations
-                    .Where(c => !c.IsDeleted && c.PropertyId != null)
-                    .Select(c => new ConversationDto
+            return await DatabaseContext.Conversations
+                .AsNoTracking()
+                .Where(c => !c.IsDeleted && c.PropertyId != null)
+                .OrderByDescending(c => c.LastSent)
+                .Take(100)
+                .Select(c => new ConversationDto
+                {
+                    PropertyId = c.PropertyId,
+                    Property = new PropertyDto { Name = c.Property.Name },
+                    Id = c.Id,
+                    ClientId = c.ClientId,
+                    RenterId = c.RenterId,
+                    LastMessage = c.LastMessage,
+                    LastSent = c.LastSent,
+                    Client = new ApplicationUserDto
                     {
-                        PropertyId = c.PropertyId,
-                        Property = new PropertyDto { Name = c.Property.Name },
-                        Id = c.Id,
-                        ClientId = c.ClientId,
-                        RenterId = c.RenterId,
-                        LastMessage = c.LastMessage,
-                        LastSent = c.LastSent,
-                        Client = new ApplicationUserDto
+                        Person = new PersonDto
                         {
-                            Person = new PersonDto
-                            {
-                                FirstName = c.Client.Person.FirstName,
-                                LastName = c.Client.Person.LastName,
-                                ProfilePhotoBytes = c.Client.Person.ProfilePhotoBytes
-                            },
-                            UserName = c.Client.UserName,
+                            FirstName = c.Client.Person.FirstName,
+                            LastName = c.Client.Person.LastName,
+                            ProfilePhoto = c.Client.Person.ProfilePhoto,
                         },
-                        Renter = new ApplicationUserDto
+                        UserName = c.Client.UserName,
+                    },
+                    Renter = new ApplicationUserDto
+                    {
+                        Person = new PersonDto
                         {
-                            Person = new PersonDto
-                            {
-                                FirstName = c.Renter.Person.FirstName,
-                                LastName = c.Renter.Person.LastName,
-                                ProfilePhotoBytes = c.Renter.Person.ProfilePhotoBytes
-                            },
-                            UserName = c.Renter.UserName,
-                        }
-                    }).OrderByDescending(x => x.LastSent)
-            );
+                            FirstName = c.Renter.Person.FirstName,
+                            LastName = c.Renter.Person.LastName,
+                            ProfilePhoto = c.Renter.Person.ProfilePhoto,
+                        },
+                        UserName = c.Renter.UserName,
+                    }
+                })
+                .ToListAsync();
         }
 
         public async Task<List<ConversationDto>> GetAdminConversations(int userId)
         {
-            return await DatabaseContext.Conversations
+            var conversations = await DatabaseContext.Conversations
                 .AsNoTracking()
                 .Where(c => !c.IsDeleted && c.PropertyId == null
                             && (c.ClientId == userId || c.RenterId == userId))
                 .OrderByDescending(c => c.LastSent)
+                .Take(100)
                 .Select(c => new ConversationDto
                 {
                     PropertyId = null,
@@ -198,9 +212,6 @@ namespace PropertEase.Infrastructure.Repositories.ConversationRepository
                     RenterId = c.RenterId,
                     LastMessage = c.LastMessage,
                     LastSent = c.LastSent,
-                    UnreadCount = DatabaseContext.Messages.Count(m =>
-                        m.ConversationId == c.Id && m.RecipientId == userId &&
-                        !m.IsRead && !m.IsDeleted),
                     Client = new ApplicationUserDto
                     {
                         Id = c.Client.Id,
@@ -208,8 +219,7 @@ namespace PropertEase.Infrastructure.Repositories.ConversationRepository
                         {
                             FirstName = c.Client.Person.FirstName,
                             LastName = c.Client.Person.LastName,
-                            ProfilePhotoBytes = c.Client.Person.ProfilePhotoBytes,
-                            ProfilePhoto = c.Client.Person.ProfilePhoto
+                            ProfilePhoto = c.Client.Person.ProfilePhoto,
                         },
                         UserName = c.Client.UserName,
                     },
@@ -220,21 +230,35 @@ namespace PropertEase.Infrastructure.Repositories.ConversationRepository
                         {
                             FirstName = c.Renter.Person.FirstName,
                             LastName = c.Renter.Person.LastName,
-                            ProfilePhotoBytes = c.Renter.Person.ProfilePhotoBytes,
-                            ProfilePhoto = c.Renter.Person.ProfilePhoto
+                            ProfilePhoto = c.Renter.Person.ProfilePhoto,
                         },
                         UserName = c.Renter.UserName,
                     }
                 })
                 .ToListAsync();
+
+            if (conversations.Count == 0) return conversations;
+
+            var ids = conversations.Select(c => c.Id).ToList();
+            var unreadCounts = await DatabaseContext.Messages
+                .Where(m => ids.Contains(m.ConversationId) && m.RecipientId == userId && !m.IsRead && !m.IsDeleted)
+                .GroupBy(m => m.ConversationId)
+                .Select(g => new { ConversationId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.ConversationId, x => x.Count);
+
+            foreach (var c in conversations)
+                c.UnreadCount = unreadCounts.GetValueOrDefault(c.Id, 0);
+
+            return conversations;
         }
 
         public async Task<List<ConversationDto>> GetByClient(int clientId)
         {
-            return await DatabaseContext.Conversations
+            var conversations = await DatabaseContext.Conversations
                 .AsNoTracking()
                 .Where(c => c.ClientId == clientId && !c.IsDeleted)
                 .OrderByDescending(c => c.LastSent)
+                .Take(100)
                 .Select(c => new ConversationDto
                 {
                     PropertyId = c.PropertyId,
@@ -244,10 +268,6 @@ namespace PropertEase.Infrastructure.Repositories.ConversationRepository
                     RenterId = c.RenterId,
                     LastMessage = c.LastMessage,
                     LastSent = c.LastSent,
-                    UnreadCount = DatabaseContext.Messages.Count(m =>
-                        m.ConversationId == c.Id && m.RecipientId == clientId &&
-                        !m.IsRead && !m.IsDeleted),
-                    // Client photo is available locally from Authorization — skip it here
                     Client = new ApplicationUserDto
                     {
                         Person = new PersonDto
@@ -263,13 +283,26 @@ namespace PropertEase.Infrastructure.Repositories.ConversationRepository
                         {
                             FirstName = c.Renter.Person.FirstName,
                             LastName = c.Renter.Person.LastName,
-                            ProfilePhotoBytes = c.Renter.Person.ProfilePhotoBytes,
-                            ProfilePhoto = c.Renter.Person.ProfilePhoto
+                            ProfilePhoto = c.Renter.Person.ProfilePhoto,
                         },
                         UserName = c.Renter.UserName,
                     }
                 })
                 .ToListAsync();
+
+            if (conversations.Count == 0) return conversations;
+
+            var ids = conversations.Select(c => c.Id).ToList();
+            var unreadCounts = await DatabaseContext.Messages
+                .Where(m => ids.Contains(m.ConversationId) && m.RecipientId == clientId && !m.IsRead && !m.IsDeleted)
+                .GroupBy(m => m.ConversationId)
+                .Select(g => new { ConversationId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.ConversationId, x => x.Count);
+
+            foreach (var c in conversations)
+                c.UnreadCount = unreadCounts.GetValueOrDefault(c.Id, 0);
+
+            return conversations;
         }
 
         public async Task UpdateLastMessageAsync(int conversationId, string? content)
@@ -311,8 +344,7 @@ namespace PropertEase.Infrastructure.Repositories.ConversationRepository
                         {
                             FirstName = c.Renter.Person.FirstName,
                             LastName = c.Renter.Person.LastName,
-                            ProfilePhotoBytes = c.Renter.Person.ProfilePhotoBytes,
-                            ProfilePhoto = c.Renter.Person.ProfilePhoto
+                            ProfilePhoto = c.Renter.Person.ProfilePhoto,
                         },
                         UserName = c.Renter.UserName,
                     }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:propertease_admin/config/app_config.dart';
+import 'package:signalr_core/signalr_core.dart';
 import 'package:propertease_admin/main.dart';
 import 'package:propertease_admin/providers/conversation_provider.dart';
 import 'package:propertease_admin/providers/reservation_notification_provider.dart';
@@ -7,6 +8,7 @@ import 'package:propertease_admin/screens/notifications/notification-list-screen
 import 'package:propertease_admin/screens/notifications/reservation_notification_list_screen.dart';
 import 'package:propertease_admin/screens/profile/profile_edit_screen.dart';
 import 'package:propertease_admin/screens/reports/renter_reservation_report_screen.dart';
+import 'package:propertease_admin/providers/auth_provider.dart';
 import 'package:propertease_admin/utils/authorization.dart';
 import 'package:provider/provider.dart';
 
@@ -15,6 +17,7 @@ import 'package:propertease_admin/screens/users/user_list_screen.dart';
 
 import '../screens/admin/city_list_screen.dart';
 import '../screens/admin/country_list_screen.dart';
+import '../screens/admin/payment_list_screen.dart';
 import '../screens/admin/property_type_list_screen.dart';
 import '../screens/admin/role_list_screen.dart';
 import '../screens/messaging/conversation_list_screen.dart';
@@ -39,12 +42,40 @@ class MasterScreenWidget extends StatefulWidget {
 class _MasterScreenWidgetState extends State<MasterScreenWidget> {
   int _unreadCount = 0;
   int _unseenNotifCount = 0;
+  HubConnection? _hub;
 
   @override
   void initState() {
     super.initState();
     _fetchUnreadCount();
     _fetchUnseenNotifCount();
+    _connectSignalR();
+  }
+
+  @override
+  void dispose() {
+    _hub?.stop();
+    super.dispose();
+  }
+
+  void _connectSignalR() async {
+    final token = Authorization.token;
+    if (token == null) return;
+    try {
+      _hub = HubConnectionBuilder()
+          .withUrl(
+            '${AppConfig.serverBase}/hubs/messageHub',
+            HttpConnectionOptions(
+              accessTokenFactory: () async => token,
+              logging: (level, message) {},
+            ),
+          )
+          .withAutomaticReconnect()
+          .build();
+      _hub!.on('newMessage', (_) => _fetchUnreadCount());
+      _hub!.on('NewNotification', (_) => _fetchUnseenNotifCount());
+      await _hub!.start();
+    } catch (_) {}
   }
 
   Future<void> _fetchUnreadCount() async {
@@ -67,6 +98,38 @@ class _MasterScreenWidgetState extends State<MasterScreenWidget> {
     } catch (_) {}
   }
 
+  Widget _navLabel(String label) => Padding(
+        padding: const EdgeInsets.only(left: 16, top: 4, bottom: 2),
+        child: Text(
+          label.toUpperCase(),
+          style: TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+            color: Colors.grey.shade500,
+            letterSpacing: 1.0,
+          ),
+        ),
+      );
+
+  Widget _navTile(IconData icon, String title, VoidCallback onTap,
+      {int badge = 0, Color? color}) {
+    return ListTile(
+      dense: true,
+      leading: badge > 0
+          ? Badge(
+              label: Text('$badge'),
+              child: Icon(icon, color: color, size: 22),
+            )
+          : Icon(icon, color: color, size: 22),
+      title: Text(title,
+          style: TextStyle(
+              fontSize: 14, color: color, fontWeight: FontWeight.w500)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+      onTap: onTap,
+    );
+  }
+
   void _openProfile() {
     Navigator.of(context)
         .push(MaterialPageRoute(builder: (_) => const ProfileEditScreen()))
@@ -87,24 +150,30 @@ class _MasterScreenWidgetState extends State<MasterScreenWidget> {
         title: widget.titleWidget ?? Text(widget.title ?? ''),
       ),
       drawer: Drawer(
-        child: ListView(children: [
+        child: Column(children: [
           // ── User profile header ───────────────────────────────────────────
           InkWell(
             onTap: _openProfile,
             child: Container(
-              decoration: const BoxDecoration(color: Color(0xFF115892)),
-              padding: const EdgeInsets.fromLTRB(16, 40, 16, 16),
+              width: double.infinity,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFF1565C0), Color(0xFF0D47A1)],
+                ),
+              ),
+              padding: const EdgeInsets.fromLTRB(16, 48, 16, 20),
               child: Row(
                 children: [
                   CircleAvatar(
-                    radius: 30,
+                    radius: 28,
                     backgroundColor: Colors.white24,
                     backgroundImage: hasPhoto
                         ? NetworkImage('${AppConfig.serverBase}$photoPath')
                         : null,
                     child: !hasPhoto
-                        ? const Icon(Icons.person,
-                            size: 32, color: Colors.white)
+                        ? const Icon(Icons.person, size: 30, color: Colors.white)
                         : null,
                   ),
                   const SizedBox(width: 12),
@@ -116,146 +185,95 @@ class _MasterScreenWidgetState extends State<MasterScreenWidget> {
                           Authorization.displayName,
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 16,
+                            fontSize: 15,
                             fontWeight: FontWeight.bold,
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          Authorization.role ?? '',
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 12,
+                        const SizedBox(height: 3),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.white24,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            Authorization.role ?? '',
+                            style: const TextStyle(color: Colors.white, fontSize: 11),
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const Icon(Icons.edit, color: Colors.white54, size: 18),
+                  const Icon(Icons.edit_outlined, color: Colors.white54, size: 16),
                 ],
               ),
             ),
           ),
           // ── Nav items ─────────────────────────────────────────────────────
-          ListTile(
-            leading: const Icon(Icons.home),
-            title: const Text('Nekretnine'),
-            onTap: () {
-              Navigator.of(context).pushReplacement(MaterialPageRoute(
-                  builder: (_) => const PropertyListWidget()));
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.calendar_month),
-            title: const Text('Rezervacije'),
-            onTap: () {
-              Navigator.of(context).pushReplacement(MaterialPageRoute(
-                  builder: (_) => const ReservationListWidget()));
-            },
-          ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.bar_chart),
-            title: const Text('Reports'),
-            onTap: () {
-              Navigator.of(context).push(MaterialPageRoute(
-                  builder: (context) => const RenterReservationReportScreen()));
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.newspaper_outlined),
-            title: const Text('Vijesti'),
-            onTap: () {
-              Navigator.of(context).push(MaterialPageRoute(
-                  builder: (context) => const NewsListWidget()));
-            },
-          ),
-          ListTile(
-            leading: Badge(
-              isLabelVisible: _unseenNotifCount > 0,
-              label: Text('$_unseenNotifCount'),
-              child: const Icon(Icons.notifications_outlined),
-            ),
-            title: const Text('Obavijesti'),
-            onTap: () {
-              Navigator.of(context)
-                  .push(MaterialPageRoute(
-                      builder: (_) =>
-                          const ReservationNotificationListScreen()))
-                  .then((_) => _fetchUnseenNotifCount());
-            },
-          ),
-          if (Authorization.isAdmin) ...[
-            ListTile(
-              leading: const Icon(Icons.people),
-              title: const Text('Users'),
-              onTap: () {
+          Expanded(
+            child: ListView(padding: const EdgeInsets.symmetric(vertical: 8), children: [
+              _navLabel('Glavno'),
+              _navTile(Icons.home_outlined, 'Nekretnine', () {
+                Navigator.of(context).pushReplacement(MaterialPageRoute(
+                    builder: (_) => const PropertyListWidget()));
+              }),
+              _navTile(Icons.calendar_month_outlined, 'Rezervacije', () {
+                Navigator.of(context).pushReplacement(MaterialPageRoute(
+                    builder: (_) => const ReservationListWidget()));
+              }),
+              _navTile(Icons.inbox_outlined, 'Inbox', () {
+                Navigator.of(context)
+                    .push(MaterialPageRoute(
+                        builder: (context) => const ConversationListScreen()))
+                    .then((_) => _fetchUnreadCount());
+              }, badge: _unreadCount),
+              _navTile(Icons.notifications_outlined, 'Obavijesti', () {
+                Navigator.of(context)
+                    .push(MaterialPageRoute(
+                        builder: (_) => const ReservationNotificationListScreen()))
+                    .then((_) => _fetchUnseenNotifCount());
+              }, badge: _unseenNotifCount),
+              const Divider(height: 16),
+              _navLabel('Analitika'),
+              _navTile(Icons.bar_chart_outlined, 'Izvještaji', () {
                 Navigator.of(context).push(MaterialPageRoute(
-                    builder: (context) => const UserListWidget()));
-              },
-            ),
-            const Divider(),
-            Padding(
-              padding: const EdgeInsets.only(left: 16, top: 8, bottom: 4),
-              child: Text('Reference data',
-                  style: TextStyle(fontSize: 11, color: Colors.grey.shade500, fontWeight: FontWeight.w600, letterSpacing: 0.8)),
-            ),
-            ListTile(
-              leading: const Icon(Icons.flag_outlined),
-              title: const Text('Countries'),
-              onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const CountryListScreen())),
-            ),
-            ListTile(
-              leading: const Icon(Icons.location_city_outlined),
-              title: const Text('Cities'),
-              onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const CityListScreen())),
-            ),
-            ListTile(
-              leading: const Icon(Icons.category_outlined),
-              title: const Text('Property Types'),
-              onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const PropertyTypeListScreen())),
-            ),
-            ListTile(
-              leading: const Icon(Icons.admin_panel_settings_outlined),
-              title: const Text('Roles'),
-              onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const RoleListScreen())),
-            ),
-          ],
-          ListTile(
-            leading: Badge(
-              isLabelVisible: _unreadCount > 0,
-              label: Text('$_unreadCount'),
-              child: const Icon(Icons.inbox),
-            ),
-            title: const Text('Inbox'),
-            onTap: () {
-              Navigator.of(context)
-                  .push(MaterialPageRoute(
-                      builder: (context) => const ConversationListScreen()))
-                  .then((_) => _fetchUnreadCount());
-            },
-          ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.manage_accounts),
-            title: const Text('Moj profil'),
-            onTap: _openProfile,
-          ),
-          ListTile(
-            leading: const Icon(Icons.logout),
-            title: const Text('Odjava'),
-            onTap: () {
-              Authorization.clear();
-              Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (_) => const LoginWidget()),
-                (_) => false,
-              );
-            },
+                    builder: (context) => const RenterReservationReportScreen()));
+              }),
+              _navTile(Icons.newspaper_outlined, 'Vijesti', () {
+                Navigator.of(context).push(MaterialPageRoute(
+                    builder: (context) => const NewsListWidget()));
+              }),
+              if (Authorization.isAdmin) ...[
+                const Divider(height: 16),
+                _navLabel('Administracija'),
+                _navTile(Icons.people_outline, 'Korisnici', () {
+                  Navigator.of(context).push(MaterialPageRoute(
+                      builder: (context) => const UserListWidget()));
+                }),
+                _navTile(Icons.flag_outlined, 'Države', () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const CountryListScreen()))),
+                _navTile(Icons.location_city_outlined, 'Gradovi', () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const CityListScreen()))),
+                _navTile(Icons.category_outlined, 'Tipovi nekretnina', () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const PropertyTypeListScreen()))),
+                _navTile(Icons.admin_panel_settings_outlined, 'Uloge', () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const RoleListScreen()))),
+                _navTile(Icons.payment_outlined, 'Plaćanja', () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const PaymentListScreen()))),
+              ],
+              const Divider(height: 16),
+              _navTile(Icons.manage_accounts_outlined, 'Moj profil', _openProfile),
+              _navTile(Icons.logout, 'Odjava', () async {
+                await context.read<AuthProvider>().logout();
+                if (context.mounted) {
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (_) => const LoginWidget()),
+                    (_) => false,
+                  );
+                }
+              }, color: Colors.red.shade700),
+            ]),
           ),
         ]),
       ),

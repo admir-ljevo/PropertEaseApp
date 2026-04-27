@@ -13,24 +13,27 @@ public class SqlNotificationWriter : INotificationWriter
             ?? throw new InvalidOperationException("DefaultConnection string is missing.");
     }
 
-    public async Task WriteAsync(int userId, int? reservationId, string message,
+    public async Task<int> WriteAsync(int userId, int? reservationId, string? title, string message,
         string? reservationNumber, string? propertyName, string? propertyPhotoUrl)
     {
         const string sql = @"
             INSERT INTO ReservationNotifications
-                (UserId, ReservationId, Message, IsSeen, ReservationNumber, PropertyName, PropertyPhotoUrl, CreatedAt, IsDeleted)
+                (UserId, ReservationId, Title, Message, IsSeen, ReservationNumber, PropertyName, PropertyPhotoUrl, CreatedAt, IsDeleted)
+            OUTPUT INSERTED.Id
             VALUES
-                (@UserId, @ReservationId, @Message, 0, @ReservationNumber, @PropertyName, @PropertyPhotoUrl, GETDATE(), 0)";
+                (@UserId, @ReservationId, @Title, @Message, 0, @ReservationNumber, @PropertyName, @PropertyPhotoUrl, GETDATE(), 0)";
 
         await using var conn = new SqlConnection(_connectionString);
         await conn.OpenAsync();
         await using var cmd = new SqlCommand(sql, conn);
-        cmd.Parameters.AddWithValue("@UserId", userId);
-        cmd.Parameters.AddWithValue("@ReservationId", (object?)reservationId ?? DBNull.Value);
-        cmd.Parameters.AddWithValue("@Message", message);
+        cmd.Parameters.AddWithValue("@UserId",           userId);
+        cmd.Parameters.AddWithValue("@ReservationId",    (object?)reservationId    ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@Title",             (object?)title            ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@Message",           message);
         cmd.Parameters.AddWithValue("@ReservationNumber", (object?)reservationNumber ?? DBNull.Value);
-        cmd.Parameters.AddWithValue("@PropertyName", (object?)propertyName ?? DBNull.Value);
-        cmd.Parameters.AddWithValue("@PropertyPhotoUrl", (object?)propertyPhotoUrl ?? DBNull.Value);
-        await cmd.ExecuteNonQueryAsync();
+        cmd.Parameters.AddWithValue("@PropertyName",      (object?)propertyName     ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@PropertyPhotoUrl",  (object?)propertyPhotoUrl ?? DBNull.Value);
+        var result = await cmd.ExecuteScalarAsync();
+        return result is int id ? id : Convert.ToInt32(result);
     }
 }

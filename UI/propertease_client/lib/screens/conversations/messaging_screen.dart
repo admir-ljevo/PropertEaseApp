@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:propertease_client/models/application_user.dart';
@@ -11,7 +10,6 @@ import 'package:propertease_client/screens/users/renter_profile_screen.dart';
 import 'package:propertease_client/utils/authorization.dart';
 import 'package:provider/provider.dart';
 import 'package:signalr_core/signalr_core.dart';
-import 'package:http/io_client.dart';
 
 class MessageListScreen extends StatefulWidget {
   final int? conversationId;
@@ -54,12 +52,18 @@ class MessageListScreenState extends State<MessageListScreen> {
   SearchResult<Message>? messages;
   late HubConnection signalR;
 
+  int _page = 1;
+  bool _hasMore = true;
+  bool _loadingMore = false;
+  static const int _pageSize = 30;
+
   @override
   void initState() {
     super.initState();
     _messageProvider = context.read<MessageProvider>();
     _messageController = TextEditingController();
 
+    _scrollController.addListener(_onScroll);
     initSignalRConnection();
     _loadUserInfo();
     fetchMessages();
@@ -82,35 +86,34 @@ class MessageListScreenState extends State<MessageListScreen> {
           .withUrl(
             '${AppConfig.serverBase}/hubs/messageHub',
             HttpConnectionOptions(
-              client: IOClient(
-                  HttpClient()..badCertificateCallback = (x, y, z) => true),
-              logging: (level, message) => print(message),
+              accessTokenFactory: () async => Authorization.token ?? '',
+              logging: (level, message) {},
             ),
           )
+          .withAutomaticReconnect()
           .build();
 
       signalR.on('newMessage', (_) {
         _syncMessages();
         _markAsReadNow();
       });
+      signalR.on('messagesRead', (_) => _syncMessages());
       await signalR.start();
-    } catch (e) {
-      print('Error initializing SignalR: $e');
-      // Handle the error appropriately based on your application's requirements.
-    }
+    } catch (_) {}
   }
 
-  void _onNewMessage(List<dynamic>? parameters) async {
-    if (parameters != null && parameters.length >= 2) {
-      final methodName = parameters[0] as String;
-      final message = parameters[1] as String;
-      print("MethodName = $methodName, Message = $message");
-      await fetchMessages();
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+            _scrollController.position.maxScrollExtent - 120 &&
+        !_loadingMore &&
+        _hasMore) {
+      _loadMoreMessages();
     }
   }
 
   @override
   void dispose() {
+    _scrollController.removeListener(_onScroll);
     signalR.off('newMessage');
     signalR.stop();
     _scrollController.dispose();
@@ -125,20 +128,55 @@ class MessageListScreenState extends State<MessageListScreen> {
 
   Future<void> fetchMessages() async {
     try {
-      final result =
-          await _messageProvider.getByConversationId(widget.conversationId!);
+      final result = await _messageProvider.getByConversationId(
+        widget.conversationId!,
+        page: 1,
+        pageSize: _pageSize,
+      );
       if (!mounted) return;
-      setState(() => messages = result);
+      setState(() {
+        messages = result;
+        _page = 1;
+        _hasMore = result.result.length >= _pageSize;
+      });
       _scrollToBottom();
     } catch (_) {}
   }
 
-  /// Syncs the list with the server without blocking the UI.
+  Future<void> _loadMoreMessages() async {
+    if (_loadingMore || !_hasMore) return;
+    setState(() => _loadingMore = true);
+    try {
+      final nextPage = _page + 1;
+      final result = await _messageProvider.getByConversationId(
+        widget.conversationId!,
+        page: nextPage,
+        pageSize: _pageSize,
+      );
+      if (!mounted) return;
+      setState(() {
+        messages!.result.addAll(result.result);
+        _page = nextPage;
+        _hasMore = result.result.length >= _pageSize;
+        _loadingMore = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _loadingMore = false);
+    }
+  }
+
+  /// Syncs newest messages without discarding older loaded pages.
   void _syncMessages() {
+    if (_page != 1) return;
     _messageProvider
-        .getByConversationId(widget.conversationId!)
+        .getByConversationId(widget.conversationId!, page: 1, pageSize: _pageSize)
         .then((result) {
-      if (mounted) setState(() => messages = result);
+      if (mounted) {
+        setState(() {
+          messages = result;
+          _hasMore = result.result.length >= _pageSize;
+        });
+      }
     }).catchError((_) {});
   }
 
@@ -178,9 +216,21 @@ class MessageListScreenState extends State<MessageListScreen> {
             child: messages != null
                 ? ListView.builder(
                     controller: _scrollController,
-                    itemCount: messages!.result.length,
+                    itemCount: messages!.result.length + (_loadingMore ? 1 : 0),
                     reverse: true,
                     itemBuilder: (context, index) {
+                      if (index == messages!.result.length) {
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 16),
+                          child: Center(
+                            child: SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          ),
+                        );
+                      }
                       return buildMessageItem(messages!.result[index]);
                     },
                   )
@@ -251,12 +301,6 @@ class MessageListScreenState extends State<MessageListScreen> {
 
       // Sync list in background (gets real server-assigned ID, etc.)
       _syncMessages();
-
-      // SignalR notification — best-effort
-      try {
-        await signalR.invoke(
-            'newMessage', args: ['newMessage', jsonEncode(optimistic.toJson())]);
-      } catch (_) {}
     } catch (e) {
       // Roll back the optimistic insert and restore text
       if (!mounted) return;
@@ -323,11 +367,26 @@ class MessageListScreenState extends State<MessageListScreen> {
                 ),
                 Padding(
                   padding: const EdgeInsets.only(top: 2),
-                  child: Text(
-                    message.createdAt != null
-                        ? DateFormat.Hm().format(message.createdAt!)
-                        : '',
-                    style: const TextStyle(fontSize: 11, color: Colors.grey),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        message.createdAt != null
+                            ? DateFormat.Hm().format(message.createdAt!)
+                            : '',
+                        style: const TextStyle(fontSize: 11, color: Colors.grey),
+                      ),
+                      if (isMine) ...[
+                        const SizedBox(width: 4),
+                        Icon(
+                          message.isRead == true ? Icons.done_all : Icons.done,
+                          size: 14,
+                          color: message.isRead == true
+                              ? Colors.blue
+                              : Colors.black38,
+                        ),
+                      ],
+                    ],
                   ),
                 ),
               ],
