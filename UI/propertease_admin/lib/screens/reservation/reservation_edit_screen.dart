@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:propertease_admin/models/property_reservation.dart';
 import 'package:propertease_admin/providers/property_reservation_provider.dart';
 import 'package:propertease_admin/utils/reservation_status.dart';
-import 'package:propertease_admin/utils/validators.dart';
 import 'package:provider/provider.dart';
 
 class ReservationEditScreen extends StatefulWidget {
@@ -19,7 +17,6 @@ class _ReservationEditScreenState extends State<ReservationEditScreen> {
   final _formKey = GlobalKey<FormState>();
   late PropertyReservationProvider _reservationProvider;
   late TextEditingController _descriptionController;
-  late TextEditingController _priceController;
 
   DateTime? _startDate;
   DateTime? _endDate;
@@ -45,15 +42,11 @@ class _ReservationEditScreenState extends State<ReservationEditScreen> {
     _isMonthly = r?.isMonthly ?? true;
     _guests = r?.numberOfGuests ?? 1;
     _descriptionController = TextEditingController(text: r?.description ?? '');
-    _priceController = TextEditingController(
-      text: (r?.totalPrice ?? 0) > 0 ? r!.totalPrice!.toStringAsFixed(2) : '',
-    );
   }
 
   @override
   void dispose() {
     _descriptionController.dispose();
-    _priceController.dispose();
     super.dispose();
   }
 
@@ -99,10 +92,6 @@ class _ReservationEditScreenState extends State<ReservationEditScreen> {
     r.dateOfOccupancyEnd = _endDate;
     r.isMonthly = _isMonthly;
     r.isDaily = !_isMonthly;
-    r.totalPrice =
-        double.tryParse(_priceController.text.replaceAll(',', '.')) ??
-            r.totalPrice ??
-            0;
     r.description = _descriptionController.text;
 
     try {
@@ -241,20 +230,15 @@ class _ReservationEditScreenState extends State<ReservationEditScreen> {
                 icon: Icons.attach_money,
                 children: [
                   TextFormField(
-                    controller: _priceController,
-                    keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true),
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(
-                          RegExp(r'[\d.,]')),
-                    ],
-                    validator: (v) =>
-                        AppValidators.positiveDecimal(v, label: 'Cijena'),
+                    initialValue: (widget.reservation?.totalPrice ?? 0) > 0
+                        ? widget.reservation!.totalPrice!.toStringAsFixed(2)
+                        : '—',
+                    readOnly: true,
                     decoration: const InputDecoration(
                       labelText: 'Ukupna cijena (KM)',
                       prefixIcon: Icon(Icons.attach_money),
                       border: OutlineInputBorder(),
-                      helperText: 'Unesite pozitivan broj (npr. 150.00)',
+                      filled: true,
                     ),
                   ),
                 ],

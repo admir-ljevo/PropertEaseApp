@@ -359,7 +359,7 @@ public static class DatabaseSeeder
 
         var now = DateTime.UtcNow;
 
-        // ── 1. Confirmed – future check-in (daily, admin prop) ────────────────
+        // ── 1. Paid – future check-in (daily, admin prop) ────────────────────
         var r1Start = new DateTime(2026, 5, 1);
         var r1End   = new DateTime(2026, 5, 8);
         db.PropertyReservations.Add(new PropertyReservation
@@ -376,14 +376,14 @@ public static class DatabaseSeeder
             TotalPrice           = 315,            // 45 * 7
             IsDaily              = true,
             IsMonthly            = false,
-            Status               = ReservationStatus.Confirmed,
+            Status               = ReservationStatus.Paid,
             ConfirmedById        = mobile.Id,
             ConfirmedAt          = now.AddDays(-10),
             Description          = "Dolazim sa partnerom, molim za tiho smještanje.",
             CreatedAt            = now.AddDays(-10),
         });
 
-        // ── 2. Confirmed – currently ongoing (daily, renter prop) ─────────────
+        // ── 2. Paid – currently ongoing (daily, renter prop) ─────────────────
         var r2Start = new DateTime(2026, 4, 10);
         var r2End   = new DateTime(2026, 4, 30);
         db.PropertyReservations.Add(new PropertyReservation
@@ -400,7 +400,7 @@ public static class DatabaseSeeder
             TotalPrice           = 1800,           // 90 * 20
             IsDaily              = true,
             IsMonthly            = false,
-            Status               = ReservationStatus.Confirmed,
+            Status               = ReservationStatus.Paid,
             ConfirmedById        = mobile.Id,
             ConfirmedAt          = now.AddDays(-15),
             Description          = "Porodični odmor, potrebne su dvije sobe.",
@@ -555,7 +555,7 @@ public static class DatabaseSeeder
 
         var yesterday = now.Date.AddDays(-1);
 
-        // ── 9. Confirmed – started yesterday, ongoing (admin prop) ───────────
+        // ── 9. Paid – started yesterday, ongoing (admin prop) ────────────────
         db.PropertyReservations.Add(new PropertyReservation
         {
             ReservationNumber    = "#0009",
@@ -570,14 +570,14 @@ public static class DatabaseSeeder
             TotalPrice           = 700,
             IsDaily              = false,
             IsMonthly            = true,
-            Status               = ReservationStatus.Confirmed,
+            Status               = ReservationStatus.Paid,
             ConfirmedById        = mobile.Id,
             ConfirmedAt          = now.AddDays(-3),
             Description          = "Kratki poslovni boravak u Zenici.",
             CreatedAt            = now.AddDays(-3),
         });
 
-        // ── 10. Confirmed – started yesterday, ongoing (renter prop) ─────────
+        // ── 10. Paid – started yesterday, ongoing (renter prop) ──────────────
         db.PropertyReservations.Add(new PropertyReservation
         {
             ReservationNumber    = "#0010",
@@ -592,7 +592,7 @@ public static class DatabaseSeeder
             TotalPrice           = 1200,            // 40 * 30
             IsDaily              = true,
             IsMonthly            = false,
-            Status               = ReservationStatus.Confirmed,
+            Status               = ReservationStatus.Paid,
             ConfirmedById        = mobile.Id,
             ConfirmedAt          = now.AddDays(-5),
             Description          = "Duži odmor uz rijeku Neretvu.",
@@ -600,7 +600,7 @@ public static class DatabaseSeeder
         });
 
         await db.SaveChangesAsync();
-        logger.LogInformation("Seeded 10 reservations (Confirmed×4, Completed×2, Cancelled×2, Pending×2).");
+        logger.LogInformation("Seeded 10 reservations (Paid×4, Completed×2, Cancelled×2, Pending×2).");
     }
 
     // ─── PAYMENTS ─────────────────────────────────────────────────────────────
@@ -788,6 +788,7 @@ public static class DatabaseSeeder
             switch (res.Status)
             {
                 case ReservationStatus.Confirmed:
+                case ReservationStatus.Paid:
                 case ReservationStatus.Completed:
                     notifications.Add(new ReservationNotification
                     {
@@ -795,7 +796,7 @@ public static class DatabaseSeeder
                         ReservationId     = res.Id,
                         Title             = "Nova rezervacija",
                         Message           = $"Nova rezervacija #{res.ReservationNumber} za nekretninu \"{propName}\".",
-                        IsSeen            = res.Status == ReservationStatus.Completed,
+                        IsSeen            = res.Status != ReservationStatus.Confirmed,
                         ReservationNumber = res.ReservationNumber,
                         PropertyName      = propName,
                         PropertyPhotoUrl  = photoUrl,
@@ -813,6 +814,21 @@ public static class DatabaseSeeder
                         PropertyPhotoUrl  = photoUrl,
                         CreatedAt         = res.ConfirmedAt ?? res.CreatedAt,
                     });
+                    if (res.Status == ReservationStatus.Paid || res.Status == ReservationStatus.Completed)
+                    {
+                        notifications.Add(new ReservationNotification
+                        {
+                            UserId            = mobile.Id,
+                            ReservationId     = res.Id,
+                            Title             = "Plaćanje uspješno",
+                            Message           = $"Plaćanje za rezervaciju \"{res.ReservationNumber}\" je uspješno obrađeno.",
+                            IsSeen            = true,
+                            ReservationNumber = res.ReservationNumber,
+                            PropertyName      = propName,
+                            PropertyPhotoUrl  = photoUrl,
+                            CreatedAt         = (res.ConfirmedAt ?? res.CreatedAt).AddMinutes(5),
+                        });
+                    }
                     if (res.Status == ReservationStatus.Completed)
                     {
                         notifications.Add(new ReservationNotification

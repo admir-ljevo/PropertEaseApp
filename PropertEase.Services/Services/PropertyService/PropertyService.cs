@@ -56,7 +56,7 @@ namespace PropertEase.Services.Services.PropertyService
 
             var hasActiveReservations = db.PropertyReservations.Any(r =>
                 r.PropertyId == id && !r.IsDeleted &&
-                (r.Status == ReservationStatus.Pending || r.Status == ReservationStatus.Confirmed));
+                (r.Status == ReservationStatus.Pending || r.Status == ReservationStatus.Confirmed || r.Status == ReservationStatus.Paid));
             if (hasActiveReservations)
                 throw new InvalidOperationException("Cannot delete a property that has active or pending reservations.");
 

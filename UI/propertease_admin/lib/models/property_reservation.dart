@@ -28,6 +28,7 @@ class PropertyReservation {
   int? status;
   String? reservationNumber;
   ApplicationUser? client;
+  ApplicationUser? renter;
   String? description;
   String? cancellationReason;
   DateTime? cancelledAt;
@@ -55,6 +56,7 @@ class PropertyReservation {
     this.status,
     this.reservationNumber = '',
     this.client,
+    this.renter,
     this.description,
     this.cancellationReason,
     this.cancelledAt,

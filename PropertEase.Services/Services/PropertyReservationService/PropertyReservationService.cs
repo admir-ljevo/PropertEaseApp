@@ -50,7 +50,7 @@ namespace PropertEase.Services.Services.PropertyReservationService
             var db = unitOfWork.GetDatabaseContext();
             var hasOverlap = await db.PropertyReservations
                 .AnyAsync(r => r.PropertyId == entityDto.PropertyId
-                               && r.Status == ReservationStatus.Confirmed
+                               && (r.Status == ReservationStatus.Confirmed || r.Status == ReservationStatus.Paid)
                                && !r.IsDeleted
                                && r.DateOfOccupancyStart < entityDto.DateOfOccupancyEnd
                                && r.DateOfOccupancyEnd   > entityDto.DateOfOccupancyStart);
@@ -121,7 +121,7 @@ namespace PropertEase.Services.Services.PropertyReservationService
             var hasOverlap = await db.PropertyReservations
                 .AnyAsync(r => r.Id != id
                                && r.PropertyId == entity.PropertyId
-                               && r.Status == ReservationStatus.Confirmed
+                               && (r.Status == ReservationStatus.Confirmed || r.Status == ReservationStatus.Paid)
                                && !r.IsDeleted
                                && r.DateOfOccupancyStart < entity.DateOfOccupancyEnd
                                && r.DateOfOccupancyEnd   > entity.DateOfOccupancyStart);
@@ -210,8 +210,10 @@ namespace PropertEase.Services.Services.PropertyReservationService
             var reservation = await db.PropertyReservations.FindAsync(id);
             if (reservation == null) return;
 
-            if (reservation.Status == ReservationStatus.Pending || reservation.Status == ReservationStatus.Confirmed)
-                throw new InvalidOperationException("Cannot delete a reservation that is pending or confirmed. Cancel it first.");
+            if (reservation.Status == ReservationStatus.Pending
+                || reservation.Status == ReservationStatus.Confirmed
+                || reservation.Status == ReservationStatus.Paid)
+                throw new InvalidOperationException("Cannot delete a reservation that is pending, confirmed or paid. Cancel it first.");
 
             foreach (var n in db.ReservationNotifications.Where(n => n.ReservationId == id && !n.IsDeleted).ToList())
                 n.IsDeleted = true;
@@ -258,6 +260,7 @@ namespace PropertEase.Services.Services.PropertyReservationService
                 ?? throw new NotFoundException("Reservation", id);
 
             var db = unitOfWork.GetDatabaseContext();
+            var originalStatus = entity.Status;
 
             // cancelling a paid reservation must go through the refund endpoint
             if (dto.Status == ReservationStatus.Cancelled && entity.Status != ReservationStatus.Cancelled)
@@ -278,7 +281,7 @@ namespace PropertEase.Services.Services.PropertyReservationService
                 var hasOverlap = await db.PropertyReservations
                     .AnyAsync(r => r.Id != id
                                    && r.PropertyId == entity.PropertyId
-                                   && r.Status == ReservationStatus.Confirmed
+                                   && (r.Status == ReservationStatus.Confirmed || r.Status == ReservationStatus.Paid)
                                    && !r.IsDeleted
                                    && r.DateOfOccupancyStart < dto.DateOfOccupancyEnd
                                    && r.DateOfOccupancyEnd   > dto.DateOfOccupancyStart);
@@ -291,7 +294,6 @@ namespace PropertEase.Services.Services.PropertyReservationService
             entity.DateOfOccupancyStart = dto.DateOfOccupancyStart;
             entity.DateOfOccupancyEnd   = dto.DateOfOccupancyEnd;
             entity.Description          = dto.Description;
-            entity.TotalPrice           = dto.TotalPrice;
             entity.IsMonthly            = dto.IsMonthly;
             entity.IsDaily              = dto.IsDaily;
 
@@ -310,82 +312,83 @@ namespace PropertEase.Services.Services.PropertyReservationService
 
             await SyncPropertyAvailabilityAsync(entity.PropertyId);
 
-            // send notification
-            try
+            // send notification only when status actually changed
+            if (originalStatus != entity.Status)
             {
-                var prop = await db.Properties
-                    .AsNoTracking()
-                    .Where(p => p.Id == entity.PropertyId && !p.IsDeleted)
-                    .Select(p => new
-                    {
-                        p.Name,
-                        PhotoUrl = p.Images.Where(i => !i.IsDeleted).Select(i => i.Url).FirstOrDefault()
-                    })
-                    .FirstOrDefaultAsync();
-
-                var isCancelled = entity.Status == ReservationStatus.Cancelled;
-
-                if (isCancelled)
+                try
                 {
-                    var userIds = new[] { entity.ClientId, entity.RenterId }
-                        .Concat(actorId.HasValue ? new[] { actorId.Value } : Array.Empty<int>())
-                        .Distinct().ToArray();
-
-                    var userInfos = await db.Users
+                    var prop = await db.Properties
                         .AsNoTracking()
-                        .Where(u => userIds.Contains(u.Id))
-                        .Select(u => new {
-                            u.Id,
-                            u.Email,
-                            FullName = db.Persons
-                                .Where(p => p.ApplicationUserId == u.Id)
-                                .Select(p => p.FirstName + " " + p.LastName)
-                                .FirstOrDefault() ?? u.UserName
+                        .Where(p => p.Id == entity.PropertyId && !p.IsDeleted)
+                        .Select(p => new
+                        {
+                            p.Name,
+                            PhotoUrl = p.Images.Where(i => !i.IsDeleted).Select(i => i.Url).FirstOrDefault()
                         })
-                        .ToDictionaryAsync(u => u.Id);
+                        .FirstOrDefaultAsync();
 
-                    userInfos.TryGetValue(entity.ClientId, out var client);
-                    userInfos.TryGetValue(entity.RenterId, out var renter);
-                    var actorName = actorId.HasValue && userInfos.TryGetValue(actorId.Value, out var actor)
-                        ? actor.FullName ?? string.Empty
-                        : string.Empty;
-
-                    _publisher.Publish(new ReservationCancelledMessage
+                    if (entity.Status == ReservationStatus.Cancelled)
                     {
-                        ReservationId      = id,
-                        ReservationNumber  = entity.ReservationNumber,
-                        PropertyName       = prop?.Name ?? string.Empty,
-                        CancellationReason = entity.CancellationReason ?? string.Empty,
-                        CheckIn            = entity.DateOfOccupancyStart,
-                        CheckOut           = entity.DateOfOccupancyEnd,
-                        TotalPrice         = (decimal)entity.TotalPrice,
-                        PropertyPhotoUrl   = prop?.PhotoUrl,
-                        ActorFullName      = actorName,
-                        ClientUserId       = entity.ClientId,
-                        ClientEmail        = client?.Email ?? string.Empty,
-                        ClientFullName     = client?.FullName ?? string.Empty,
-                        RenterUserId       = entity.RenterId > 0 ? entity.RenterId : null,
-                        RenterEmail        = renter?.Email ?? string.Empty,
-                        RenterFullName     = renter?.FullName ?? string.Empty
-                    }, "reservation.cancelled");
+                        var userIds = new[] { entity.ClientId, entity.RenterId }
+                            .Concat(actorId.HasValue ? new[] { actorId.Value } : Array.Empty<int>())
+                            .Distinct().ToArray();
+
+                        var userInfos = await db.Users
+                            .AsNoTracking()
+                            .Where(u => userIds.Contains(u.Id))
+                            .Select(u => new {
+                                u.Id,
+                                u.Email,
+                                FullName = db.Persons
+                                    .Where(p => p.ApplicationUserId == u.Id)
+                                    .Select(p => p.FirstName + " " + p.LastName)
+                                    .FirstOrDefault() ?? u.UserName
+                            })
+                            .ToDictionaryAsync(u => u.Id);
+
+                        userInfos.TryGetValue(entity.ClientId, out var client);
+                        userInfos.TryGetValue(entity.RenterId, out var renter);
+                        var actorName = actorId.HasValue && userInfos.TryGetValue(actorId.Value, out var actor)
+                            ? actor.FullName ?? string.Empty
+                            : string.Empty;
+
+                        _publisher.Publish(new ReservationCancelledMessage
+                        {
+                            ReservationId      = id,
+                            ReservationNumber  = entity.ReservationNumber,
+                            PropertyName       = prop?.Name ?? string.Empty,
+                            CancellationReason = entity.CancellationReason ?? string.Empty,
+                            CheckIn            = entity.DateOfOccupancyStart,
+                            CheckOut           = entity.DateOfOccupancyEnd,
+                            TotalPrice         = (decimal)entity.TotalPrice,
+                            PropertyPhotoUrl   = prop?.PhotoUrl,
+                            ActorFullName      = actorName,
+                            ClientUserId       = entity.ClientId,
+                            ClientEmail        = client?.Email ?? string.Empty,
+                            ClientFullName     = client?.FullName ?? string.Empty,
+                            RenterUserId       = entity.RenterId > 0 ? entity.RenterId : null,
+                            RenterEmail        = renter?.Email ?? string.Empty,
+                            RenterFullName     = renter?.FullName ?? string.Empty
+                        }, "reservation.cancelled");
+                    }
+                    else
+                    {
+                        _publisher.Publish(new ReservationNotificationMessage
+                        {
+                            UserId            = entity.ClientId,
+                            ReservationId     = id,
+                            Title             = "Rezervacija ažurirana",
+                            Message           = "Vaša rezervacija je ažurirana",
+                            ReservationNumber = entity.ReservationNumber,
+                            PropertyName      = prop?.Name,
+                            PropertyPhotoUrl  = prop?.PhotoUrl
+                        }, "reservation.notification");
+                    }
                 }
-                else
+                catch (Exception ex)
                 {
-                    _publisher.Publish(new ReservationNotificationMessage
-                    {
-                        UserId            = entity.ClientId,
-                        ReservationId     = id,
-                        Title             = "Rezervacija ažurirana",
-                        Message           = "Vaša rezervacija je ažurirana",
-                        ReservationNumber = entity.ReservationNumber,
-                        PropertyName      = prop?.Name,
-                        PropertyPhotoUrl  = prop?.PhotoUrl
-                    }, "reservation.notification");
+                    logger.LogWarning(ex, "Failed to publish update notification for reservation {Id}", id);
                 }
-            }
-            catch (Exception ex)
-            {
-                logger.LogWarning(ex, "Failed to publish update notification for reservation {Id}", id);
             }
 
             return await unitOfWork.PropertyReservationRepository.GetByIdAsync(id);
@@ -396,7 +399,7 @@ namespace PropertEase.Services.Services.PropertyReservationService
             var db = unitOfWork.GetDatabaseContext();
             var hasConfirmedReservation = await db.PropertyReservations
                 .AnyAsync(r => r.PropertyId == propertyId
-                               && r.Status == ReservationStatus.Confirmed
+                               && (r.Status == ReservationStatus.Confirmed || r.Status == ReservationStatus.Paid)
                                && !r.IsDeleted);
 
             var property = await db.Properties.FindAsync(propertyId);
@@ -420,7 +423,7 @@ namespace PropertEase.Services.Services.PropertyReservationService
             var db = unitOfWork.GetDatabaseContext();
 
             var toComplete = await db.PropertyReservations
-                .Where(r => r.Status == ReservationStatus.Confirmed
+                .Where(r => (r.Status == ReservationStatus.Confirmed || r.Status == ReservationStatus.Paid)
                          && r.DateOfOccupancyEnd <= DateTime.Now
                          && !r.IsDeleted)
                 .Select(r => new

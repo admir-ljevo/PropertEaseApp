@@ -1,8 +1,7 @@
-using MailKit.Net.Smtp;
-using MailKit.Security;
+using System.Net;
+using System.Net.Mail;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using MimeKit;
 
 namespace PropertEase.Worker.Services;
 
@@ -345,28 +344,29 @@ Provjerite detalje rezervacije u vašem PropertEase dashboardu.
         var smtpPass = _config["Smtp:Password"] ?? throw new InvalidOperationException("SMTP password not configured");
         var fromName = _config["Smtp:FromName"] ?? "PropertEase";
 
-        var message = new MimeMessage();
-        message.From.Add(new MailboxAddress(fromName, smtpUser));
-        message.To.Add(MailboxAddress.Parse(to));
-        message.Subject = subject;
-        message.Body = new TextPart("html") { Text = htmlBody };
+        var message = new MailMessage
+        {
+            From       = new MailAddress(smtpUser, fromName),
+            Subject    = subject,
+            Body       = htmlBody,
+            IsBodyHtml = true,
+        };
+        message.To.Add(to);
 
-        using var smtp = new SmtpClient();
+        using var smtp = new System.Net.Mail.SmtpClient(smtpHost, smtpPort)
+        {
+            Credentials = new NetworkCredential(smtpUser, smtpPass),
+            EnableSsl   = true,
+        };
         try
         {
-            await smtp.ConnectAsync(smtpHost, smtpPort, SecureSocketOptions.StartTls);
-            await smtp.AuthenticateAsync(smtpUser, smtpPass);
-            await smtp.SendAsync(message);
+            await smtp.SendMailAsync(message);
             _logger.LogInformation("Email sent to {To} with subject {Subject}", to, subject);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to send email to {To}", to);
             throw;
-        }
-        finally
-        {
-            await smtp.DisconnectAsync(true);
         }
     }
 }

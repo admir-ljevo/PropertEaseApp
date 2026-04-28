@@ -24,10 +24,10 @@ namespace PropertEase.Core.Entities
         public bool IsDaily { get; set; }
         public string? Description { get; set; }
 
-        // Pending Confirmed Completed / Cancelled.
+        // Pending → Confirmed → Paid → Completed / Cancelled
         public ReservationStatus Status { get; set; } = ReservationStatus.Pending;
 
-        // Audit trail 
+        // Audit trail
 
         public int? ConfirmedById { get; set; }
         public DateTime? ConfirmedAt { get; set; }
@@ -39,7 +39,7 @@ namespace PropertEase.Core.Entities
         [System.ComponentModel.DataAnnotations.Schema.NotMapped]
         public bool IsActive
         {
-            get => Status == ReservationStatus.Confirmed || Status == ReservationStatus.Completed;
+            get => Status == ReservationStatus.Confirmed || Status == ReservationStatus.Paid || Status == ReservationStatus.Completed;
             set => Status = value ? ReservationStatus.Confirmed : ReservationStatus.Cancelled;
         }
     }

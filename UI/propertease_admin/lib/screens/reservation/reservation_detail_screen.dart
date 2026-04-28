@@ -5,6 +5,7 @@ import 'package:propertease_admin/models/property_reservation.dart';
 import 'package:propertease_admin/providers/payment_provider.dart';
 import 'package:propertease_admin/providers/property_reservation_provider.dart';
 import 'package:propertease_admin/screens/reservation/reservation_edit_screen.dart';
+import 'package:propertease_admin/screens/users/renter_profile_screen.dart';
 import 'package:propertease_admin/screens/users/user_profile_screen.dart';
 import 'package:propertease_admin/utils/reservation_status.dart';
 
@@ -194,6 +195,8 @@ class _ReservationDetailsScreenState extends State<ReservationDetailsScreen> {
 
     final clientName =
         '${r.client?.person?.firstName ?? ''} ${r.client?.person?.lastName ?? ''}'.trim();
+    final renterName =
+        '${r.renter?.person?.firstName ?? ''} ${r.renter?.person?.lastName ?? ''}'.trim();
 
     return Scaffold(
       appBar: AppBar(
@@ -230,6 +233,14 @@ class _ReservationDetailsScreenState extends State<ReservationDetailsScreen> {
                             MaterialPageRoute(
                                 builder: (_) =>
                                     UserProfileScreen(userId: r.clientId)))
+                        : null),
+                _row('Iznajmljivač', renterName.isNotEmpty ? renterName : null,
+                    onTap: r.renterId != null
+                        ? () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) =>
+                                    RenterProfileScreen(renterId: r.renterId)))
                         : null),
                 _row('Broj gostiju', r.numberOfGuests?.toString()),
               ],
@@ -371,7 +382,7 @@ class _ReservationDetailsScreenState extends State<ReservationDetailsScreen> {
                 ),
             ],
 
-            if (r.status == 1) ...[
+            if (r.status == 1 || r.status == 4) ...[
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,

@@ -25,7 +25,7 @@ namespace PropertEase.Infrastructure.Repositories.PropertyRepository
                 .Include(p => p.PropertyType)
                 .Include(p => p.ApplicationUser).ThenInclude(u => u.Person)
                 .Include(p => p.Images.Where(img => !img.IsDeleted))
-                .Include(p => p.PropertyReservations.Where(r => !r.IsDeleted && (r.Status == ReservationStatus.Confirmed || r.Status == ReservationStatus.Completed)))
+                .Include(p => p.PropertyReservations.Where(r => !r.IsDeleted && (r.Status == ReservationStatus.Confirmed || r.Status == ReservationStatus.Paid || r.Status == ReservationStatus.Completed)))
                 .Where(p => !p.IsDeleted && p.Id == id)
                 .FirstOrDefaultAsync();
 
@@ -137,11 +137,11 @@ namespace PropertEase.Infrastructure.Repositories.PropertyRepository
             {
                 if (filter.IsAvailable.Value)
                     query = query.Where(p => !p.PropertyReservations.Any(r =>
-                        !r.IsDeleted && (r.Status == ReservationStatus.Confirmed || r.Status == ReservationStatus.Completed) &&
+                        !r.IsDeleted && (r.Status == ReservationStatus.Confirmed || r.Status == ReservationStatus.Paid || r.Status == ReservationStatus.Completed) &&
                         r.DateOfOccupancyStart <= today && r.DateOfOccupancyEnd >= today));
                 else
                     query = query.Where(p => p.PropertyReservations.Any(r =>
-                        !r.IsDeleted && (r.Status == ReservationStatus.Confirmed || r.Status == ReservationStatus.Completed) &&
+                        !r.IsDeleted && (r.Status == ReservationStatus.Confirmed || r.Status == ReservationStatus.Paid || r.Status == ReservationStatus.Completed) &&
                         r.DateOfOccupancyStart <= today && r.DateOfOccupancyEnd >= today));
             }
 
@@ -191,10 +191,10 @@ namespace PropertEase.Infrastructure.Repositories.PropertyRepository
                     IsMonthly = p.IsMonthly,
                     IsDaily = p.IsDaily,
                     IsAvailable = !p.PropertyReservations.Any(r =>
-                        !r.IsDeleted && (r.Status == ReservationStatus.Confirmed || r.Status == ReservationStatus.Completed) &&
+                        !r.IsDeleted && (r.Status == ReservationStatus.Confirmed || r.Status == ReservationStatus.Paid || r.Status == ReservationStatus.Completed) &&
                         r.DateOfOccupancyStart <= today && r.DateOfOccupancyEnd >= today),
                     AvailableFrom = p.PropertyReservations
-                        .Where(r => !r.IsDeleted && (r.Status == ReservationStatus.Confirmed || r.Status == ReservationStatus.Completed) &&
+                        .Where(r => !r.IsDeleted && (r.Status == ReservationStatus.Confirmed || r.Status == ReservationStatus.Paid || r.Status == ReservationStatus.Completed) &&
                             r.DateOfOccupancyStart <= today && r.DateOfOccupancyEnd >= today)
                         .OrderByDescending(r => r.DateOfOccupancyEnd)
                         .Select(r => (DateTime?)r.DateOfOccupancyEnd)

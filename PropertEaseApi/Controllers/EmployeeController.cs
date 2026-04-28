@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 using PropertEase.Core.Dto.ApplicationUser;
 using PropertEase.Services.FileManager;
 using PropertEase.Services.Services.ApplicationUsersService;
@@ -35,10 +36,15 @@ namespace PropertEase.Controllers
             return Ok(await ApplicationUsersService.AddEmployeeAsync(entity));
         }
 
-        [Authorize(Roles = AppRoles.Admin)]
+        [Authorize(Roles = AppRoles.Admin + "," + AppRoles.Renter)]
         [HttpPut("Edit/{id}")]
         public async Task<IActionResult> Put(int id, [FromForm] EmployeeUpdateDto entity)
         {
+            var callerId = int.TryParse(User.FindFirstValue("Id"), out var parsed) ? parsed : 0;
+            var isAdmin = User.IsInRole(AppRoles.Admin);
+            if (!isAdmin && callerId != id)
+                return Forbid();
+
             var file = entity.File;
             if (file != null)
             {

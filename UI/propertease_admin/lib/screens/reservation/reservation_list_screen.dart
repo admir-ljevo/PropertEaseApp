@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:propertease_admin/models/application_user.dart';
 import 'package:propertease_admin/models/property_reservation.dart';
 import 'package:propertease_admin/models/search_result.dart';
+import 'package:propertease_admin/providers/application_user_provider.dart';
 import 'package:propertease_admin/providers/property_reservation_provider.dart';
 import 'package:propertease_admin/providers/property_type_provider.dart';
 import 'package:propertease_admin/utils/authorization.dart';
@@ -24,9 +26,12 @@ class ReservationListWidget extends StatefulWidget {
 class ReservationListWidgetState extends State<ReservationListWidget> {
   late final PropertyReservationProvider _reservationProvider;
   late final PropertyTypeProvider _propertyTypeProvider;
+  late final UserProvider _userProvider;
 
   SearchResult<PropertyReservation>? _result;
   List<PropertyType> _propertyTypes = [];
+  List<ApplicationUser> _renters = [];
+  ApplicationUser? _selectedRenter;
 
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _minPriceController = TextEditingController();
@@ -51,6 +56,7 @@ class ReservationListWidgetState extends State<ReservationListWidget> {
     super.initState();
     _reservationProvider = context.read<PropertyReservationProvider>();
     _propertyTypeProvider = context.read<PropertyTypeProvider>();
+    _userProvider = context.read<UserProvider>();
     _loadReferenceDataThenReservations();
   }
 
@@ -71,6 +77,9 @@ class ReservationListWidgetState extends State<ReservationListWidget> {
     try {
       final typesResult = await _propertyTypeProvider.get();
       _propertyTypes = typesResult.result;
+      if (Authorization.isAdmin) {
+        _renters = await _userProvider.getRenters();
+      }
       await _fetchReservations();
     } catch (e) {
       setState(() => _error = e.toString());
@@ -100,7 +109,10 @@ class ReservationListWidgetState extends State<ReservationListWidget> {
         if (_statusFilter != null) 'status': _statusFilter,
         'page': _currentPage,
         'pageSize': _pageSize,
-        if (Authorization.roleId == 2) 'renterId': Authorization.userId,
+        if (Authorization.isAdmin && _selectedRenter != null)
+          'renterId': _selectedRenter!.id
+        else if (!Authorization.isAdmin)
+          'renterId': Authorization.userId,
       });
 
       if (mounted) {
@@ -293,6 +305,33 @@ class ReservationListWidgetState extends State<ReservationListWidget> {
               onChanged: (_) => _debounce.run(_fetchReservations),
             ),
           ),
+          if (Authorization.isAdmin) ...[
+            const SizedBox(width: 16),
+            Expanded(
+              child: DropdownButtonFormField<ApplicationUser?>(
+                value: _selectedRenter,
+                onChanged: (v) {
+                  setState(() => _selectedRenter = v);
+                  _fetchReservations();
+                },
+                items: [
+                  const DropdownMenuItem<ApplicationUser?>(
+                    value: null,
+                    child: Text('Svi iznajmljivači'),
+                  ),
+                  ..._renters.map((u) => DropdownMenuItem<ApplicationUser?>(
+                        value: u,
+                        child: Text(
+                          '${u.person?.firstName ?? ''} ${u.person?.lastName ?? ''}'.trim().isNotEmpty
+                              ? '${u.person?.firstName ?? ''} ${u.person?.lastName ?? ''}'.trim()
+                              : u.userName ?? '',
+                        ),
+                      )),
+                ],
+                decoration: const InputDecoration(labelText: 'Iznajmljivač'),
+              ),
+            ),
+          ],
           const SizedBox(width: 16),
           Expanded(
             child: DropdownButtonFormField<int?>(
@@ -302,9 +341,10 @@ class ReservationListWidgetState extends State<ReservationListWidget> {
                 _fetchReservations();
               },
               items: const [
-                DropdownMenuItem<int?>(value: null, child: Text('All statuses')),
+                DropdownMenuItem<int?>(value: null, child: Text('Svi statusi')),
                 DropdownMenuItem<int?>(value: 0, child: Text('Na čekanju')),
                 DropdownMenuItem<int?>(value: 1, child: Text('Potvrđena')),
+                DropdownMenuItem<int?>(value: 4, child: Text('Plaćena')),
                 DropdownMenuItem<int?>(value: 2, child: Text('Završena')),
                 DropdownMenuItem<int?>(value: 3, child: Text('Otkazana')),
               ],
@@ -316,6 +356,7 @@ class ReservationListWidgetState extends State<ReservationListWidget> {
             onPressed: () {
               setState(() {
                 _selectedPropertyType = null;
+                _selectedRenter = null;
                 _statusFilter = null;
                 _propertyTypeId = null;
                 _selectedDateStart = null;

@@ -18,13 +18,13 @@ namespace PropertEase.Core.Dto.PropertyReservation
         public bool IsMonthly { get; set; }
         public bool IsDaily { get; set; }
 
-        public ReservationStatus Status { get; set; } = ReservationStatus.Confirmed;
+        public ReservationStatus Status { get; set; }
 
         public string? CancellationReason { get; set; }
 
         public bool IsActive
         {
-            get => Status == ReservationStatus.Confirmed || Status == ReservationStatus.Completed;
+            get => Status == ReservationStatus.Confirmed || Status == ReservationStatus.Paid || Status == ReservationStatus.Completed;
             set => Status = value ? ReservationStatus.Confirmed : ReservationStatus.Cancelled;
         }
     }

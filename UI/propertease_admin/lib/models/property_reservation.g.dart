@@ -35,6 +35,9 @@ PropertyReservation _$PropertyReservationFromJson(Map<String, dynamic> json) =>
       client: json['client'] == null
           ? null
           : ApplicationUser.fromJson(json['client'] as Map<String, dynamic>),
+      renter: json['renter'] == null
+          ? null
+          : ApplicationUser.fromJson(json['renter'] as Map<String, dynamic>),
       description: json['description'] as String?,
       cancellationReason: json['cancellationReason'] as String?,
       cancelledAt: json['cancelledAt'] == null
@@ -77,6 +80,7 @@ Map<String, dynamic> _$PropertyReservationToJson(
       'status': instance.status,
       'reservationNumber': instance.reservationNumber,
       'client': instance.client,
+      'renter': instance.renter,
       'description': instance.description,
       'cancellationReason': instance.cancellationReason,
       'cancelledAt': instance.cancelledAt?.toIso8601String(),

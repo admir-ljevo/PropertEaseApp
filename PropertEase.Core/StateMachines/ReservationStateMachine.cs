@@ -10,7 +10,8 @@ namespace PropertEase.Core.StateMachines
         private static readonly Dictionary<ReservationStatus, HashSet<ReservationStatus>> ValidTransitions = new()
         {
             [ReservationStatus.Pending]   = new() { ReservationStatus.Confirmed, ReservationStatus.Cancelled },
-            [ReservationStatus.Confirmed] = new() { ReservationStatus.Completed, ReservationStatus.Cancelled },
+            [ReservationStatus.Confirmed] = new() { ReservationStatus.Paid,      ReservationStatus.Cancelled },
+            [ReservationStatus.Paid]      = new() { ReservationStatus.Completed, ReservationStatus.Cancelled },
             [ReservationStatus.Completed] = new(),
             [ReservationStatus.Cancelled] = new(),
         };

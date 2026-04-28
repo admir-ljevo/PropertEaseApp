@@ -160,8 +160,8 @@ namespace PropertEase.Infrastructure.Repositories.PropertyReservationRepository
                     (!filter.renterId.HasValue || pr.RenterId == filter.renterId) &&
                     (!filter.status.HasValue || (int)pr.Status == filter.status.Value) &&
                     (!filter.isActive.HasValue || (filter.isActive.Value
-                        ? pr.Status == Core.Enumerations.ReservationStatus.Confirmed
-                        : pr.Status != Core.Enumerations.ReservationStatus.Confirmed)) &&
+                        ? (pr.Status == Core.Enumerations.ReservationStatus.Confirmed || pr.Status == Core.Enumerations.ReservationStatus.Paid)
+                        : (pr.Status != Core.Enumerations.ReservationStatus.Confirmed && pr.Status != Core.Enumerations.ReservationStatus.Paid))) &&
                     (filter.propertyTypeId == null || filter.propertyTypeId == pr.Property.PropertyTypeId) &&
                     !pr.IsDeleted);
 
@@ -350,7 +350,8 @@ namespace PropertEase.Infrastructure.Repositories.PropertyReservationRepository
         public async Task<int> DeactivateExpiredAsync()
         {
             return await DatabaseContext.PropertyReservations
-                .Where(r => r.Status == PropertEase.Core.Enumerations.ReservationStatus.Confirmed
+                .Where(r => (r.Status == PropertEase.Core.Enumerations.ReservationStatus.Confirmed
+                          || r.Status == PropertEase.Core.Enumerations.ReservationStatus.Paid)
                          && r.DateOfOccupancyEnd <= DateTime.Now
                          && !r.IsDeleted)
                 .ExecuteUpdateAsync(s => s.SetProperty(r => r.Status, PropertEase.Core.Enumerations.ReservationStatus.Completed));

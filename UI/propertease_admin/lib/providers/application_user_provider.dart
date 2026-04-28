@@ -332,10 +332,11 @@ class UserProvider with ChangeNotifier {
       }
       final response = await request.send();
       if (response.statusCode != 200) {
-        print('Error: ${response.statusCode} ${response.toString()}');
+        final body = await response.stream.bytesToString();
+        throw Exception('Greška pri ažuriranju profila (${response.statusCode}): $body');
       }
     } catch (e) {
-      print('Err: ${e.toString()}');
+      rethrow;
     }
   }
 
@@ -388,11 +389,10 @@ class UserProvider with ChangeNotifier {
       final response = await request.send();
       if (response.statusCode != 200) {
         final body = await response.stream.bytesToString();
-        print('updateEmployee error ${response.statusCode}: $body');
-        throw Exception('updateEmployee failed ${response.statusCode}: $body');
+        throw Exception('Greška pri ažuriranju profila (${response.statusCode}): $body');
       }
     } catch (e) {
-      print('Err: ${e.toString()}');
+      rethrow;
     }
   }
 

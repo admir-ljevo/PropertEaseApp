@@ -297,7 +297,7 @@ namespace PropertEase.Services.Services.ApplicationUsersService
             var hasActiveReservations = db.PropertyReservations.Any(r =>
                 !r.IsDeleted &&
                 (r.RenterId == id || r.ClientId == id) &&
-                (r.Status == ReservationStatus.Pending || r.Status == ReservationStatus.Confirmed));
+                (r.Status == ReservationStatus.Pending || r.Status == ReservationStatus.Confirmed || r.Status == ReservationStatus.Paid));
             if (hasActiveReservations)
                 throw new InvalidOperationException("Cannot delete a user that has active or pending reservations.");
 

@@ -66,7 +66,7 @@ class PropertyReservationProvider extends BaseProvider<PropertyReservation> {
         'totalPrice': data.totalPrice,
         'isMonthly': data.isMonthly,
         'isDaily': data.isDaily,
-        'isActive': data.isActive,
+        'status': data.status,
         'reservationNumber': data.reservationNumber,
         'description': data.description,
         'isDeleted': data.isDeleted,

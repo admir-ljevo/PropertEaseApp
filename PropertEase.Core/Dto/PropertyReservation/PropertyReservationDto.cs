@@ -25,7 +25,7 @@ namespace PropertEase.Core.Dto.PropertyReservation
 
         public ReservationStatus Status { get; set; }
 
-        public bool IsActive => Status == ReservationStatus.Confirmed || Status == ReservationStatus.Completed;
+        public bool IsActive => Status == ReservationStatus.Confirmed || Status == ReservationStatus.Paid || Status == ReservationStatus.Completed;
 
         public bool IsPaid { get; set; }
 

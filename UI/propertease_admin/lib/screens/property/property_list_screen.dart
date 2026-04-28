@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:propertease_admin/models/application_user.dart';
 import 'package:propertease_admin/models/city.dart';
 import 'package:propertease_admin/models/property.dart';
 import 'package:propertease_admin/models/property_type.dart';
 import 'package:propertease_admin/models/search_result.dart';
+import 'package:propertease_admin/providers/application_user_provider.dart';
 import 'package:propertease_admin/providers/city_provider.dart';
 
 import 'package:propertease_admin/providers/property_provider.dart';
@@ -26,10 +28,13 @@ class PropertyListWidgetState extends State<PropertyListWidget> {
   late final PropertyProvider _propertyProvider;
   late final PropertyTypeProvider _propertyTypeProvider;
   late final CityProvider _cityProvider;
+  late final UserProvider _userProvider;
 
   SearchResult<Property>? _result;
   List<PropertyType> _propertyTypes = [];
   List<City> _cities = [];
+  List<ApplicationUser> _renters = [];
+  ApplicationUser? _selectedRenter;
 
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _minPriceController = TextEditingController();
@@ -49,6 +54,7 @@ class PropertyListWidgetState extends State<PropertyListWidget> {
     _propertyProvider = context.read<PropertyProvider>();
     _propertyTypeProvider = context.read<PropertyTypeProvider>();
     _cityProvider = context.read<CityProvider>();
+    _userProvider = context.read<UserProvider>();
     _loadReferenceDataThenProperties();
   }
 
@@ -65,12 +71,15 @@ class PropertyListWidgetState extends State<PropertyListWidget> {
     try {
       final typesFuture = _propertyTypeProvider.get();
       final citiesFuture = _cityProvider.get();
+      final rentersFuture = Authorization.isAdmin ? _userProvider.getRenters() : null;
       final typesResult = await typesFuture;
       final citiesResult = await citiesFuture;
+      final renters = rentersFuture != null ? await rentersFuture : <ApplicationUser>[];
       if (!mounted) return;
       setState(() {
         _propertyTypes = typesResult.result;
         _cities = citiesResult.result;
+        _renters = renters;
       });
     } catch (_) {}
     await _fetchProperties();
@@ -92,7 +101,10 @@ class PropertyListWidgetState extends State<PropertyListWidget> {
         'priceTo': double.tryParse(_maxPriceController.text),
         'page': _currentPage,
         'pageSize': _pageSize,
-        if (Authorization.roleId == 2) 'applicationUserId': Authorization.userId,
+        if (Authorization.roleId == 2)
+          'applicationUserId': Authorization.userId
+        else if (_selectedRenter != null)
+          'applicationUserId': _selectedRenter!.id,
       });
       if (!mounted) return;
       setState(() => _result = result);
@@ -109,6 +121,7 @@ class PropertyListWidgetState extends State<PropertyListWidget> {
       _selectedCity = null;
       _selectedType = null;
       _isAvailable = null;
+      _selectedRenter = null;
       _currentPage = 1;
     });
     _nameController.clear();
@@ -284,6 +297,35 @@ class PropertyListWidgetState extends State<PropertyListWidget> {
                     labelText: 'Cijena do', isDense: true),
                 onChanged: (_) => _debounce.run(_fetchProperties),
               )),
+          if (Authorization.isAdmin && _renters.isNotEmpty)
+            SizedBox(
+              width: 180,
+              child: DropdownButtonFormField<ApplicationUser?>(
+                value: _selectedRenter,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                    labelText: 'Iznajmljivač', isDense: true),
+                items: [
+                  const DropdownMenuItem<ApplicationUser?>(
+                      value: null, child: Text('Svi iznajmljivači')),
+                  ..._renters.map((r) {
+                    final name =
+                        '${r.person?.firstName ?? ''} ${r.person?.lastName ?? ''}'
+                            .trim();
+                    return DropdownMenuItem<ApplicationUser?>(
+                        value: r,
+                        child: Text(name.isNotEmpty ? name : r.userName ?? ''));
+                  }),
+                ],
+                onChanged: (v) {
+                  setState(() {
+                    _selectedRenter = v;
+                    _currentPage = 1;
+                  });
+                  _fetchProperties();
+                },
+              ),
+            ),
           TextButton.icon(
             onPressed: _clearFilters,
             icon: const Icon(Icons.clear),

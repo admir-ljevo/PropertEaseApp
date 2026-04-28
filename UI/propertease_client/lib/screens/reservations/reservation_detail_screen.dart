@@ -39,7 +39,7 @@ class _ReservationDetailScreenState extends State<ReservationDetailsScreen> {
 
   bool get _canCancel {
     final r = _reservation;
-    if (r == null || r.status != 1) return false;
+    if (r == null || (r.status != 1 && r.status != 4)) return false;
     final checkIn = r.dateOfOccupancyStart;
     if (checkIn == null) return false;
     return checkIn.difference(DateTime.now()).inDays >= 7;

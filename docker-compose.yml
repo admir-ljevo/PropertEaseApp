@@ -8,7 +8,7 @@ services:
     container_name: propertease-sqlserver
     environment:
       ACCEPT_EULA: "Y"
-      SA_PASSWORD: "${SA_PASSWORD:-PropertEase_Dev#2024}"
+      SA_PASSWORD: "${SA_PASSWORD}"
       MSSQL_PID: "Developer"
     ports:
       - "1433:1433"
@@ -51,8 +51,8 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: "Production"
       ASPNETCORE_URLS: "http://+:80"
-      ConnectionStrings__DefaultConnection: "Server=sqlserver;Database=190049;User Id=sa;Password=${SA_PASSWORD:-PropertEase_Dev#2024};TrustServerCertificate=True;MultipleActiveResultSets=true"
-      JWTConfig__TokenKey: "${JWT_TOKEN_KEY:-change-this-in-production-must-be-32-chars}"
+      ConnectionStrings__DefaultConnection: "Server=sqlserver;Database=190049;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True;MultipleActiveResultSets=true"
+      JWTConfig__TokenKey: "${JWT_TOKEN_KEY}"
       JWTConfig__TokenValidityInMinutes: "120"
       RabbitMQ__Host: "rabbitmq"
       RabbitMQ__Port: "5672"
@@ -98,7 +98,7 @@ services:
     container_name: propertease-worker
     environment:
       DOTNET_ENVIRONMENT: "Production"
-      ConnectionStrings__DefaultConnection: "Server=sqlserver;Database=190049;User Id=sa;Password=${SA_PASSWORD:-PropertEase_Dev#2024};TrustServerCertificate=True;MultipleActiveResultSets=true"
+      ConnectionStrings__DefaultConnection: "Server=sqlserver;Database=190049;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True;MultipleActiveResultSets=true"
       RabbitMQ__Host: "rabbitmq"
       RabbitMQ__Port: "5672"
       RabbitMQ__Username: "${RABBITMQ_USER:-guest}"

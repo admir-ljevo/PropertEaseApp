@@ -6,12 +6,14 @@ import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import 'package:propertease_admin/config/app_config.dart';
 import 'package:propertease_admin/models/property_rating.dart';
+import 'package:propertease_admin/models/application_user.dart';
 import 'package:propertease_admin/providers/application_user_provider.dart';
 import 'package:propertease_admin/providers/image_provider.dart';
 import 'package:propertease_admin/providers/property_provider.dart';
 import 'package:propertease_admin/providers/property_rating_provider.dart';
 import '../../models/photo.dart';
 import '../../models/property.dart';
+import '../users/renter_profile_screen.dart';
 import '../users/user_detail_screen.dart';
 import 'property_edit_screen.dart';
 
@@ -27,6 +29,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
   List<Photo> _images = [];
   List<Property> _recommended = [];
   List<PropertyRating> _ratings = [];
+  ApplicationUser? _renter;
   int _ratingsPage = 1;
   int _ratingsTotalCount = 0;
   bool _ratingsLoading = false;
@@ -69,6 +72,14 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
           _images = validImages;
           _loading = false;
         });
+      }
+      final renterId = full.applicationUserId;
+      if (renterId != null && renterId > 0 && mounted) {
+        try {
+          final userProvider = context.read<UserProvider>();
+          final renter = await userProvider.getById(renterId);
+          if (mounted) setState(() => _renter = renter);
+        } catch (_) {}
       }
     } catch (_) {
       if (mounted) setState(() => _loading = false);
@@ -396,6 +407,39 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                     fontSize: 14, fontWeight: FontWeight.w600),
               ),
             ],
+          ),
+        ],
+        if (_renter != null) ...[
+          const SizedBox(height: 6),
+          GestureDetector(
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => RenterProfileScreen(renter: _renter),
+              ),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.person_outline, size: 15, color: Colors.blue),
+                const SizedBox(width: 4),
+                Text(
+                  () {
+                    final n =
+                        '${_renter!.person?.firstName ?? ''} ${_renter!.person?.lastName ?? ''}'
+                            .trim();
+                    return n.isNotEmpty ? n : (_renter!.userName ?? '');
+                  }(),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Colors.blue,
+                    decoration: TextDecoration.underline,
+                    decorationColor: Colors.blue,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                const Icon(Icons.chevron_right, size: 15, color: Colors.blue),
+              ],
+            ),
           ),
         ],
       ],

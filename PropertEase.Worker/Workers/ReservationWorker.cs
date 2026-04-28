@@ -27,6 +27,8 @@ public class ReservationWorker : BackgroundService
     private const string PushQueue         = "notification.push";
     private const string Exchange          = "propertease.exchange";
 
+    private const int MaxRetries = 4; // delays: 1s, 2s, 4s, 8s
+
     public ReservationWorker(IConfiguration config, ILogger<ReservationWorker> logger,
         IEmailService emailService, INotificationWriter notificationWriter)
     {
@@ -110,14 +112,54 @@ public class ReservationWorker : BackgroundService
             await Task.Delay(1000, stoppingToken);
     }
 
+    // Retries the handler up to MaxRetries times with exponential backoff (1s, 2s, 4s, 8s).
+    // Acks on success; nacks without requeue after all retries are exhausted.
+    private async Task ExecuteWithRetryAsync(
+        BasicDeliverEventArgs ea,
+        Func<Task> handler,
+        string handlerName,
+        CancellationToken ct = default)
+    {
+        for (int attempt = 1; ; attempt++)
+        {
+            try
+            {
+                await handler();
+                _channel!.BasicAck(ea.DeliveryTag, false);
+                return;
+            }
+            catch (Exception ex) when (attempt <= MaxRetries && !ct.IsCancellationRequested)
+            {
+                var delaySec = Math.Pow(2, attempt - 1); // 1, 2, 4, 8
+                _logger.LogWarning(ex,
+                    "{Handler} failed (attempt {Attempt}/{MaxRetries}). Retrying in {Delay}s.",
+                    handlerName, attempt, MaxRetries, delaySec);
+                await Task.Delay(TimeSpan.FromSeconds(delaySec), ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "{Handler} failed after {MaxRetries} retries. Discarding message.",
+                    handlerName, MaxRetries);
+                _channel!.BasicNack(ea.DeliveryTag, false, requeue: false);
+                return;
+            }
+        }
+    }
+
     private async Task OnReservationConfirmed(object sender, BasicDeliverEventArgs ea)
     {
         var body = Encoding.UTF8.GetString(ea.Body.ToArray());
-        try
+        var message = JsonConvert.DeserializeObject<ReservationConfirmedMessage>(body);
+        if (message is null)
         {
-            var message = JsonConvert.DeserializeObject<ReservationConfirmedMessage>(body);
-            if (message is null) return;
+            _logger.LogWarning("Received null/unparseable message on {Queue}. Discarding.", ConfirmedQueue);
+            _channel!.BasicNack(ea.DeliveryTag, false, requeue: false);
+            return;
+        }
 
+        await ExecuteWithRetryAsync(ea, async () =>
+        {
             _logger.LogInformation("Processing confirmed reservation {ReservationNumber}", message.ReservationNumber);
 
             if (!string.IsNullOrEmpty(message.ClientEmail))
@@ -153,24 +195,22 @@ public class ReservationWorker : BackgroundService
                     "Rezervacija potvrđena", notificationText,
                     message.ReservationNumber, message.PropertyName, message.PropertyPhotoUrl);
             }
-
-            _channel!.BasicAck(ea.DeliveryTag, false);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error processing confirmed reservation message");
-            _channel!.BasicNack(ea.DeliveryTag, false, requeue: false);
-        }
+        }, nameof(OnReservationConfirmed));
     }
 
     private async Task OnReservationCancelled(object sender, BasicDeliverEventArgs ea)
     {
         var body = Encoding.UTF8.GetString(ea.Body.ToArray());
-        try
+        var message = JsonConvert.DeserializeObject<ReservationCancelledMessage>(body);
+        if (message is null)
         {
-            var message = JsonConvert.DeserializeObject<ReservationCancelledMessage>(body);
-            if (message is null) return;
+            _logger.LogWarning("Received null/unparseable message on {Queue}. Discarding.", CancelledQueue);
+            _channel!.BasicNack(ea.DeliveryTag, false, requeue: false);
+            return;
+        }
 
+        await ExecuteWithRetryAsync(ea, async () =>
+        {
             _logger.LogInformation("Processing cancelled reservation {ReservationNumber}", message.ReservationNumber);
 
             await _emailService.SendReservationCancellationAsync(
@@ -219,24 +259,22 @@ public class ReservationWorker : BackgroundService
                     "Rezervacija otkazana", renterText,
                     message.ReservationNumber, message.PropertyName, message.PropertyPhotoUrl);
             }
-
-            _channel!.BasicAck(ea.DeliveryTag, false);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error processing cancelled reservation message");
-            _channel!.BasicNack(ea.DeliveryTag, false, requeue: false);
-        }
+        }, nameof(OnReservationCancelled));
     }
 
     private async Task OnReservationNotification(object sender, BasicDeliverEventArgs ea)
     {
         var body = Encoding.UTF8.GetString(ea.Body.ToArray());
-        try
+        var message = JsonConvert.DeserializeObject<ReservationNotificationMessage>(body);
+        if (message is null)
         {
-            var message = JsonConvert.DeserializeObject<ReservationNotificationMessage>(body);
-            if (message is null) return;
+            _logger.LogWarning("Received null/unparseable message on {Queue}. Discarding.", NotificationQueue);
+            _channel!.BasicNack(ea.DeliveryTag, false, requeue: false);
+            return;
+        }
 
+        await ExecuteWithRetryAsync(ea, async () =>
+        {
             _logger.LogInformation("Creating notification for user {UserId}, reservation {ReservationNumber}",
                 message.UserId, message.ReservationNumber);
 
@@ -251,34 +289,25 @@ public class ReservationWorker : BackgroundService
             PublishPush(notifId, message.UserId, message.ReservationId,
                 message.Title, message.Message,
                 message.ReservationNumber, message.PropertyName, message.PropertyPhotoUrl);
-
-            _channel!.BasicAck(ea.DeliveryTag, false);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error processing reservation notification message");
-            _channel!.BasicNack(ea.DeliveryTag, false, requeue: false);
-        }
+        }, nameof(OnReservationNotification));
     }
 
     private async Task OnPasswordReset(object sender, BasicDeliverEventArgs ea)
     {
         var body = Encoding.UTF8.GetString(ea.Body.ToArray());
-        try
+        var message = JsonConvert.DeserializeObject<PasswordResetMessage>(body);
+        if (message is null)
         {
-            var message = JsonConvert.DeserializeObject<PasswordResetMessage>(body);
-            if (message is null) return;
+            _logger.LogWarning("Received null/unparseable message on {Queue}. Discarding.", PasswordResetQueue);
+            _channel!.BasicNack(ea.DeliveryTag, false, requeue: false);
+            return;
+        }
 
+        await ExecuteWithRetryAsync(ea, async () =>
+        {
             _logger.LogInformation("Sending password reset OTP to {Email}", message.Email);
             await _emailService.SendPasswordResetAsync(message.Email, message.FullName, message.Otp);
-
-            _channel!.BasicAck(ea.DeliveryTag, false);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error processing password reset message");
-            _channel!.BasicNack(ea.DeliveryTag, false, requeue: false);
-        }
+        }, nameof(OnPasswordReset));
     }
 
     private void PublishPush(int notificationId, int userId, int? reservationId,

@@ -269,6 +269,10 @@ namespace PropertEase.Services.Services.PaymentService
             PaymentStateMachine.Transition(payment, PaymentStatus.Completed);
 
             await _unitOfWork.PaymentRepository.AddAsync(payment);
+
+            ReservationStateMachine.Transition(reservation, ReservationStatus.Paid, callerId);
+            db.PropertyReservations.Update(reservation);
+
             await _unitOfWork.SaveChangesAsync();
 
             try

@@ -149,10 +149,9 @@ namespace PropertEase.Services.AccessManager
             return await _userManager.AddPasswordAsync(user, newPassword);
         }
 
-        private string GenerateToken(ApplicationUserDto user)
+        private string GenerateToken(ApplicationUserDto user, IList<string> roleNames)
         {
-
-            var claims = CreateClaims(user);
+            var claims = CreateClaims(user, roleNames);
 
             var tokenKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration.GetSection(ConfigurationValues.TokenKey).Value));
             var signInCreds = new SigningCredentials(tokenKey, SecurityAlgorithms.HmacSha256Signature);
@@ -161,7 +160,7 @@ namespace PropertEase.Services.AccessManager
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
 
-        private IEnumerable<Claim> CreateClaims(ApplicationUserDto user)
+        private IEnumerable<Claim> CreateClaims(ApplicationUserDto user, IList<string> roleNames)
         {
             var identity = new ClaimsIdentity(CookieAuthenticationDefaults.AuthenticationScheme);
 
@@ -180,9 +179,8 @@ namespace PropertEase.Services.AccessManager
                     identity.AddClaim(new Claim(CustomClaimTypes.ProfilePhoto, user.Person.ProfilePhotoThumbnail));
             }
 
-            if (user.UserRoles != null)
-                foreach (var item in user.UserRoles)
-                    identity.AddClaim(new Claim(ClaimTypes.Role, item.Role?.Name ?? item.RoleId.ToString()));
+            foreach (var role in roleNames)
+                identity.AddClaim(new Claim(ClaimTypes.Role, role));
 
             return identity.Claims;
         }
@@ -203,17 +201,16 @@ namespace PropertEase.Services.AccessManager
             if (user == null)
                 throw new UserNotFoundException();
 
-            var adminRole = user.UserRoles?.FirstOrDefault(r => r.Role?.Name == "Admin");
-            var firstUserRole = adminRole ?? user.UserRoles?.FirstOrDefault();
-            var roleId = firstUserRole?.RoleId;
-            var roleName = firstUserRole?.Role?.Name;
+            var roleNames = await _userManager.GetRolesAsync(actualUser);
 
-            var isRenter = user.UserRoles?.Any(r => r.Role?.Name == "Renter") == true;
+            var roleName = roleNames.Contains(AppRoles.Admin) ? AppRoles.Admin : roleNames.FirstOrDefault();
+            var roleId = user.UserRoles?.FirstOrDefault(r => r.Role?.Name == roleName)?.RoleId;
+            var isRenter = roleNames.Contains(AppRoles.Renter);
 
             return new LoginInformation
             {
                 User = user,
-                Token = GenerateToken(user),
+                Token = GenerateToken(user, roleNames),
                 UserId = user.Id,
                 Role = roleName,
                 RoleId = roleId,
