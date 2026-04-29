@@ -21,7 +21,7 @@ Raspakovati .env.zip file koristeći lozinku poslanu na dlwms
 ### 2. Pokretanje backend servisa
 
 ```bash
-docker compose up -d
+docker compose up --build
 ```
 
 Ovo pokreće:
@@ -125,7 +125,7 @@ Za testiranje plaćanja koristiti sljedeće PayPal sandbox podatke:
 5. Nakon potvrde:
    - Status prelazi na *Potvrđena*
    - Klijent dobija email i in-app notifikaciju s pozivom na plaćanje
-
+   
 ---
 
 ### Odbijanje rezervacije (Iznajmljivač / Admin — desktop app)
@@ -219,6 +219,7 @@ Admin može u listi nekretnina i listi rezervacija koristiti dropdown **Iznajmlj
 - Vidljive u ikoni zvona (gornji desni ugao) u oba interfejsa
 - Notifikacije se generišu za: novu rezervaciju, potvrdu, odbijanje, plaćanje, otkazivanje i završetak rezervacije
 - Klikni na notifikaciju za direktan prelaz na detalje rezervacije
+- Za testiranje email notifikacije, editovati korisnikov email i promijeniti ga u svoj 
 
 ---
 
