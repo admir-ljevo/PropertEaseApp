@@ -96,10 +96,10 @@ Za testiranje plaćanja koristiti sljedeće PayPal sandbox podatke:
 |--------|------|
 | **Na čekanju** | Rezervacija kreirana, čeka odluku iznajmljivača |
 | **Potvrđena** | Iznajmljivač potvrdio — klijent može izvršiti plaćanje; ostaje Potvrđena i nakon plaćanja |
+| **Plaćena** | Klijent izvršio plaćanje |
 | **Završena** | Rezervacija je istekla (datum boravka je prošao) |
 | **Otkazana** | Odbijeno ili otkazano |
 
-> Nema zasebnog statusa "Plaćena" — plaćanje se evidentira kao posebna transakcija, ali status rezervacije ostaje **Potvrđena** sve do isteka datuma boravka, kada automatski prelazi u **Završena**.
 
 ---
 
@@ -144,7 +144,7 @@ Za testiranje plaćanja koristiti sljedeće PayPal sandbox podatke:
 3. Klikni dugme — otvara se PayPal sandbox forma
 4. Uloguj se s PayPal sandbox podacima navedenim gore
 5. Potvrdi plaćanje
-6. Plaćanje je evidentirano — status rezervacije ostaje *Potvrđena*
+6. Plaćanje je evidentirano — status rezervacije postaje *Plaćena*
 
 ---
 
