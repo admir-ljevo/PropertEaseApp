@@ -185,13 +185,7 @@ Plaćene (aktivne) rezervacije **ne mogu se direktno obrisati**. Jedini način j
 1. Nakon završene rezervacije, na profilu iznajmljivača dostupna je opcija ocjenjivanja
 2. Ocjena se prikazuje na profilu iznajmljivača s prosječnom ocjenom
 
-#### Ocjena klijenta (Iznajmljivač — desktop app)
 
-1. Otvori detalje završene rezervacije
-2. Klikni na ime klijenta — otvara se profil klijenta
-3. Dostupna je opcija za dodavanje ocjene klijentu
-
----
 
 ### Upravljanje nekretninama (Iznajmljivač / Admin — desktop app)
 
