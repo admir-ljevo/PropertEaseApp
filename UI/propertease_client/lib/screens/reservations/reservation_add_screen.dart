@@ -126,7 +126,7 @@ class ReservationAddScreenState extends State<ReservationAddScreen> {
       initialDate = initialDate.add(const Duration(days: 1));
     }
 
-    final DateTime picked = (await showDatePicker(
+    final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: initialDate,
       firstDate: currentDate,
@@ -134,7 +134,9 @@ class ReservationAddScreenState extends State<ReservationAddScreen> {
       selectableDayPredicate: (DateTime date) {
         return _isDateSelectable(date);
       },
-    ))!;
+    );
+
+    if (picked == null) return;
 
     if (picked != startDate) {
       setState(() {
@@ -170,7 +172,7 @@ class ReservationAddScreenState extends State<ReservationAddScreen> {
     DateTime? initialDate =
         minEndDate.isAfter(currentDate) ? minEndDate : currentDate;
 
-    while (!selectableDayPredicate(initialDate!, minEndDate)) {
+    while (!_isEndDateSelectable(initialDate!, minEndDate)) {
       initialDate = initialDate.add(const Duration(days: 1));
     }
 
@@ -187,7 +189,7 @@ class ReservationAddScreenState extends State<ReservationAddScreen> {
               firstDate: minEndDate,
               lastDate: DateTime(2101),
               selectableDayPredicate: (DateTime date) {
-                return selectableDayPredicate(date, minEndDate);
+                return _isEndDateSelectable(date, minEndDate);
               },
               onDateChanged: (DateTime date) {
                 pickedDate = date;
@@ -212,8 +214,17 @@ class ReservationAddScreenState extends State<ReservationAddScreen> {
     }
   }
 
-  bool selectableDayPredicate(DateTime date, DateTime minEndDate) {
-    return !date.isBefore(minEndDate);
+  bool _isEndDateSelectable(DateTime date, DateTime minEndDate) {
+    if (date.isBefore(minEndDate)) return false;
+    if (_reservations == null || startDate == null) return true;
+    for (final r in _reservations!) {
+      final rStart = r.dateOfOccupancyStart;
+      final rEnd = r.dateOfOccupancyEnd;
+      if (rStart == null || rEnd == null) continue;
+      // Block if [startDate, date] would overlap [rStart, rEnd)
+      if (startDate!.isBefore(rEnd) && date.isAfter(rStart)) return false;
+    }
+    return true;
   }
 
   @override
