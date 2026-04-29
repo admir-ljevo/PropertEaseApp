@@ -36,15 +36,16 @@ namespace PropertEase.Services.Services.PropertyReservationService
             // server side price calculation
             var totalHours = (entityDto.DateOfOccupancyEnd - entityDto.DateOfOccupancyStart).TotalHours;
             var totalDays   = (int)Math.Ceiling(totalHours / 24.0);
-            var totalMonths = (int)Math.Ceiling(totalDays  / 30.0);
+            var totalMonths = (int)Math.Floor(totalDays / 30.0);
+            var remainingDays = totalDays - (totalMonths * 30);
 
             entityDto.NumberOfDays   = Math.Max(totalDays, 1);
             entityDto.NumberOfMonths = Math.Max(totalMonths, 1);
 
             if (property.IsDaily)
-                entityDto.TotalPrice = (double)(property.DailyPrice   * entityDto.NumberOfDays);
+                entityDto.TotalPrice = (double)(property.DailyPrice * entityDto.NumberOfDays);
             if (property.IsMonthly)
-                entityDto.TotalPrice = (double)(property.MonthlyPrice  * entityDto.NumberOfMonths);
+                entityDto.TotalPrice = (double)(property.MonthlyPrice * totalMonths + (property.MonthlyPrice / 30.0) * remainingDays);
 
             // overlap check
             var db = unitOfWork.GetDatabaseContext();

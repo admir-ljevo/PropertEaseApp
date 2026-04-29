@@ -43,10 +43,15 @@ class ReservationAddScreenState extends State<ReservationAddScreen> {
 
 
   void setTotalPrice() {
-    if (widget.property!.isMonthly!)
-      totalPrice = widget.property!.monthlyPrice! * numberOfMonths;
+    final days = calculateNumberOfDays(startDate, endDate);
+    if (widget.property!.isMonthly!) {
+      final fullMonths = days ~/ 30;
+      final remaining = days - (fullMonths * 30);
+      final dailyRate = widget.property!.monthlyPrice! / 30.0;
+      totalPrice = widget.property!.monthlyPrice! * fullMonths + dailyRate * remaining;
+    }
     if (widget.property!.isDaily!)
-      totalPrice = widget.property!.dailyPrice! * numberOfDays;
+      totalPrice = widget.property!.dailyPrice! * days;
     setState(() {
       _priceController.text = totalPrice.toStringAsFixed(2);
     });
@@ -172,8 +177,18 @@ class ReservationAddScreenState extends State<ReservationAddScreen> {
     DateTime? initialDate =
         minEndDate.isAfter(currentDate) ? minEndDate : currentDate;
 
+    final DateTime searchLimit = DateTime.now().add(const Duration(days: 730));
     while (!_isEndDateSelectable(initialDate!, minEndDate)) {
       initialDate = initialDate.add(const Duration(days: 1));
+      if (initialDate.isAfter(searchLimit)) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Nema dostupnih datuma završetka za odabrani period.'),
+            backgroundColor: Colors.red,
+          ));
+        }
+        return;
+      }
     }
 
     DateTime? pickedDate;
