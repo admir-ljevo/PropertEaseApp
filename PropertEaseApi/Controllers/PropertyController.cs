@@ -5,7 +5,9 @@ using PropertEase.Core.Dto.Property;
 using PropertEase.Core.Filters;
 using PropertEase.Core.SearchObjects;
 using PropertEase.Services.Services.PropertyService;
+using PropertEase.Shared.Constants;
 using Swashbuckle.AspNetCore.Annotations;
+using System.Security.Claims;
 
 namespace PropertEase.Controllers
 {
@@ -29,9 +31,18 @@ namespace PropertEase.Controllers
             return Ok(properties);
         }
 
+        [Authorize(Roles = AppRoles.Admin + "," + AppRoles.Renter)]
         [HttpDelete("{id}")]
         public override async Task<IActionResult> Delete(int id)
         {
+            if (!User.IsInRole(AppRoles.Admin))
+            {
+                var callerId = int.TryParse(User.FindFirstValue("Id"), out var parsed) ? parsed : 0;
+                var property = await propertyService.GetByIdAsync(id);
+                if (property == null || property.ApplicationUserId != callerId)
+                    return Forbid();
+            }
+
             await propertyService.RemoveByIdAsync(id);
             return Ok();
         }
