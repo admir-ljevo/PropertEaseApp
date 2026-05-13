@@ -307,8 +307,8 @@ namespace PropertEase.Infrastructure.Repositories.PropertyReservationRepository
                 .ToListAsync();
         }
 
-        public Task<PropertEase.Core.Dto.PagedResult<ReservationSummaryDto>> GetClientSummariesAsync(int clientId, int page = 1, int pageSize = 10)
-            => GetSummariesAsync(pr => pr.ClientId == clientId && !pr.IsDeleted, page, pageSize);
+        public Task<PropertEase.Core.Dto.PagedResult<ReservationSummaryDto>> GetClientSummariesAsync(int clientId, int page = 1, int pageSize = 10, int? renterId = null)
+            => GetSummariesAsync(pr => pr.ClientId == clientId && !pr.IsDeleted && (renterId == null || pr.RenterId == renterId), page, pageSize);
 
         public Task<PropertEase.Core.Dto.PagedResult<ReservationSummaryDto>> GetRenterSummariesAsync(int renterId, int page = 1, int pageSize = 10)
             => GetSummariesAsync(pr => pr.RenterId == renterId && !pr.IsDeleted, page, pageSize);

@@ -33,6 +33,9 @@ namespace PropertEase.Services.Services.PropertyReservationService
 
             Property property = await unitOfWork.PropertyRepository.GetById(entityDto.PropertyId);
 
+            // always derive RenterId from property owner, never trust the client-supplied value
+            entityDto.RenterId = property.ApplicationUserId;
+
             // server side price calculation
             var totalHours = (entityDto.DateOfOccupancyEnd - entityDto.DateOfOccupancyStart).TotalHours;
             var totalDays   = (int)Math.Ceiling(totalHours / 24.0);
@@ -467,8 +470,8 @@ namespace PropertEase.Services.Services.PropertyReservationService
             return count;
         }
 
-        public async Task<PropertEase.Core.Dto.PagedResult<ReservationSummaryDto>> GetClientSummariesAsync(int clientId, int page = 1, int pageSize = 10)
-            => await unitOfWork.PropertyReservationRepository.GetClientSummariesAsync(clientId, page, pageSize);
+        public async Task<PropertEase.Core.Dto.PagedResult<ReservationSummaryDto>> GetClientSummariesAsync(int clientId, int page = 1, int pageSize = 10, int? renterId = null)
+            => await unitOfWork.PropertyReservationRepository.GetClientSummariesAsync(clientId, page, pageSize, renterId);
 
         public async Task<PropertEase.Core.Dto.PagedResult<ReservationSummaryDto>> GetRenterSummariesAsync(int renterId, int page = 1, int pageSize = 10)
             => await unitOfWork.PropertyReservationRepository.GetRenterSummariesAsync(renterId, page, pageSize);

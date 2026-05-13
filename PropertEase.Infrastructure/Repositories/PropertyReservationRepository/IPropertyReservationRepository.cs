@@ -21,7 +21,7 @@ namespace PropertEase.Infrastructure.Repositories.PropertyReservationRepository
 
         Task<List<PropertyReservationDto>> GetForReportAsync(int? ownerId, DateTime? from, DateTime? to);
 
-        Task<PropertEase.Core.Dto.PagedResult<ReservationSummaryDto>> GetClientSummariesAsync(int clientId, int page = 1, int pageSize = 10);
+        Task<PropertEase.Core.Dto.PagedResult<ReservationSummaryDto>> GetClientSummariesAsync(int clientId, int page = 1, int pageSize = 10, int? renterId = null);
         Task<PropertEase.Core.Dto.PagedResult<ReservationSummaryDto>> GetRenterSummariesAsync(int renterId, int page = 1, int pageSize = 10);
 
         Task<int> GetUpcomingCountByPropertyAsync(int propertyId);
