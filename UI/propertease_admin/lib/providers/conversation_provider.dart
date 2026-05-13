@@ -124,8 +124,8 @@ class ConversationProvider with ChangeNotifier {
     throw Exception("Failed to fetch client conversations");
   }
 
-  Future<int> getUnreadCount(int recipientId) async {
-    final url = "$_baseUrl" "Message/UnreadCount/$recipientId";
+  Future<int> getUnreadCount() async {
+    final url = "$_baseUrl" "Message/UnreadCount";
     final response =
         await http!.get(Uri.parse(url), headers: createHeaders());
     if (response.statusCode < 299) {
@@ -134,8 +134,8 @@ class ConversationProvider with ChangeNotifier {
     return 0;
   }
 
-  Future<void> markAsRead(int conversationId, int recipientId) async {
-    final url = "$_baseUrl" "Message/MarkAsRead/$conversationId?recipientId=$recipientId";
+  Future<void> markAsRead(int conversationId) async {
+    final url = "$_baseUrl" "Message/MarkAsRead/$conversationId";
     await http!.put(Uri.parse(url), headers: createHeaders());
   }
 

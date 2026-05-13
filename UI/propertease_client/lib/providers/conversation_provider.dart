@@ -54,8 +54,8 @@ class ConversationProvider extends BaseProvider<Conversation> {
     return [];
   }
 
-  Future<int> getUnreadCount(int recipientId) async {
-    final url = '${BaseProvider.baseUrl}Message/UnreadCount/$recipientId';
+  Future<int> getUnreadCount() async {
+    final url = '${BaseProvider.baseUrl}Message/UnreadCount';
     final response = await http!.get(Uri.parse(url), headers: createHeaders());
     if (isValidResponse(response)) {
       return jsonDecode(response.body) as int? ?? 0;

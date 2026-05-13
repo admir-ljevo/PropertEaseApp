@@ -34,9 +34,8 @@ class MessageProvider extends BaseProvider<Message> {
     throw Exception('Failed to load messages');
   }
 
-  Future<void> markAsRead(int conversationId, int recipientId) async {
-    final url =
-        '${BaseProvider.baseUrl}Message/MarkAsRead/$conversationId?recipientId=$recipientId';
+  Future<void> markAsRead(int conversationId) async {
+    final url = '${BaseProvider.baseUrl}Message/MarkAsRead/$conversationId';
     await http!.put(Uri.parse(url), headers: createHeaders());
   }
 

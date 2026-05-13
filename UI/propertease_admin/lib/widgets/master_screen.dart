@@ -83,7 +83,7 @@ class _MasterScreenWidgetState extends State<MasterScreenWidget> {
     if (userId == null) return;
     try {
       final provider = context.read<ConversationProvider>();
-      final count = await provider.getUnreadCount(userId);
+      final count = await provider.getUnreadCount();
       if (mounted) setState(() => _unreadCount = count);
     } catch (_) {}
   }

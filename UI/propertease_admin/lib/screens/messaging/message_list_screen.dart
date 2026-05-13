@@ -128,7 +128,7 @@ class MessageListScreenState extends State<MessageListScreen> {
   void _markAsReadSilent() {
     if (userId == null) return;
     _conversationProvider
-        .markAsRead(widget.conversationId!, userId!)
+        .markAsRead(widget.conversationId!)
         .then((_) => widget.onConversationListUpdated())
         .catchError((Object _) {});
   }

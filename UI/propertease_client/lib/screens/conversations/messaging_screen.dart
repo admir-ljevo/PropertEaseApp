@@ -73,7 +73,7 @@ class MessageListScreenState extends State<MessageListScreen> {
   void _markAsReadNow() {
     final uid = Authorization.userId;
     if (uid == null || widget.conversationId == null) return;
-    _messageProvider.markAsRead(widget.conversationId!, uid).then((_) {
+    _messageProvider.markAsRead(widget.conversationId!).then((_) {
       widget.onConversationListUpdated?.call();
     }).catchError((_) {});
   }
