@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:propertease_admin/models/property_reservation.dart';
 import 'package:propertease_admin/providers/property_reservation_provider.dart';
@@ -235,7 +235,7 @@ class _ReservationEditScreenState extends State<ReservationEditScreen> {
                         : '—',
                     readOnly: true,
                     decoration: const InputDecoration(
-                      labelText: 'Ukupna cijena (KM)',
+                      labelText: 'Ukupna cijena (USD)',
                       prefixIcon: Icon(Icons.attach_money),
                       border: OutlineInputBorder(),
                       filled: true,

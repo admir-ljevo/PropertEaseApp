@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:propertease_client/config/app_config.dart';
 import 'package:provider/provider.dart';
@@ -470,8 +470,8 @@ class _RenterProfileScreenState extends State<RenterProfileScreen> {
           ),
           trailing: Text(
             p.isMonthly == true
-                ? '${p.monthlyPrice?.toStringAsFixed(0)} BAM/mj.'
-                : '${p.dailyPrice?.toStringAsFixed(0)} BAM/dan',
+                ? '${p.monthlyPrice?.toStringAsFixed(0)} USD/mj.'
+                : '${p.dailyPrice?.toStringAsFixed(0)} USD/dan',
             style: const TextStyle(
                 color: _kPrimary,
                 fontWeight: FontWeight.w600,
@@ -533,7 +533,7 @@ class _RenterProfileScreenState extends State<RenterProfileScreen> {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                '${r.totalPrice?.toStringAsFixed(0) ?? '—'} BAM',
+                '${r.totalPrice?.toStringAsFixed(0) ?? '—'} USD',
                 style: const TextStyle(
                     color: _kPrimary,
                     fontWeight: FontWeight.w600,

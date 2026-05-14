@@ -65,11 +65,8 @@ namespace PropertEase.Services.Services.PaymentService
 
         public async Task<(string PaymentId, string ApprovalUrl)> CreatePayPalPaymentAsync(decimal amount)
         {
-            if (IsPlaceholderCredentials())
-            {
-                var fakeId = "sandbox_" + Guid.NewGuid().ToString("N")[..12];
-                return (fakeId, $"{ReturnUrl}?paymentId={fakeId}&PayerID=sandbox");
-            }
+            if (string.IsNullOrEmpty(_payPalClientId) || string.IsNullOrEmpty(_payPalSecret))
+                throw new BusinessException("PayPal nije konfigurisan.");
 
             using var http = _httpClientFactory.CreateClient("PayPal");
             var accessToken = await GetPayPalAccessTokenAsync(http);
@@ -121,109 +118,6 @@ namespace PropertEase.Services.Services.PaymentService
             return await CreatePayPalPaymentAsync((decimal)reservation.TotalPrice);
         }
 
-        public async Task<PropertyReservationDto> CompleteReservationAsync(CompleteReservationPaymentDto dto)
-        {
-            var db = _unitOfWork.GetDatabaseContext();
-
-            //  if this PayPal payment was already processed return existing reservation
-            var existingPayment = await db.Payments
-                .FirstOrDefaultAsync(p => p.PayPalPaymentId == dto.PayPalPaymentId && !p.IsDeleted);
-            if (existingPayment?.ReservationId != null)
-            {
-                var existing = await _unitOfWork.PropertyReservationRepository
-                    .GetByIdAsync(existingPayment.ReservationId.Value);
-                if (existing != null) return existing;
-            }
-
-           
-            await ExecutePayPalPaymentAsync(dto.PayPalPaymentId, dto.PayPalPayerId, dto.Amount);
-
-            var payment = new Payment
-            {
-                ClientId        = dto.ClientId,
-                PayPalPaymentId = dto.PayPalPaymentId,
-                PayPalPayerId   = dto.PayPalPayerId,
-                Amount          = dto.Amount,
-                Currency        = "USD",
-                Status          = PaymentStatus.Pending,
-                Description     = $"Reservation for property {dto.PropertyId}",
-                CreatedAt       = DateTime.UtcNow,
-                IsDeleted       = false,
-            };
-            PaymentStateMachine.Transition(payment, PaymentStatus.Completed);
-
-            await _unitOfWork.PaymentRepository.AddAsync(payment);
-            await _unitOfWork.SaveChangesAsync();
-
-            var reservationDto = new PropertyReservationDto
-            {
-                PropertyId           = dto.PropertyId,
-                ClientId             = dto.ClientId,
-                RenterId             = dto.RenterId,
-                NumberOfGuests       = dto.NumberOfGuests,
-                DateOfOccupancyStart = dto.DateOfOccupancyStart,
-                DateOfOccupancyEnd   = dto.DateOfOccupancyEnd,
-                NumberOfDays         = dto.NumberOfDays,
-                NumberOfMonths       = dto.NumberOfMonths,
-                TotalPrice           = dto.TotalPrice,
-                IsMonthly            = dto.IsMonthly,
-                IsDaily              = dto.IsDaily,
-                Description          = dto.Description,
-                CreatedAt            = DateTime.UtcNow,
-            };
-
-            var created = await _reservationService.AddAsync(reservationDto);
-
-            payment.ReservationId = created.Id;
-            _unitOfWork.PaymentRepository.Update(payment);
-            await _unitOfWork.SaveChangesAsync();
-
-            // Payment already captured
-            var created2 = await _reservationService.ConfirmReservationAsync(created.Id, dto.ClientId);
-
-            try
-            {
-                var prop = await db.Properties
-                    .AsNoTracking()
-                    .Where(p => p.Id == dto.PropertyId && !p.IsDeleted)
-                    .Select(p => new { p.Name })
-                    .FirstOrDefaultAsync();
-
-                var photoUrl = await db.Photos
-                    .Where(p => p.PropertyId == dto.PropertyId && !p.IsDeleted)
-                    .Select(p => p.Url)
-                    .FirstOrDefaultAsync();
-
-                _publisher.Publish(new ReservationNotificationMessage
-                {
-                    UserId            = dto.ClientId,
-                    ReservationId     = created2.Id,
-                    Title             = "Plaćanje uspješno",
-                    Message           = $"Plaćanje za rezervaciju \"{created2.ReservationNumber}\" je uspješno obrađeno.",
-                    ReservationNumber = created2.ReservationNumber,
-                    PropertyName      = prop?.Name,
-                    PropertyPhotoUrl  = photoUrl
-                }, "reservation.notification");
-
-                _publisher.Publish(new ReservationNotificationMessage
-                {
-                    UserId            = dto.RenterId,
-                    ReservationId     = created2.Id,
-                    Title             = "Plaćanje primljeno",
-                    Message           = $"Plaćanje za rezervaciju \"{created2.ReservationNumber}\" je uspješno primljeno.",
-                    ReservationNumber = created2.ReservationNumber,
-                    PropertyName      = prop?.Name,
-                    PropertyPhotoUrl  = photoUrl
-                }, "reservation.notification");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to publish payment notifications for reservation {Id}", created2.Id);
-            }
-
-            return created2;
-        }
-
         public async Task<PropertyReservationDto> PayForReservationAsync(PayForReservationDto dto, int callerId)
         {
             var db = _unitOfWork.GetDatabaseContext();
@@ -259,7 +153,7 @@ namespace PropertEase.Services.Services.PaymentService
                 ReservationId   = dto.ReservationId,
                 PayPalPaymentId = dto.PayPalPaymentId,
                 PayPalPayerId   = dto.PayPalPayerId,
-                Amount          = dto.Amount,
+                Amount          = reservation.TotalPrice,
                 Currency        = "USD",
                 Status          = PaymentStatus.Pending,
                 Description     = $"Payment for reservation #{reservation.ReservationNumber}",
@@ -330,6 +224,9 @@ namespace PropertEase.Services.Services.PaymentService
             if (reservation == null || reservation.IsDeleted)
                 throw new NotFoundException("Reservation", reservationId);
 
+            if (reservation.Status == ReservationStatus.Cancelled)
+                throw new BusinessException("Rezervacija je već otkazana.");
+
             if (enforceSevenDayRule)
             {
                 var daysUntilCheckIn = (reservation.DateOfOccupancyStart - DateTime.UtcNow).TotalDays;
@@ -338,12 +235,7 @@ namespace PropertEase.Services.Services.PaymentService
                         "Cancellation is only allowed more than 7 days before check-in.");
             }
 
-            var finalReason = reason
-                ?? (enforceSevenDayRule
-                    ? "Otkazano od strane klijenta"
-                    : "Otkazano od strane iznajmljivača/admina");
-
-            ReservationStateMachine.Transition(reservation, ReservationStatus.Cancelled, actorId, finalReason);
+            ReservationStateMachine.Transition(reservation, ReservationStatus.Cancelled, actorId, reason);
 
             var payment = await _unitOfWork.PaymentRepository.GetByReservationIdAsync(reservationId);
 
@@ -433,10 +325,6 @@ namespace PropertEase.Services.Services.PaymentService
 
         // helpers
 
-        private bool IsPlaceholderCredentials()
-            => string.IsNullOrEmpty(_payPalClientId) || _payPalClientId.StartsWith("REPLACE") ||
-               string.IsNullOrEmpty(_payPalSecret)   || _payPalSecret.StartsWith("REPLACE");
-
         private async Task<string> GetPayPalAccessTokenAsync(HttpClient http)
         {
             var credentials = Convert.ToBase64String(
@@ -455,7 +343,8 @@ namespace PropertEase.Services.Services.PaymentService
 
         private async Task ExecutePayPalPaymentAsync(string paymentId, string payerId, double expectedAmount)
         {
-            if (IsPlaceholderCredentials()) return;
+            if (string.IsNullOrEmpty(_payPalClientId) || string.IsNullOrEmpty(_payPalSecret))
+                throw new BusinessException("PayPal nije konfigurisan.");
 
             using var http = _httpClientFactory.CreateClient("PayPal");
             var accessToken = await GetPayPalAccessTokenAsync(http);
@@ -495,7 +384,8 @@ namespace PropertEase.Services.Services.PaymentService
 
         private async Task RefundPayPalPaymentAsync(string paymentId, double amount)
         {
-            if (IsPlaceholderCredentials()) return;
+            if (string.IsNullOrEmpty(_payPalClientId) || string.IsNullOrEmpty(_payPalSecret))
+                throw new BusinessException("PayPal nije konfigurisan.");
 
             using var http = _httpClientFactory.CreateClient("PayPal");
             var accessToken = await GetPayPalAccessTokenAsync(http);

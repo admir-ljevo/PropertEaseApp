@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:propertease_admin/models/property_reservation.dart';
@@ -164,7 +164,7 @@ class _ReservationDetailsScreenState extends State<ReservationDetailsScreen> {
     try {
       await context
           .read<PaymentProvider>()
-          .refundReservation((_freshReservation ?? widget.reservation)!.id!, isClient: false, reason: reason);
+          .refundReservation((_freshReservation ?? widget.reservation)!.id!, reason: reason);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -267,7 +267,7 @@ class _ReservationDetailsScreenState extends State<ReservationDetailsScreen> {
               title: 'Cijena i status',
               icon: Icons.attach_money,
               children: [
-                _row('Ukupna cijena', r.totalPrice != null ? '${r.totalPrice} KM' : null),
+                _row('Ukupna cijena', r.totalPrice != null ? '${r.totalPrice} USD' : null),
                 _rowBool('Dnevna rezervacija', r.isDaily),
                 _rowBool('Mjesečna rezervacija', r.isMonthly),
                 _rowWidget('Status', ReservationStatus.chip(r.status)),

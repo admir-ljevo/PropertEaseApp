@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:propertease_client/config/app_config.dart';
@@ -303,10 +303,10 @@ class PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
             children: [
               if (p.isMonthly == true)
                 _PriceChip(
-                    '${p.monthlyPrice?.toStringAsFixed(0) ?? '—'} BAM/mj.'),
+                    '${p.monthlyPrice?.toStringAsFixed(0) ?? '—'} USD/mj.'),
               if (p.isDaily == true)
                 _PriceChip(
-                    '${p.dailyPrice?.toStringAsFixed(0) ?? '—'} BAM/dan'),
+                    '${p.dailyPrice?.toStringAsFixed(0) ?? '—'} USD/dan'),
               if ((p.averageRating ?? 0) > 0)
                 _RatingChip(p.averageRating!),
             ],
@@ -636,8 +636,8 @@ class PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
                                 overflow: TextOverflow.ellipsis),
                             Text(
                               rec.isMonthly == true
-                                  ? '${rec.monthlyPrice?.toStringAsFixed(0) ?? ''} BAM/mj.'
-                                  : '${rec.dailyPrice?.toStringAsFixed(0) ?? ''} BAM/dan',
+                                  ? '${rec.monthlyPrice?.toStringAsFixed(0) ?? ''} USD/mj.'
+                                  : '${rec.dailyPrice?.toStringAsFixed(0) ?? ''} USD/dan',
                               style: const TextStyle(
                                   fontSize: 11,
                                   color: _kPrimary,

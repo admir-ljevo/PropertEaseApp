@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:propertease_admin/models/application_user.dart';
 import 'package:propertease_admin/models/city.dart';
 import 'package:propertease_admin/models/property.dart';
@@ -385,9 +385,9 @@ class PropertyListWidgetState extends State<PropertyListWidget> {
                 ],
                 rows: rows.map((e) {
                   final priceLabel = e.isDaily == true
-                      ? '${e.dailyPrice} BAM/dan'
+                      ? '${e.dailyPrice} USD/dan'
                       : e.isMonthly == true
-                          ? '${e.monthlyPrice} BAM/mj.'
+                          ? '${e.monthlyPrice} USD/mj.'
                           : '/';
                   final String statusLabel;
                   final Color statusColor;

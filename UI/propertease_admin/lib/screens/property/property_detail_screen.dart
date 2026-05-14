@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:intl/intl.dart';
@@ -457,14 +457,14 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
       children: [
         if (hasDaily)
           _PriceChip(
-            label: '${property.dailyPrice!.round()} KM',
+            label: '${property.dailyPrice!.round()} USD',
             sublabel: 'po danu',
             icon: Icons.today,
           ),
         if (hasDaily && hasMonthly) const SizedBox(width: 12),
         if (hasMonthly)
           _PriceChip(
-            label: '${property.monthlyPrice!.round()} KM',
+            label: '${property.monthlyPrice!.round()} USD',
             sublabel: 'po mjesecu',
             icon: Icons.calendar_month,
           ),

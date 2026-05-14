@@ -9,22 +9,18 @@ const _cancelUrl  = 'https://propertease.app/payment/cancel';
 
 class PayPalScreen extends StatefulWidget {
   final double totalPrice;
-  final Map<String, dynamic> reservationData;
   final void Function(PropertyReservation reservation)? onReservationCreated;
   final void Function(String error)? onReservationError;
   final VoidCallback? onCancelled;
-
-  /// When set, pays for an existing confirmed reservation instead of creating a new one.
-  final int? existingReservationId;
+  final int existingReservationId;
 
   const PayPalScreen({
     super.key,
     this.totalPrice = 0,
-    required this.reservationData,
     this.onReservationCreated,
     this.onReservationError,
     this.onCancelled,
-    this.existingReservationId,
+    required this.existingReservationId,
   });
 
   @override
@@ -47,8 +43,7 @@ class _PayPalScreenState extends State<PayPalScreen> {
 
   Future<void> _createOrder() async {
     try {
-      if (widget.existingReservationId == null) throw Exception('Reservation ID required');
-      final order = await _paymentProvider.createPayPalOrder(widget.existingReservationId!);
+      final order = await _paymentProvider.createPayPalOrder(widget.existingReservationId);
       final approvalUrl = order['approvalUrl'] as String?;
       if (approvalUrl == null) throw Exception('No approval URL returned');
 
@@ -105,22 +100,12 @@ class _PayPalScreenState extends State<PayPalScreen> {
     if (mounted) setState(() => _processingPayment = true);
 
     try {
-      final PropertyReservation result;
-      if (widget.existingReservationId != null) {
-        result = await _paymentProvider.payForReservation({
-          'reservationId':  widget.existingReservationId,
-          'payPalPaymentId': paymentId,
-          'payPalPayerId':   payerId,
-          'amount':          widget.totalPrice,
-        });
-      } else {
-        result = await _paymentProvider.completeReservation({
-          ...widget.reservationData,
-          'payPalPaymentId': paymentId,
-          'payPalPayerId':   payerId,
-          'amount':          widget.totalPrice,
-        });
-      }
+      final result = await _paymentProvider.payForReservation({
+        'reservationId':   widget.existingReservationId,
+        'payPalPaymentId': paymentId,
+        'payPalPayerId':   payerId,
+        'amount':          widget.totalPrice,
+      });
       widget.onReservationCreated?.call(result);
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {

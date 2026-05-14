@@ -34,21 +34,6 @@ class PaymentProvider extends BaseProvider<PropertyReservation> {
         'Failed to create PayPal order: ${response.statusCode} ${response.body}');
   }
 
-  Future<PropertyReservation> completeReservation(
-      Map<String, dynamic> data) async {
-    final url = '${BaseProvider.baseUrl}Payment/CompleteReservation';
-    final response = await http!.post(
-      Uri.parse(url),
-      headers: createHeaders(),
-      body: jsonEncode(data),
-    );
-    if (isValidResponse(response)) {
-      return fromJson(jsonDecode(response.body));
-    }
-    throw Exception(
-        'Failed to complete reservation: ${response.statusCode} ${response.body}');
-  }
-
   /// Pays for an already-confirmed reservation (Pending → paid).
   Future<PropertyReservation> payForReservation(Map<String, dynamic> data) async {
     final url = '${BaseProvider.baseUrl}Payment/PayForReservation';
@@ -64,12 +49,9 @@ class PaymentProvider extends BaseProvider<PropertyReservation> {
         'Plaćanje neuspješno: ${response.statusCode} ${response.body}');
   }
 
-  /// Cancels a reservation and refunds the PayPal payment.
-  /// [isClient] = true enforces the 7-day rule server-side.
-  Future<void> refundReservation(int reservationId,
-      {bool isClient = false}) async {
+  Future<void> refundReservation(int reservationId) async {
     final url =
-        '${BaseProvider.baseUrl}Payment/RefundReservation/$reservationId?isClient=$isClient';
+        '${BaseProvider.baseUrl}Payment/RefundReservation/$reservationId';
     final response =
         await http!.post(Uri.parse(url), headers: createHeaders());
     if (!isValidResponse(response)) {

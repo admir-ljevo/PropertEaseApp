@@ -1,4 +1,4 @@
-import 'dart:io';
+﻿import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -506,10 +506,10 @@ class _PropertyAddScreenState extends State<PropertyAddScreen> {
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             decoration: InputDecoration(
               labelText: _property.isMonthly == true
-                  ? 'Cijena (KM/mj.)'
+                  ? 'Cijena (USD/mj.)'
                   : _property.isDaily == true
-                      ? 'Cijena (KM/dan)'
-                      : 'Cijena (KM)',
+                      ? 'Cijena (USD/dan)'
+                      : 'Cijena (USD)',
               prefixIcon: const Icon(Icons.attach_money),
               border: const OutlineInputBorder(),
             ),

@@ -61,8 +61,7 @@ class _ReservationDetailScreenState extends State<ReservationDetailsScreen> {
         MaterialPageRoute(
           builder: (_) => PayPalScreen(
             totalPrice: r.totalPrice ?? 0,
-            reservationData: const {},
-            existingReservationId: r.id,
+            existingReservationId: r.id!,
             onReservationCreated: (_) {},
             onReservationError: (err) {
               if (mounted) {
@@ -147,7 +146,7 @@ class _ReservationDetailScreenState extends State<ReservationDetailsScreen> {
     try {
       await context
           .read<PaymentProvider>()
-          .refundReservation(_reservation!.id!, isClient: true);
+          .refundReservation(_reservation!.id!);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(

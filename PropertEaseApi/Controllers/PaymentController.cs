@@ -101,14 +101,6 @@ namespace PropertEase.Controllers
             return Ok(new { paymentId, approvalUrl });
         }
 
-        [HttpPost("CompleteReservation")]
-        public async Task<IActionResult> CompleteReservation([FromBody] CompleteReservationPaymentDto dto)
-        {
-            dto.ClientId = int.Parse(User.FindFirstValue("Id")!);
-            var reservation = await _paymentService.CompleteReservationAsync(dto);
-            return Ok(reservation);
-        }
-
         [HttpPost("PayForReservation")]
         public async Task<IActionResult> PayForReservation([FromBody] PayForReservationDto dto)
         {
@@ -118,17 +110,45 @@ namespace PropertEase.Controllers
         }
 
         [HttpPost("RefundReservation/{reservationId}")]
-        public async Task<IActionResult> RefundReservation(
-            int reservationId,
-            [FromQuery] bool isClient = false,
-            [FromQuery] string? reason = null)
+        public async Task<IActionResult> RefundReservation(int reservationId, [FromQuery] string? reason = null)
         {
-            var actorId = int.TryParse(User.FindFirstValue("Id"), out var parsed) ? parsed : (int?)null;
+            var callerId = int.TryParse(User.FindFirstValue("Id"), out var parsed) ? parsed : 0;
+            bool enforceSevenDayRule;
+
+            if (User.IsInRole(AppRoles.Admin))
+            {
+                if (string.IsNullOrWhiteSpace(reason))
+                    return BadRequest("Razlog otkazivanja je obavezan.");
+                enforceSevenDayRule = false;
+            }
+            else if (User.IsInRole(AppRoles.Client))
+            {
+                var reservation = await _db.PropertyReservations.FindAsync(reservationId);
+                if (reservation == null || reservation.IsDeleted) return NotFound();
+                if (reservation.ClientId != callerId) return Forbid();
+                enforceSevenDayRule = true;
+                reason ??= "Otkazano od strane klijenta";
+            }
+            else if (User.IsInRole(AppRoles.Renter))
+            {
+                if (string.IsNullOrWhiteSpace(reason))
+                    return BadRequest("Razlog otkazivanja je obavezan.");
+                var reservation = await _db.PropertyReservations
+                    .Include(r => r.Property)
+                    .FirstOrDefaultAsync(r => r.Id == reservationId && !r.IsDeleted);
+                if (reservation == null) return NotFound();
+                if (reservation.Property.ApplicationUserId != callerId) return Forbid();
+                enforceSevenDayRule = false;
+            }
+            else
+            {
+                return Forbid();
+            }
 
             await _paymentService.RefundReservationAsync(
                 reservationId,
-                enforceSevenDayRule: isClient,
-                actorId: actorId,
+                enforceSevenDayRule: enforceSevenDayRule,
+                actorId: callerId,
                 reason: reason);
 
             return Ok(new { message = "Rezervacija otkazana i refund je izvršen." });

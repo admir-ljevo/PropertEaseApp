@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_calendar_carousel/flutter_calendar_carousel.dart';
 import 'package:flutter_calendar_carousel/classes/event.dart';
 import 'package:propertease_client/config/app_config.dart';
@@ -540,12 +540,12 @@ class ReservationAddScreenState extends State<ReservationAddScreen> {
           if (p.isMonthly == true)
             _PriceRow(
               label: 'Cijena po mjesecu',
-              value: '${p.monthlyPrice?.toStringAsFixed(2) ?? '—'} BAM',
+              value: '${p.monthlyPrice?.toStringAsFixed(2) ?? '—'} USD',
             ),
           if (p.isDaily == true)
             _PriceRow(
               label: 'Cijena po danu',
-              value: '${p.dailyPrice?.toStringAsFixed(2) ?? '—'} BAM',
+              value: '${p.dailyPrice?.toStringAsFixed(2) ?? '—'} USD',
             ),
           const Divider(height: 1, indent: 16, endIndent: 16),
           Padding(
@@ -560,7 +560,7 @@ class ReservationAddScreenState extends State<ReservationAddScreen> {
                 const Spacer(),
                 Text(
                   startDate != null && endDate != null
-                      ? '${totalPrice.toStringAsFixed(2)} BAM'
+                      ? '${totalPrice.toStringAsFixed(2)} USD'
                       : '—',
                   style: const TextStyle(
                     fontSize: 20,

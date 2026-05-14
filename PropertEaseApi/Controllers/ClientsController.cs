@@ -46,10 +46,8 @@ namespace PropertEase.Controllers
         [HttpPut("Edit/{id}")]
         public async Task<IActionResult> Put(int id, [FromForm] ClientUpdateDto entity)
         {
-            var callerId = int.TryParse(User.FindFirstValue("Id"), out var parsed) ? parsed : (int?)null;
-            var isAdmin = User.IsInRole(AppRoles.Admin);
-            if (!isAdmin && callerId != id)
-                return Forbid();
+            var callerId = int.TryParse(User.FindFirstValue("Id"), out var parsed) ? parsed : 0;
+            entity.Id = User.IsInRole(AppRoles.Admin) ? id : callerId;
 
             var file = entity.File;
             if (file != null)

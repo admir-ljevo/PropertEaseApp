@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -147,7 +147,7 @@ class _PropertyCompareScreenState extends State<PropertyCompareScreen> {
                     valB: b.monthlyPrice,
                     lowerIsBetter: true,
                     format: (v) =>
-                        v > 0 ? '${v.toStringAsFixed(0)} BAM' : '—',
+                        v > 0 ? '${v.toStringAsFixed(0)} USD' : '—',
                     icon: Icons.calendar_month,
                   ),
                 if ((a.isDaily == true) || (b.isDaily == true))
@@ -157,7 +157,7 @@ class _PropertyCompareScreenState extends State<PropertyCompareScreen> {
                     valB: b.dailyPrice,
                     lowerIsBetter: true,
                     format: (v) =>
-                        v > 0 ? '${v.toStringAsFixed(0)} BAM' : '—',
+                        v > 0 ? '${v.toStringAsFixed(0)} USD' : '—',
                     icon: Icons.today,
                   ),
               ]),
@@ -622,9 +622,9 @@ class _PropertyPickerSheetState extends State<_PropertyPickerSheet> {
           style: const TextStyle(fontSize: 12)),
       trailing: Text(
         p.isMonthly == true
-            ? '${p.monthlyPrice?.toStringAsFixed(0)} BAM/mj.'
+            ? '${p.monthlyPrice?.toStringAsFixed(0)} USD/mj.'
             : p.isDaily == true
-                ? '${p.dailyPrice?.toStringAsFixed(0)} BAM/dan'
+                ? '${p.dailyPrice?.toStringAsFixed(0)} USD/dan'
                 : '',
         style: const TextStyle(
             fontSize: 12,

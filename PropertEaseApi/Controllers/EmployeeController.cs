@@ -41,9 +41,7 @@ namespace PropertEase.Controllers
         public async Task<IActionResult> Put(int id, [FromForm] EmployeeUpdateDto entity)
         {
             var callerId = int.TryParse(User.FindFirstValue("Id"), out var parsed) ? parsed : 0;
-            var isAdmin = User.IsInRole(AppRoles.Admin);
-            if (!isAdmin && callerId != id)
-                return Forbid();
+            entity.Id = User.IsInRole(AppRoles.Admin) ? id : callerId;
 
             var file = entity.File;
             if (file != null)

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
@@ -196,7 +196,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                         children: [
                           Text(
                               r.totalPrice != null
-                                  ? '${r.totalPrice!.toStringAsFixed(2)} KM'
+                                  ? '${r.totalPrice!.toStringAsFixed(2)} USD'
                                   : '—',
                               style: const TextStyle(
                                   fontWeight: FontWeight.bold, fontSize: 13)),

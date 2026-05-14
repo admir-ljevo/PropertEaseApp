@@ -12,12 +12,10 @@ class PaymentProvider extends BaseProvider<Payment> {
   @override
   Map<String, dynamic> toJson(Payment data) => {};
 
-  Future<void> refundReservation(int reservationId,
-      {bool isClient = false, String? reason}) async {
-    var url =
-        '${AppConfig.apiBase}Payment/RefundReservation/$reservationId?isClient=$isClient';
+  Future<void> refundReservation(int reservationId, {String? reason}) async {
+    var url = '${AppConfig.apiBase}Payment/RefundReservation/$reservationId';
     if (reason != null && reason.isNotEmpty) {
-      url += '&reason=${Uri.encodeQueryComponent(reason)}';
+      url += '?reason=${Uri.encodeQueryComponent(reason)}';
     }
     final response =
         await http.post(Uri.parse(url), headers: createHeaders());

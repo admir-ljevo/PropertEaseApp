@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:propertease_client/config/app_config.dart';
@@ -410,10 +410,10 @@ class PropertyListWidgetState extends State<PropertyListWidget> {
               child: Row(
                 children: [
                   if (p.isMonthly == true)
-                    _priceChip('${p.monthlyPrice} BAM/mj.'),
+                    _priceChip('${p.monthlyPrice} USD/mj.'),
                   if (p.isDaily == true) ...[
                     if (p.isMonthly == true) const SizedBox(width: 8),
-                    _priceChip('${p.dailyPrice} BAM/dan'),
+                    _priceChip('${p.dailyPrice} USD/dan'),
                   ],
                 ],
               ),
