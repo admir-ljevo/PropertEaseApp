@@ -74,5 +74,13 @@ namespace PropertEase.Infrastructure.Repositories.ReservationNotificationReposit
                 .Where(n => n.Id == notificationId && !n.IsDeleted)
                 .ExecuteUpdateAsync(s => s.SetProperty(n => n.IsSeen, true));
         }
+
+        public async Task<int?> GetOwnerIdAsync(int notificationId)
+        {
+            return await _db.ReservationNotifications
+                .Where(n => n.Id == notificationId && !n.IsDeleted)
+                .Select(n => (int?)n.UserId)
+                .FirstOrDefaultAsync();
+        }
     }
 }

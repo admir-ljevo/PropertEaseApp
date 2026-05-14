@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PropertEase.Services.Recommendations;
+using System.Security.Claims;
 
 namespace PropertEase.Controllers;
 
@@ -16,9 +17,10 @@ public class RecommendationController : ControllerBase
         _engine = engine;
     }
 
-    [HttpGet("{userId}")]
-    public async Task<IActionResult> GetRecommendations(int userId)
+    [HttpGet("me")]
+    public async Task<IActionResult> GetRecommendations()
     {
+        var userId = int.TryParse(User.FindFirstValue("Id"), out var id) ? id : 0;
         var propertyIds = await _engine.GetRecommendationsAsync(userId);
         return Ok(propertyIds);
     }

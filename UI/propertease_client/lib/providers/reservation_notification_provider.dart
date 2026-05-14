@@ -25,12 +25,11 @@ class ReservationNotificationProvider with ChangeNotifier {
           'Authorization': 'Bearer ${Authorization.token}',
       };
 
-  Future<List<ReservationNotification>> getByUser(int userId,
+  Future<List<ReservationNotification>> getForMe(
       {int page = 1, int pageSize = 20}) async {
     final url =
-        '${_baseUrl}ReservationNotification/user/$userId?page=$page&pageSize=$pageSize';
-    final response =
-        await _http.get(Uri.parse(url), headers: _headers());
+        '${_baseUrl}ReservationNotification/me?page=$page&pageSize=$pageSize';
+    final response = await _http.get(Uri.parse(url), headers: _headers());
     if (response.statusCode == 200) {
       final List data = jsonDecode(response.body) as List;
       return data
@@ -40,24 +39,23 @@ class ReservationNotificationProvider with ChangeNotifier {
     return [];
   }
 
-  Future<int> getUnseenCount(int userId) async {
-    final url =
-        '${_baseUrl}ReservationNotification/user/$userId/unseen-count';
-    final response =
-        await _http.get(Uri.parse(url), headers: _headers());
+  Future<int> getUnseenCount() async {
+    final url = '${_baseUrl}ReservationNotification/me/unseen-count';
+    final response = await _http.get(Uri.parse(url), headers: _headers());
     if (response.statusCode == 200) {
       return (jsonDecode(response.body) as int?) ?? 0;
     }
     return 0;
   }
 
-  Future<void> markAllSeen(int userId) async {
-    final url = '${_baseUrl}ReservationNotification/mark-seen/$userId';
+  Future<void> markAllSeen() async {
+    final url = '${_baseUrl}ReservationNotification/me/mark-seen';
     await _http.put(Uri.parse(url), headers: _headers());
   }
 
   Future<void> markSeen(int notificationId) async {
-    final url = '${_baseUrl}ReservationNotification/mark-seen-single/$notificationId';
+    final url =
+        '${_baseUrl}ReservationNotification/mark-seen-single/$notificationId';
     await _http.put(Uri.parse(url), headers: _headers());
   }
 }

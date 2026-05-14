@@ -63,12 +63,10 @@ class _ReservationNotificationListScreenState
   }
 
   Future<void> _load() async {
-    final userId = Authorization.userId;
-    if (userId == null) return;
     try {
       final items = await context
           .read<ReservationNotificationProvider>()
-          .getByUser(userId, page: 1, pageSize: _pageSize);
+          .getForMe(page: 1, pageSize: _pageSize);
       if (mounted) {
         setState(() {
           _notifications = items;
@@ -84,14 +82,12 @@ class _ReservationNotificationListScreenState
 
   Future<void> _loadMore() async {
     if (_loadingMore || !_hasMore) return;
-    final userId = Authorization.userId;
-    if (userId == null) return;
     setState(() => _loadingMore = true);
     try {
       final nextPage = _page + 1;
       final items = await context
           .read<ReservationNotificationProvider>()
-          .getByUser(userId, page: nextPage, pageSize: _pageSize);
+          .getForMe(page: nextPage, pageSize: _pageSize);
       if (mounted) {
         setState(() {
           _notifications = [..._notifications, ...items];
@@ -122,9 +118,7 @@ class _ReservationNotificationListScreenState
   }
 
   Future<void> _markAllSeen() async {
-    final userId = Authorization.userId;
-    if (userId == null) return;
-    context.read<ReservationNotificationProvider>().markAllSeen(userId).ignore();
+    context.read<ReservationNotificationProvider>().markAllSeen().ignore();
     setState(() {
       _notifications = _notifications.map((n) => ReservationNotification(
         id: n.id, userId: n.userId, reservationId: n.reservationId,

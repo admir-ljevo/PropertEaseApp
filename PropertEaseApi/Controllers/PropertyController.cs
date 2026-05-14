@@ -47,7 +47,6 @@ namespace PropertEase.Controllers
             return Ok();
         }
 
-        [AllowAnonymous]
         [HttpGet("{id}/Recommendations")]
         [SwaggerOperation(OperationId = "GetRecommendations")]
         public async Task<IActionResult> GetRecommendations(int id)

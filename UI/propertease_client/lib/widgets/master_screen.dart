@@ -102,11 +102,9 @@ class _MasterScreenWidgetState extends State<MasterScreenWidget> {
   }
 
   Future<void> _fetchUnseenNotifCount() async {
-    final userId = Authorization.userId;
-    if (userId == null) return;
     try {
       final provider = context.read<ReservationNotificationProvider>();
-      final count = await provider.getUnseenCount(userId);
+      final count = await provider.getUnseenCount();
       if (mounted) setState(() => _unseenNotifCount = count);
     } catch (_) {}
   }

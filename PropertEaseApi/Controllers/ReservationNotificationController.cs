@@ -18,43 +18,38 @@ namespace PropertEase.Controllers
             _service = service;
         }
 
-        [HttpGet("user/{userId}")]
-        public async Task<IActionResult> GetByUser(int userId, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+        private int GetCallerId() => int.TryParse(User.FindFirstValue("Id"), out var id) ? id : 0;
+
+        [HttpGet("me")]
+        public async Task<IActionResult> GetForMe([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
         {
-            if (!IsAuthorizedForUser(userId)) return Forbid();
             pageSize = Paging.Clamp(pageSize);
-            var result = await _service.GetByUserAsync(userId, page, pageSize);
+            var result = await _service.GetByUserAsync(GetCallerId(), page, pageSize);
             return Ok(result);
         }
 
-        [HttpGet("user/{userId}/unseen-count")]
-        public async Task<IActionResult> GetUnseenCount(int userId)
+        [HttpGet("me/unseen-count")]
+        public async Task<IActionResult> GetUnseenCount()
         {
-            if (!IsAuthorizedForUser(userId)) return Forbid();
-            var count = await _service.GetUnseenCountAsync(userId);
+            var count = await _service.GetUnseenCountAsync(GetCallerId());
             return Ok(count);
         }
 
-        [HttpPut("mark-seen/{userId}")]
-        public async Task<IActionResult> MarkAllSeen(int userId)
+        [HttpPut("me/mark-seen")]
+        public async Task<IActionResult> MarkAllSeen()
         {
-            if (!IsAuthorizedForUser(userId)) return Forbid();
-            await _service.MarkAllSeenAsync(userId);
+            await _service.MarkAllSeenAsync(GetCallerId());
             return Ok();
         }
 
         [HttpPut("mark-seen-single/{id}")]
         public async Task<IActionResult> MarkSingleSeen(int id)
         {
+            var ownerId = await _service.GetOwnerIdAsync(id);
+            if (ownerId == null) return NotFound();
+            if (ownerId != GetCallerId()) return Forbid();
             await _service.MarkSeenAsync(id);
             return Ok();
-        }
-
-        private bool IsAuthorizedForUser(int userId)
-        {
-            if (User.IsInRole(AppRoles.Admin)) return true;
-            var tokenUserId = User.FindFirstValue("Id");
-            return tokenUserId != null && tokenUserId == userId.ToString();
         }
     }
 }
