@@ -36,25 +36,38 @@ class ReservationAddScreenState extends State<ReservationAddScreen> {
   bool isMonthly = false;
   bool isDaily = false;
   bool isActive = false;
+  bool _priceLoading = false;
   late int renterId;
   int numberOfMonths = 0;
   int numberOfDays = 0;
   final _scaffoldKey = GlobalKey<ScaffoldState>();
 
 
-  void setTotalPrice() {
-    final days = calculateNumberOfDays(startDate, endDate);
-    if (widget.property!.isMonthly!) {
-      final fullMonths = days ~/ 30;
-      final remaining = days - (fullMonths * 30);
-      final dailyRate = widget.property!.monthlyPrice! / 30.0;
-      totalPrice = widget.property!.monthlyPrice! * fullMonths + dailyRate * remaining;
+  Future<void> _fetchPricePreview() async {
+    if (startDate == null || endDate == null) return;
+    setState(() => _priceLoading = true);
+    try {
+      final preview = await _reservationProvider.getPricePreview(
+        propertyId: widget.property!.id!,
+        startDate: startDate!,
+        endDate: endDate!,
+      );
+      if (!mounted) return;
+      setState(() {
+        totalPrice = (preview['totalPrice'] as num).toDouble();
+        numberOfDays = preview['numberOfDays'] as int;
+        numberOfMonths = preview['numberOfMonths'] as int;
+        _priceController.text = totalPrice.toStringAsFixed(2);
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        totalPrice = 0;
+        _priceController.text = '0.00';
+      });
+    } finally {
+      if (mounted) setState(() => _priceLoading = false);
     }
-    if (widget.property!.isDaily!)
-      totalPrice = widget.property!.dailyPrice! * days;
-    setState(() {
-      _priceController.text = totalPrice.toStringAsFixed(2);
-    });
   }
 
   int? get userId => Authorization.userId;
@@ -144,14 +157,8 @@ class ReservationAddScreenState extends State<ReservationAddScreen> {
     if (picked == null) return;
 
     if (picked != startDate) {
-      setState(() {
-        startDate = picked;
-        if (widget.property!.isMonthly!)
-          numberOfMonths = calculateNumberOfMonths(startDate, endDate);
-        if (widget.property!.isDaily!)
-          numberOfDays = calculateNumberOfDays(startDate, endDate);
-        setTotalPrice();
-      });
+      setState(() => startDate = picked);
+      await _fetchPricePreview();
     }
   }
 
@@ -217,15 +224,8 @@ class ReservationAddScreenState extends State<ReservationAddScreen> {
     );
 
     if (pickedDate != null && pickedDate != endDate) {
-      setState(() {
-        endDate = pickedDate;
-        if (widget.property!.isMonthly!) {
-          numberOfMonths = calculateNumberOfMonths(startDate, endDate);
-        }
-        if (widget.property!.isDaily!)
-          numberOfDays = calculateNumberOfDays(startDate, endDate);
-        setTotalPrice();
-      });
+      setState(() => endDate = pickedDate);
+      await _fetchPricePreview();
     }
   }
 
@@ -558,16 +558,23 @@ class ReservationAddScreenState extends State<ReservationAddScreen> {
                         fontWeight: FontWeight.bold,
                         color: Colors.black87)),
                 const Spacer(),
-                Text(
-                  startDate != null && endDate != null
-                      ? '${totalPrice.toStringAsFixed(2)} USD'
-                      : '—',
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: _kPrimary,
-                  ),
-                ),
+                _priceLoading
+                    ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: _kPrimary),
+                      )
+                    : Text(
+                        startDate != null && endDate != null
+                            ? '${totalPrice.toStringAsFixed(2)} USD'
+                            : '—',
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: _kPrimary,
+                        ),
+                      ),
               ],
             ),
           ),

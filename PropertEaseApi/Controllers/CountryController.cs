@@ -1,10 +1,12 @@
 using AutoMapper;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using PropertEase.Controllers;
 using PropertEase.Core.Dto.Country;
 using PropertEase.Core.SearchObjects;
 using PropertEase.Services.Services.CountryService;
+using PropertEase.Shared.Constants;
 
 namespace PropertEaseApi.Controllers
 {
@@ -13,6 +15,15 @@ namespace PropertEaseApi.Controllers
         public CountryController(ICountryService baseService, IMapper mapper) : base(baseService, mapper)
         {
         }
+
+        [Authorize(Roles = AppRoles.Admin)]
+        public override Task<CountryDto> Post(CountryUpsertDto insertEntity) => base.Post(insertEntity);
+
+        [Authorize(Roles = AppRoles.Admin)]
+        public override Task<CountryDto> Put(int id, CountryUpsertDto updateEntity) => base.Put(id, updateEntity);
+
+        [Authorize(Roles = AppRoles.Admin)]
+        public override Task<IActionResult> Delete(int id) => base.Delete(id);
 
         [HttpGet("GetFilteredData")]
         public async Task<IActionResult> GetFilteredData([FromQuery] string? search, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)

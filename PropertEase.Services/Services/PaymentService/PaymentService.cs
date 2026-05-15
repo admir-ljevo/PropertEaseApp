@@ -106,11 +106,14 @@ namespace PropertEase.Services.Services.PaymentService
             return (paymentId, approvalUrl);
         }
 
-        public async Task<(string PaymentId, string ApprovalUrl)> CreatePayPalPaymentForReservationAsync(int reservationId)
+        public async Task<(string PaymentId, string ApprovalUrl)> CreatePayPalPaymentForReservationAsync(int reservationId, int callerId)
         {
             var db = _unitOfWork.GetDatabaseContext();
             var reservation = await db.PropertyReservations.FindAsync(reservationId)
                 ?? throw new NotFoundException("Reservation", reservationId);
+
+            if (reservation.ClientId != callerId)
+                throw new BusinessException("Nije moguće platiti rezervaciju drugog korisnika.");
 
             if (reservation.Status != ReservationStatus.Confirmed)
                 throw new BusinessException("Plaćanje je moguće samo za potvrđene rezervacije.");
@@ -140,10 +143,10 @@ namespace PropertEase.Services.Services.PaymentService
             // guard against double payment
             var alreadyPaid = await db.Payments
                 .AnyAsync(p => p.ReservationId == dto.ReservationId
-                               && p.Status == PaymentStatus.Completed
+                               && (p.Status == PaymentStatus.Completed || p.Status == PaymentStatus.Pending)
                                && !p.IsDeleted);
             if (alreadyPaid)
-                throw new BusinessException("Rezervacija je već plaćena.");
+                throw new BusinessException("Rezervacija je već plaćena ili je plaćanje u toku.");
 
             await ExecutePayPalPaymentAsync(dto.PayPalPaymentId, dto.PayPalPayerId, reservation.TotalPrice);
 

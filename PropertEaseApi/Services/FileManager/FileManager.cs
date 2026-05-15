@@ -38,6 +38,9 @@ namespace PropertEase.Services.FileManager
             if (!AllowedExtensions.Contains(ext))
                 throw new InvalidOperationException($"Ekstenzija '{ext}' nije dozvoljena.");
 
+            if (!FileValidator.IsValidImage(file))
+                throw new InvalidOperationException("Fajl nije validna slika.");
+
             var filePath = GetFilePath(file);
             await using (var fileStream = new FileStream(filePath, FileMode.Create))
             {

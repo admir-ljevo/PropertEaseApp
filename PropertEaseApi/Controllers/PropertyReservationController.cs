@@ -114,6 +114,27 @@ namespace PropertEase.Controllers
             return Ok(result);
         }
 
+        [HttpGet("price-preview")]
+        [Authorize]
+        public async Task<IActionResult> PricePreview(
+            [FromQuery] int propertyId,
+            [FromQuery] DateTime startDate,
+            [FromQuery] DateTime endDate)
+        {
+            if (startDate >= endDate)
+                return BadRequest("Datum odlaska mora biti poslije datuma dolaska.");
+            try
+            {
+                var (totalPrice, numberOfDays, numberOfMonths) =
+                    await _reservationService.CalculatePriceAsync(propertyId, startDate, endDate);
+                return Ok(new { totalPrice, numberOfDays, numberOfMonths });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
+        }
+
         [HttpPost("{id}/confirm")]
         [Authorize(Roles = AppRoles.Renter + "," + AppRoles.Admin)]
         public async Task<IActionResult> Confirm(int id)

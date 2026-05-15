@@ -110,9 +110,9 @@ builder.Services.AddHostedService<NotificationPushWorker>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.Configure<FormOptions>(o =>
 {
-    o.ValueLengthLimit = int.MaxValue;
-    o.MultipartBodyLengthLimit = int.MaxValue;
-    o.MemoryBufferThreshold = int.MaxValue;
+    o.ValueLengthLimit = 10 * 1024 * 1024;
+    o.MultipartBodyLengthLimit = 10 * 1024 * 1024;
+    o.MemoryBufferThreshold = 1 * 1024 * 1024;
 });
 
 // RABBITMQ 

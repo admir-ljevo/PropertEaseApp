@@ -33,6 +33,9 @@ namespace PropertEase.Controllers
         [NonAction] public override Task<NotificationDto> Put(int id, NotificationUpsertDto updateEntity) => throw new NotSupportedException();
 
         [Authorize(Roles = AppRoles.Admin)]
+        public override Task<IActionResult> Delete(int id) => base.Delete(id);
+
+        [Authorize(Roles = AppRoles.Admin)]
         [HttpPost("Add")]
         public async Task<NotificationDto> Add([FromForm] NotificationUpsertDto notification)
         {

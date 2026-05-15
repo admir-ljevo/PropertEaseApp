@@ -67,6 +67,22 @@ namespace PropertEase.Controllers
         }
 
         [Authorize(Roles = AppRoles.Admin)]
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Put(int id, [FromBody] ApplicationRoleDto dto)
+        {
+            try
+            {
+                dto.Id = id;
+                var result = await applicationRolesService.UpdateAsync(dto);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
+            }
+        }
+
+        [Authorize(Roles = AppRoles.Admin)]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {

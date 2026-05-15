@@ -40,6 +40,18 @@ namespace PropertEase.Services.Services.ApplicationRolesService
             return _unitOfWork.ApplicationRolesRepository.GetByRoleLevelOrName(roleLeveleId, roleName);
         }
 
+        public async Task<ApplicationRoleDto> UpdateAsync(ApplicationRoleDto dto)
+        {
+            var db = _unitOfWork.GetDatabaseContext();
+            var role = await db.Roles.FindAsync(dto.Id)
+                ?? throw new KeyNotFoundException($"Role {dto.Id} not found.");
+            role.Name = dto.Name;
+            role.NormalizedName = dto.Name?.ToUpperInvariant();
+            role.RoleLevel = dto.RoleLevel;
+            await db.SaveChangesAsync();
+            return dto;
+        }
+
         public async Task RemoveByIdAsync(int id, bool isSoft = true)
         {
             var db = _unitOfWork.GetDatabaseContext();

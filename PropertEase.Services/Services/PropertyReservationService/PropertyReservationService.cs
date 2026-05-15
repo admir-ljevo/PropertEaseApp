@@ -37,9 +37,8 @@ namespace PropertEase.Services.Services.PropertyReservationService
             entityDto.RenterId = property.ApplicationUserId;
 
             // server side price calculation
-            var totalHours = (entityDto.DateOfOccupancyEnd - entityDto.DateOfOccupancyStart).TotalHours;
-            var totalDays   = (int)Math.Ceiling(totalHours / 24.0);
-            var totalMonths = (int)Math.Floor(totalDays / 30.0);
+            var totalDays     = (entityDto.DateOfOccupancyEnd.Date - entityDto.DateOfOccupancyStart.Date).Days;
+            var totalMonths   = (int)Math.Floor(totalDays / 30.0);
             var remainingDays = totalDays - (totalMonths * 30);
 
             entityDto.NumberOfDays   = Math.Max(totalDays, 1);
@@ -302,11 +301,20 @@ namespace PropertEase.Services.Services.PropertyReservationService
             entity.IsDaily              = dto.IsDaily;
 
             // server side calculation
-            var totalHours = (entity.DateOfOccupancyEnd - entity.DateOfOccupancyStart).TotalHours;
-            var days   = (int)Math.Ceiling(totalHours / 24.0);
-            var months = (int)Math.Ceiling(days / 30.0);
+            var days          = (entity.DateOfOccupancyEnd.Date - entity.DateOfOccupancyStart.Date).Days;
+            var months        = (int)Math.Floor(days / 30.0);
+            var remainingDays = days - (months * 30);
             entity.NumberOfDays   = Math.Max(days, 1);
             entity.NumberOfMonths = Math.Max(months, 1);
+
+            var property = await db.Properties.FindAsync(entity.PropertyId);
+            if (property != null)
+            {
+                if (property.IsDaily)
+                    entity.TotalPrice = (double)(property.DailyPrice * entity.NumberOfDays);
+                if (property.IsMonthly)
+                    entity.TotalPrice = (double)(property.MonthlyPrice * months + (property.MonthlyPrice / 30.0) * remainingDays);
+            }
 
             // state machine
             if (entity.Status != dto.Status)
@@ -475,5 +483,23 @@ namespace PropertEase.Services.Services.PropertyReservationService
 
         public async Task<PropertEase.Core.Dto.PagedResult<ReservationSummaryDto>> GetRenterSummariesAsync(int renterId, int page = 1, int pageSize = 10)
             => await unitOfWork.PropertyReservationRepository.GetRenterSummariesAsync(renterId, page, pageSize);
+
+        public async Task<(double totalPrice, int numberOfDays, int numberOfMonths)> CalculatePriceAsync(int propertyId, DateTime start, DateTime end)
+        {
+            var property = await unitOfWork.PropertyRepository.GetById(propertyId)
+                ?? throw new KeyNotFoundException($"Property {propertyId} not found.");
+
+            var days          = (end.Date - start.Date).Days;
+            var months        = (int)Math.Floor(days / 30.0);
+            var remainingDays = days - (months * 30);
+
+            double totalPrice = 0;
+            if (property.IsDaily)
+                totalPrice = (double)(property.DailyPrice * Math.Max(days, 1));
+            if (property.IsMonthly)
+                totalPrice = (double)(property.MonthlyPrice * months + (property.MonthlyPrice / 30.0) * remainingDays);
+
+            return (totalPrice, Math.Max(days, 1), Math.Max(months, 1));
+        }
     }
 }

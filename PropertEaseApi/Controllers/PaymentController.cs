@@ -97,7 +97,8 @@ namespace PropertEase.Controllers
         [HttpPost("CreatePayPalOrder")]
         public async Task<IActionResult> CreatePayPalOrder([FromQuery] int reservationId)
         {
-            var (paymentId, approvalUrl) = await _paymentService.CreatePayPalPaymentForReservationAsync(reservationId);
+            var callerId = int.Parse(User.FindFirstValue("Id")!);
+            var (paymentId, approvalUrl) = await _paymentService.CreatePayPalPaymentForReservationAsync(reservationId, callerId);
             return Ok(new { paymentId, approvalUrl });
         }
 

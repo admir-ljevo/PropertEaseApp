@@ -101,6 +101,27 @@ class PropertyReservationProvider extends BaseProvider<PropertyReservation> {
         'Kreiranje rezervacije neuspješno: ${response.statusCode} ${response.body}');
   }
 
+  Future<Map<String, dynamic>> getPricePreview({
+    required int propertyId,
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    final url = Uri.parse(
+      '${BaseProvider.baseUrl}PropertyReservation/price-preview'
+      '?propertyId=$propertyId'
+      '&startDate=${startDate.toIso8601String()}'
+      '&endDate=${endDate.toIso8601String()}',
+    );
+    final response = await http.get(url, headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ${Authorization.token}',
+    });
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+    throw Exception('Price preview failed: ${response.statusCode}');
+  }
+
   Future<SummaryPage> getClientSummaries(int clientId,
           {int page = 1, int pageSize = 10}) =>
       _fetchSummaries('client/$clientId/summary', page, pageSize);
