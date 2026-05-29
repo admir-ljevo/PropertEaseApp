@@ -141,4 +141,25 @@ class PropertyReservationProvider extends BaseProvider<PropertyReservation> {
     }
     throw Exception('Failed to load summaries (${response.statusCode})');
   }
+
+  Future<Map<String, dynamic>> getPricePreview({
+    required int propertyId,
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    final url = Uri.parse(
+      '${AppConfig.apiBase}PropertyReservation/price-preview'
+      '?propertyId=$propertyId'
+      '&startDate=${startDate.toIso8601String()}'
+      '&endDate=${endDate.toIso8601String()}',
+    );
+    final response = await http.get(url, headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ${Authorization.token}',
+    });
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+    throw Exception('Nije moguće učitati pregled cijene.');
+  }
 }

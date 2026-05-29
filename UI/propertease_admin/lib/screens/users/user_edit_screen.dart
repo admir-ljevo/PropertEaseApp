@@ -119,7 +119,7 @@ class UserEditScreenState extends State<UserEditScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Greška. Pokušajte ponovo.'), backgroundColor: Colors.red),
+          SnackBar(content: Text(e.toString().replaceFirst('Exception: ', '')), backgroundColor: Colors.red),
         );
       }
     }

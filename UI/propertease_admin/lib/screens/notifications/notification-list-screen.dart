@@ -295,7 +295,7 @@ class _NewsCardState extends State<_NewsCard> {
       widget.onDeleted();
     } catch (e) {
       messenger.showSnackBar(
-        const SnackBar(content: Text('Greška pri brisanju. Pokušajte ponovo.'), backgroundColor: Colors.red),
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', '')), backgroundColor: Colors.red),
       );
     }
   }

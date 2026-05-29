@@ -75,7 +75,7 @@ class _ReservationDetailsScreenState extends State<ReservationDetailsScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Greška. Pokušajte ponovo.'), backgroundColor: Colors.red),
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', '')), backgroundColor: Colors.red),
       );
     } finally {
       if (mounted) setState(() => _confirming = false);

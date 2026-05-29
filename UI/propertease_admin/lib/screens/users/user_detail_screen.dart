@@ -108,7 +108,7 @@ class UserDetailScreenState extends State<UserDetailScreen> {
       await _userProvider.assignRole(widget.user!.id!, selected!.id!);
       await _loadRoles();
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Greška. Pokušajte ponovo.'), backgroundColor: Colors.red));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', '')), backgroundColor: Colors.red));
     }
   }
 
@@ -141,7 +141,7 @@ class UserDetailScreenState extends State<UserDetailScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Greška pri uklanjanju uloge. Pokušajte ponovo.'), backgroundColor: Colors.red),
+          SnackBar(content: Text(e.toString().replaceFirst('Exception: ', '')), backgroundColor: Colors.red),
         );
       }
     }

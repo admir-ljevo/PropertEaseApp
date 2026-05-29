@@ -269,7 +269,7 @@ class _ConversationListScreenState extends State<ConversationListScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Greška. Pokušajte ponovo.')));
+            .showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', '')), backgroundColor: Colors.red));
       }
     }
   }
@@ -296,7 +296,7 @@ class _ConversationListScreenState extends State<ConversationListScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Greška pri kreiranju razgovora. Pokušajte ponovo.')));
+            SnackBar(content: Text(e.toString().replaceFirst('Exception: ', '')), backgroundColor: Colors.red));
       }
     }
   }

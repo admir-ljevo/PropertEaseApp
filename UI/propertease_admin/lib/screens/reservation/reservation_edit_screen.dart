@@ -24,6 +24,8 @@ class _ReservationEditScreenState extends State<ReservationEditScreen> {
   int _guests = 1;
 
   bool _submitted = false;
+  double? _previewPrice;
+  bool _loadingPrice = false;
 
   int get _computedDays =>
       (_startDate != null && _endDate != null && _endDate!.isAfter(_startDate!))
@@ -50,6 +52,25 @@ class _ReservationEditScreenState extends State<ReservationEditScreen> {
     super.dispose();
   }
 
+  Future<void> _fetchPricePreview() async {
+    final propertyId = widget.reservation?.propertyId;
+    if (propertyId == null || _startDate == null || _endDate == null) return;
+    if (!_endDate!.isAfter(_startDate!)) return;
+    setState(() => _loadingPrice = true);
+    try {
+      final preview = await _reservationProvider.getPricePreview(
+        propertyId: propertyId,
+        startDate: _startDate!,
+        endDate: _endDate!,
+      );
+      if (mounted) setState(() => _previewPrice = (preview['totalPrice'] as num).toDouble());
+    } catch (_) {
+      if (mounted) setState(() => _previewPrice = null);
+    } finally {
+      if (mounted) setState(() => _loadingPrice = false);
+    }
+  }
+
   Future<void> _pickDate(bool isStart) async {
     final initial = (isStart ? _startDate : _endDate) ?? DateTime.now();
     final picked = await showDatePicker(
@@ -60,12 +81,9 @@ class _ReservationEditScreenState extends State<ReservationEditScreen> {
     );
     if (picked != null) {
       setState(() {
-        if (isStart) {
-          _startDate = picked;
-        } else {
-          _endDate = picked;
-        }
+        if (isStart) { _startDate = picked; } else { _endDate = picked; }
       });
+      _fetchPricePreview();
     }
   }
 
@@ -108,11 +126,9 @@ class _ReservationEditScreenState extends State<ReservationEditScreen> {
       }
     } catch (e) {
       if (mounted) {
+        final msg = e.toString().replaceFirst('Exception: ', '');
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Greška pri ažuriranju rezervacije. Pokušajte ponovo.'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text(msg), backgroundColor: Colors.red),
         );
       }
     }
@@ -193,8 +209,10 @@ class _ReservationEditScreenState extends State<ReservationEditScreen> {
                             DropdownMenuItem(
                                 value: false, child: Text('Dnevno')),
                           ],
-                          onChanged: (val) =>
-                              setState(() => _isMonthly = val ?? true),
+                          onChanged: (val) {
+                            setState(() => _isMonthly = val ?? true);
+                            _fetchPricePreview();
+                          },
                         ),
                       ),
                     ],
@@ -229,17 +247,26 @@ class _ReservationEditScreenState extends State<ReservationEditScreen> {
                 title: 'Cijena',
                 icon: Icons.attach_money,
                 children: [
-                  TextFormField(
-                    initialValue: (widget.reservation?.totalPrice ?? 0) > 0
-                        ? widget.reservation!.totalPrice!.toStringAsFixed(2)
-                        : '—',
-                    readOnly: true,
+                  InputDecorator(
                     decoration: const InputDecoration(
-                      labelText: 'Ukupna cijena (USD)',
+                      labelText: 'Ukupna cijena (BAM)',
                       prefixIcon: Icon(Icons.attach_money),
                       border: OutlineInputBorder(),
                       filled: true,
                     ),
+                    child: _loadingPrice
+                        ? const SizedBox(
+                            height: 16,
+                            width: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2))
+                        : Text(
+                            _previewPrice != null
+                                ? '${_previewPrice!.toStringAsFixed(2)} BAM'
+                                : (widget.reservation?.totalPrice ?? 0) > 0
+                                    ? '${widget.reservation!.totalPrice!.toStringAsFixed(2)} BAM'
+                                    : '—',
+                            style: const TextStyle(fontSize: 14),
+                          ),
                   ),
                 ],
               ),

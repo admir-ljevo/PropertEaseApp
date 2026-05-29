@@ -158,10 +158,10 @@ class _PropertyEditScreenState extends State<PropertyEditScreen> {
           const SnackBar(content: Text('Slika uklonjena'), backgroundColor: Colors.green),
         );
       }
-    } catch (_) {
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Greška pri uklanjanju slike'), backgroundColor: Colors.red),
+          SnackBar(content: Text(e.toString().replaceFirst('Exception: ', '')), backgroundColor: Colors.red),
         );
       }
     }
