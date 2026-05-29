@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using PropertEase.Core.Exceptions;
 
 namespace PropertEase.Api.Middleware
@@ -37,6 +38,8 @@ namespace PropertEase.Api.Middleware
                 InvalidOperationException => (StatusCodes.Status400BadRequest, exception.Message),
                 ArgumentException => (StatusCodes.Status400BadRequest, exception.Message),
                 UnauthorizedAccessException => (StatusCodes.Status403Forbidden, "Access denied."),
+                DbUpdateException dbEx when dbEx.InnerException?.Message.Contains("UserNameIndex") == true
+                    => (StatusCodes.Status400BadRequest, "Korisničko ime je već zauzeto."),
                 _ => (StatusCodes.Status500InternalServerError, "An unexpected error occurred.")
             };
 

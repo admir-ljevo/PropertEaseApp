@@ -11,6 +11,6 @@ namespace PropertEase.Services.Services.ApplicationRolesService
     public interface IApplicationRolesService: IBaseService<ApplicationRoleDto>
     {
         Task<ApplicationRoleDto> GetByRoleLevelIdOrName(int roleLeveleId, string roleName);
-
+        Task<(List<ApplicationRoleDto> items, int totalCount)> GetFilteredAsync(string? search, int page, int pageSize);
     }
 }

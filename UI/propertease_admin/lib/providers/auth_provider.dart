@@ -29,10 +29,18 @@ class AuthProvider with ChangeNotifier {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
 
+        final role = data['role'] as String?;
+        if (role != 'Admin' && role != 'Renter') {
+          _errorMessage = 'Nemate dozvolu za pristup ovoj aplikaciji.';
+          _isLoading = false;
+          notifyListeners();
+          return false;
+        }
+
         Authorization.token = data['token'] as String?;
         Authorization.username = username;
         Authorization.userId = data['userId'] as int?;
-        Authorization.role = data['role'] as String?;
+        Authorization.role = role;
         Authorization.roleId = data['roleId'] as int?;
         Authorization.isRenter = data['isRenter'] as bool? ?? false;
 

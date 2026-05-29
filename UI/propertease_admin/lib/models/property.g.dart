@@ -50,6 +50,7 @@ Property _$PropertyFromJson(Map<String, dynamic> json) => Property(
       longitude: (json['longitude'] as num?)?.toDouble() ?? 0,
       averageRating: (json['averageRating'] as num?)?.toDouble() ?? 0,
       isAvailable: json['isAvailable'] as bool? ?? true,
+      reason: json['reason'] as String?,
     )
       ..availableFrom = json['availableFrom'] == null
           ? null
@@ -104,6 +105,7 @@ Map<String, dynamic> _$PropertyToJson(Property instance) => <String, dynamic>{
       'longitude': instance.longitude,
       'averageRating': instance.averageRating,
       'isAvailable': instance.isAvailable,
+      'reason': instance.reason,
       'propertyType': instance.propertyType,
       'city': instance.city,
     };

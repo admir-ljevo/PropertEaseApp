@@ -63,8 +63,8 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Greška: $e'),
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Greška pri promjeni lozinke. Pokušajte ponovo.'),
           backgroundColor: Colors.red,
         ));
       }

@@ -43,7 +43,7 @@ class _PropertyTypeListScreenState extends State<PropertyTypeListScreen> {
       });
       if (mounted) setState(() { _items = result.result; _totalCount = result.totalCount; });
     } catch (e) {
-      _showError('Failed to load: $e');
+      _showError('Nije moguće učitati podatke.');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -82,7 +82,7 @@ class _PropertyTypeListScreenState extends State<PropertyTypeListScreen> {
       }
       await _load();
     } catch (e) {
-      _showError('Error: $e');
+      _showError(e.toString().replaceFirst('Exception: ', ''));
     }
   }
 
@@ -108,7 +108,7 @@ class _PropertyTypeListScreenState extends State<PropertyTypeListScreen> {
       if (_items.length == 1 && _currentPage > 1) setState(() => _currentPage--);
       await _load();
     } catch (e) {
-      _showError('Error deleting: $e');
+      _showError(e.toString().replaceFirst('Exception: ', ''));
     }
   }
 

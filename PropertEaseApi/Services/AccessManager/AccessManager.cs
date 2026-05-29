@@ -126,14 +126,12 @@ namespace PropertEase.Services.AccessManager
                     Description = "Korisnik nije pronađen."
                 });
 
-            var removeResult = await _userManager.RemovePasswordAsync(user);
-            if (!removeResult.Succeeded) return removeResult;
-
-            var addResult = await _userManager.AddPasswordAsync(user, newPassword);
-            if (addResult.Succeeded)
+            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+            var result = await _userManager.ResetPasswordAsync(user, token, newPassword);
+            if (result.Succeeded)
                 _cache.Remove(OtpCacheKey(email));
 
-            return addResult;
+            return result;
         }
 
         public async Task<IdentityResult> AdminResetPassword(string userId, string newPassword)
@@ -142,11 +140,8 @@ namespace PropertEase.Services.AccessManager
             if (user == null)
                 return IdentityResult.Failed(new IdentityError { Description = $"User {userId} not found." });
 
-            var removeResult = await _userManager.RemovePasswordAsync(user);
-            if (!removeResult.Succeeded)
-                return removeResult;
-
-            return await _userManager.AddPasswordAsync(user, newPassword);
+            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+            return await _userManager.ResetPasswordAsync(user, token, newPassword);
         }
 
         private string GenerateToken(ApplicationUserDto user, IList<string> roleNames)
@@ -155,7 +150,7 @@ namespace PropertEase.Services.AccessManager
 
             var tokenKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration.GetSection(ConfigurationValues.TokenKey).Value));
             var signInCreds = new SigningCredentials(tokenKey, SecurityAlgorithms.HmacSha256Signature);
-            var token = new JwtSecurityToken(claims: claims, expires: DateTime.Now.AddMinutes(int.Parse(_configuration.GetSection(ConfigurationValues.TokenValidityInMinutes).Value)), signingCredentials: signInCreds);
+            var token = new JwtSecurityToken(claims: claims, expires: DateTime.UtcNow.AddMinutes(int.Parse(_configuration.GetSection(ConfigurationValues.TokenValidityInMinutes).Value)), signingCredentials: signInCreds);
 
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
@@ -191,7 +186,7 @@ namespace PropertEase.Services.AccessManager
             var actualUser = await _userManager.FindByNameAsync(username)
                           ?? await _userManager.FindByEmailAsync(username);
 
-            if (actualUser == null || !actualUser.Active)
+            if (actualUser == null || !actualUser.Active || actualUser.IsDeleted)
                 throw new UserNotFoundException();
 
             if (!await _userManager.CheckPasswordAsync(actualUser, password))
@@ -202,6 +197,8 @@ namespace PropertEase.Services.AccessManager
                 throw new UserNotFoundException();
 
             var roleNames = await _userManager.GetRolesAsync(actualUser);
+            if (roleNames.Count == 0)
+                throw new UnauthorizedAccessException("Korisnik nema dodijeljenu ulogu.");
 
             var roleName = roleNames.Contains(AppRoles.Admin) ? AppRoles.Admin : roleNames.FirstOrDefault();
             var roleId = user.UserRoles?.FirstOrDefault(r => r.Role?.Name == roleName)?.RoleId;

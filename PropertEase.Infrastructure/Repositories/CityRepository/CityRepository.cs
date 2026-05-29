@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 using PropertEase.Core.Dto.City;
 using PropertEase.Core.Entities;
 using PropertEase.Infrastructure;
@@ -30,6 +31,14 @@ namespace PropertEase.Infrastructure.Repositories.CityRepository
             return await ProjectToListAsync<CityDto>(DatabaseContext.Cities.Where(c => !c.IsDeleted && c.Name == name));
         }
 
-
+        public async Task<(List<CityDto> items, int totalCount)> GetFilteredAsync(string? search, int page, int pageSize)
+        {
+            var query = DatabaseContext.Cities.Where(c => !c.IsDeleted);
+            if (!string.IsNullOrWhiteSpace(search))
+                query = query.Where(c => c.Name != null && c.Name.Contains(search));
+            var totalCount = await query.CountAsync();
+            var items = await ProjectToListAsync<CityDto>(query.OrderBy(c => c.Name).Skip((page - 1) * pageSize).Take(pageSize));
+            return (items, totalCount);
+        }
     }
 }

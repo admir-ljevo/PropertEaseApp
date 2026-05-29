@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PropertEase.Services.Reports;
 using PropertEase.Shared.Constants;
+using System.Security.Claims;
 
 namespace PropertEase.Controllers;
 
@@ -23,8 +24,9 @@ public class ReportController : ControllerBase
         [FromQuery] DateTime? from,
         [FromQuery] DateTime? to)
     {
-        var pdf = await _reportService.GenerateReservationReportAsync(ownerId, from, to);
-        return File(pdf, "application/pdf", $"rezervacije_{DateTime.Now:yyyyMMdd}.pdf");
+        var resolvedOwnerId = ResolveOwnerId(ownerId);
+        var pdf = await _reportService.GenerateReservationReportAsync(resolvedOwnerId, from, to);
+        return File(pdf, "application/pdf", $"rezervacije_{DateTime.UtcNow:yyyyMMdd}.pdf");
     }
 
     [HttpGet("revenue")]
@@ -33,8 +35,9 @@ public class ReportController : ControllerBase
         [FromQuery] DateTime? from,
         [FromQuery] DateTime? to)
     {
-        var pdf = await _reportService.GenerateRevenueReportAsync(ownerId, from, to);
-        return File(pdf, "application/pdf", $"prihodi_{DateTime.Now:yyyyMMdd}.pdf");
+        var resolvedOwnerId = ResolveOwnerId(ownerId);
+        var pdf = await _reportService.GenerateRevenueReportAsync(resolvedOwnerId, from, to);
+        return File(pdf, "application/pdf", $"prihodi_{DateTime.UtcNow:yyyyMMdd}.pdf");
     }
 
     [HttpGet("payments")]
@@ -43,7 +46,15 @@ public class ReportController : ControllerBase
         [FromQuery] DateTime? from,
         [FromQuery] DateTime? to)
     {
-        var pdf = await _reportService.GeneratePaymentReportAsync(ownerId, from, to);
-        return File(pdf, "application/pdf", $"placanja_{DateTime.Now:yyyyMMdd}.pdf");
+        var resolvedOwnerId = ResolveOwnerId(ownerId);
+        var pdf = await _reportService.GeneratePaymentReportAsync(resolvedOwnerId, from, to);
+        return File(pdf, "application/pdf", $"placanja_{DateTime.UtcNow:yyyyMMdd}.pdf");
+    }
+
+    private int? ResolveOwnerId(int? queriedOwnerId)
+    {
+        if (!User.IsInRole(AppRoles.Admin) && User.IsInRole(AppRoles.Renter))
+            return int.Parse(User.FindFirstValue("Id")!);
+        return queriedOwnerId;
     }
 }

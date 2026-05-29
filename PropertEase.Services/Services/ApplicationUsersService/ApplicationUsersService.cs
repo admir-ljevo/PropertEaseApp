@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using PropertEase.Core.Dto;
 using PropertEase.Core.Dto.ApplicationUser;
 using PropertEase.Core.Dto.Person;
@@ -152,6 +153,7 @@ namespace PropertEase.Services.Services.ApplicationUsersService
             {
                 var editedUser = await _unitOfWork.ApplicationUsersRepository.GetByIdAsync(user.Id);
                 var editUser = await _unitOfWork.ApplicationUsersRepository.GetByIdAsync(user.Id);
+
                 editUser.Person.FirstName = user.FirstName;
                 editUser.Person.LastName = user.LastName;
                 editUser.Person.MarriageStatus = 0;
@@ -196,10 +198,9 @@ namespace PropertEase.Services.Services.ApplicationUsersService
 
                 return editUser;
             }
-            catch (Exception ex)
+            catch
             {
-
-                throw new Exception(ex.Message);
+                throw;
             }
         }
 
@@ -208,6 +209,7 @@ namespace PropertEase.Services.Services.ApplicationUsersService
             try
             {
                 var editUser = await _unitOfWork.ApplicationUsersRepository.GetByIdAsync(user.Id);
+
                 editUser.Person.FirstName = user.FirstName;
                 editUser.Person.LastName = user.LastName;
                 editUser.Person.MarriageStatus = user.MarriageStatus;
@@ -301,6 +303,10 @@ namespace PropertEase.Services.Services.ApplicationUsersService
             if (hasActiveReservations)
                 throw new InvalidOperationException("Cannot delete a user that has active or pending reservations.");
 
+            var hasActiveProperties = db.Properties.Any(p => p.ApplicationUserId == id && !p.IsDeleted);
+            if (hasActiveProperties)
+                throw new InvalidOperationException("Ne možete obrisati korisnika koji ima aktivne nekretnine.");
+
             foreach (var n in db.Notifications.Where(n => n.UserId == id && !n.IsDeleted).ToList())
                 n.IsDeleted = true;
             foreach (var n in db.ReservationNotifications.Where(n => n.UserId == id && !n.IsDeleted).ToList())
@@ -315,7 +321,11 @@ namespace PropertEase.Services.Services.ApplicationUsersService
             // reservations payments messages and ratings are preserved 
 
             var user = await db.Users.FindAsync(id);
-            if (user != null) user.IsDeleted = true;
+            if (user != null)
+            {
+                user.IsDeleted = true;
+                user.Active = false;
+            }
 
             await _unitOfWork.SaveChangesAsync();
         }

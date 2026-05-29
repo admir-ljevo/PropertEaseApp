@@ -90,7 +90,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   static String? _validateEmail(String? v) {
     if (v == null || v.trim().isEmpty) return 'Unesite email adresu';
-    final re = RegExp(r'^[\w\-.+]+@[\w\-]+\.[a-zA-Z]{2,}$');
+    final re = RegExp(r'^[\w\-.+]+@([\w\-]+\.)+[a-zA-Z]{2,}$');
     if (!re.hasMatch(v.trim())) return 'Unesite ispravnu email adresu';
     return null;
   }

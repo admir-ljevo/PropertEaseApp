@@ -26,13 +26,9 @@ class UserProvider with ChangeNotifier {
     _endpoint = 'ApplicationUser';
   }
   bool isValidResponse(Response response) {
-    if (response.statusCode < 299) {
-      return true;
-    } else if (response.statusCode == 401) {
-      throw Exception("Wrong credentials");
-    } else {
-      throw Exception("Something else is wrong");
-    }
+    if (response.statusCode < 300) return true;
+    if (response.statusCode == 401) throw Exception('Sesija je istekla. Prijavite se ponovo.');
+    throw Exception(_extractMessage(response.body, response.statusCode));
   }
 
   Future<void> deleteById(int? id) async {
@@ -40,15 +36,9 @@ class UserProvider with ChangeNotifier {
     final headers = createHeaders();
 
     final response = await http.delete(Uri.parse(url), headers: headers);
-    print(url);
-    if (response.statusCode == 200) {
-      print("User deleted successfully");
-    } else if (response.statusCode == 404) {
-      throw Exception("User not found");
-    } else {
-      throw Exception(
-          "Failed to delete user. Status code: ${response.statusCode}");
-    }
+    if (response.statusCode == 200) return;
+    final msg = _extractMessage(response.body, response.statusCode);
+    throw Exception(msg);
   }
 
   Future<ApplicationUser> getUserById(int id) async {
@@ -96,17 +86,10 @@ class UserProvider with ChangeNotifier {
     var headers = createHeaders();
     var response = await http.get(uri, headers: headers);
 
-    try {
-      if (isValidResponse(response)) {
-        return (jsonDecode(response.body) as List)
-            .map((item) => ApplicationUser.fromJson(item))
-            .toList();
-      } else {
-        throw Exception("Not valid response");
-      }
-    } catch (e) {
-      throw Exception(response.statusCode);
-    }
+    isValidResponse(response);
+    return (jsonDecode(response.body) as List)
+        .map((item) => ApplicationUser.fromJson(item))
+        .toList();
   }
 
   Future<List<ApplicationUser>> getEmployees() async {
@@ -115,17 +98,10 @@ class UserProvider with ChangeNotifier {
     var headers = createHeaders();
     var response = await http.get(uri, headers: headers);
 
-    try {
-      if (isValidResponse(response)) {
-        return (jsonDecode(response.body) as List)
-            .map((item) => ApplicationUser.fromJson(item))
-            .toList();
-      } else {
-        throw Exception("Not valid response: ");
-      }
-    } catch (e) {
-      throw Exception(response.statusCode);
-    }
+    isValidResponse(response);
+    return (jsonDecode(response.body) as List)
+        .map((item) => ApplicationUser.fromJson(item))
+        .toList();
   }
 
   Future<SearchResult<ApplicationUser>> get({dynamic filter}) async {
@@ -140,22 +116,14 @@ class UserProvider with ChangeNotifier {
     var headers = createHeaders();
     var response = await http.get(uri, headers: headers);
 
-    try {
-      if (isValidResponse(response)) {
-        final decoded = jsonDecode(response.body);
-        final List items = decoded['items'] as List;
-        final result = SearchResult<ApplicationUser>();
-        result.totalCount = (decoded['totalCount'] as int?) ?? 0;
-        result.count = items.length;
-        result.result =
-            items.map((item) => ApplicationUser.fromJson(item)).toList();
-        return result;
-      } else {
-        throw Exception("Not valid response");
-      }
-    } catch (e) {
-      throw Exception(response.statusCode);
-    }
+    isValidResponse(response);
+    final decoded = jsonDecode(response.body);
+    final List items = decoded['items'] as List;
+    final result = SearchResult<ApplicationUser>();
+    result.totalCount = (decoded['totalCount'] as int?) ?? 0;
+    result.count = items.length;
+    result.result = items.map((item) => ApplicationUser.fromJson(item)).toList();
+    return result;
   }
 
   Future<Map<String, dynamic>?> signIn(String userName, String password) async {
@@ -333,7 +301,7 @@ class UserProvider with ChangeNotifier {
       final response = await request.send();
       if (response.statusCode != 200) {
         final body = await response.stream.bytesToString();
-        throw Exception('Greška pri ažuriranju profila (${response.statusCode}): $body');
+        throw Exception(_extractMessage(body, response.statusCode));
       }
     } catch (e) {
       rethrow;
@@ -389,7 +357,7 @@ class UserProvider with ChangeNotifier {
       final response = await request.send();
       if (response.statusCode != 200) {
         final body = await response.stream.bytesToString();
-        throw Exception('Greška pri ažuriranju profila (${response.statusCode}): $body');
+        throw Exception(_extractMessage(body, response.statusCode));
       }
     } catch (e) {
       rethrow;
@@ -462,7 +430,7 @@ class UserProvider with ChangeNotifier {
       body: jsonEncode({'userId': userId, 'roleId': roleId}),
     );
     if (response.statusCode >= 300) {
-      throw Exception('Failed to assign role: ${response.statusCode}');
+      throw Exception(_extractMessage(response.body, response.statusCode));
     }
   }
 
@@ -470,7 +438,7 @@ class UserProvider with ChangeNotifier {
     final url = Uri.parse('${_baseUrl}ApplicationUser/$userId/roles/$roleId');
     final response = await http.delete(url, headers: createHeaders());
     if (response.statusCode >= 300) {
-      throw Exception('Status ${response.statusCode}: ${response.body}');
+      throw Exception(_extractMessage(response.body, response.statusCode));
     }
   }
 
@@ -483,7 +451,7 @@ class UserProvider with ChangeNotifier {
       body: jsonEncode({'userId': userId.toString(), 'newPassword': newPassword}),
     );
     if (response.statusCode != 200) {
-      throw Exception('Failed to reset password: ${response.statusCode}');
+      throw Exception(_extractMessage(response.body, response.statusCode));
     }
   }
 

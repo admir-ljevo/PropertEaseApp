@@ -17,7 +17,7 @@ namespace PropertEase.Infrastructure.Repositories.PropertyRepository
 
         public async Task<PropertyDto> GetByIdAsync(int id)
         {
-            var today = DateTime.Today;
+            var today = DateTime.UtcNow.Date;
 
             var property = await DatabaseContext.Properties
                 .AsNoTracking()
@@ -103,7 +103,7 @@ namespace PropertEase.Infrastructure.Repositories.PropertyRepository
 
         public async Task<PagedResult<PropertyListDto>> GetFilteredData(PropertyFilter filter)
         {
-            var today = DateTime.Today;
+            var today = DateTime.UtcNow.Date;
 
             var query = DatabaseContext.Properties
                 .AsNoTracking()

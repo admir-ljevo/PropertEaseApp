@@ -16,6 +16,8 @@ namespace PropertEase.Infrastructure.Repositories.PropertyReservationRepository
         Task<(int TotalClientCount, int PropertyClientCount, Dictionary<int, int> CoOccurrences)>
             GetRecommendationDataAsync(int propertyId);
 
+        Task<List<(int ClientId, int PropertyId)>> GetTransactionPairsAsync();
+
     
         Task<int> DeactivateExpiredAsync();
 

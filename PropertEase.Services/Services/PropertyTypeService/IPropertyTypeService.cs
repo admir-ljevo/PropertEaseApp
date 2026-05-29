@@ -11,5 +11,6 @@ namespace PropertEase.Services.Services.PropertyTypeService
     public interface IPropertyTypeService: IBaseService<PropertyTypeDto>
     {
         public Task<List<PropertyTypeDto>> GetByNameAsync(string name);
+        Task<(List<PropertyTypeDto> items, int totalCount)> GetFilteredAsync(string? search, int page, int pageSize);
     }
 }

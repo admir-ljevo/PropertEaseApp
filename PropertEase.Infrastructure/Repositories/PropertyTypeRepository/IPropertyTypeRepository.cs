@@ -14,5 +14,6 @@ namespace PropertEase.Infrastructure.Repositories.PropertyTypeRepository
         new Task<List<PropertyTypeDto>> GetAllAsync();
         Task<List<PropertyTypeDto>> GetByName(string name);
         Task<PropertyTypeDto> GetByIdAsync(int id);
+        Task<(List<PropertyTypeDto> items, int totalCount)> GetFilteredAsync(string? search, int page, int pageSize);
     }
 }

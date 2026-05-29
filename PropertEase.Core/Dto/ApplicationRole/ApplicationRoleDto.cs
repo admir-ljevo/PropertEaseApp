@@ -12,7 +12,7 @@ namespace PropertEase.Core.Dto.ApplicationRole
     {
         public int? RoleLevel { get; set; }
         public string Name { get; set; }
-        public DateTime CreatedAt { get; set; } = DateTime.Now;
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? ModifiedAt { get; set; }
         public bool IsDeleted { get; set; }
         public ICollection<ApplicationUserRoleDto>? UserRoles { get; set; }

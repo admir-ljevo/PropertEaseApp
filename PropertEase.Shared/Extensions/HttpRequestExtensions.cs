@@ -24,7 +24,7 @@ namespace PropertEase.Shared.Extensions
             var json = JsonConvert.SerializeObject(value);
             var options = new CookieOptions
             {
-                Expires = expireTime.HasValue ? DateTime.Now.AddMinutes(expireTime.GetValueOrDefault()) : DateTime.Now.AddDays(7)
+                Expires = expireTime.HasValue ? DateTime.UtcNow.AddMinutes(expireTime.GetValueOrDefault()) : DateTime.UtcNow.AddDays(7)
             };
 
             response.RemoveObject(key);

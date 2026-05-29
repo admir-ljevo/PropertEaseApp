@@ -34,9 +34,7 @@ namespace PropertEase.Controllers
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 10)
         {
-            try
-            {
-                var query = _db.Payments.Where(p => !p.IsDeleted).AsQueryable();
+            var query = _db.Payments.Where(p => !p.IsDeleted).AsQueryable();
 
                 if (!string.IsNullOrWhiteSpace(search))
                     query = query.Where(p =>
@@ -81,11 +79,6 @@ namespace PropertEase.Controllers
                     .ToListAsync();
 
                 return Ok(new { items, totalCount });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
-            }
         }
 
         [HttpGet("Config")]

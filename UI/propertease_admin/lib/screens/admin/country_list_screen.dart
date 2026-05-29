@@ -43,7 +43,7 @@ class _CountryListScreenState extends State<CountryListScreen> {
       });
       if (mounted) setState(() { _items = result.result; _totalCount = result.totalCount; });
     } catch (e) {
-      _showError('Failed to load countries: $e');
+      _showError('Nije moguće učitati države.');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -82,7 +82,7 @@ class _CountryListScreenState extends State<CountryListScreen> {
       }
       await _load();
     } catch (e) {
-      _showError('Error: $e');
+      _showError(e.toString().replaceFirst('Exception: ', ''));
     }
   }
 
@@ -108,7 +108,7 @@ class _CountryListScreenState extends State<CountryListScreen> {
       if (_items.length == 1 && _currentPage > 1) setState(() => _currentPage--);
       await _load();
     } catch (e) {
-      _showError('Error deleting: $e');
+      _showError(e.toString().replaceFirst('Exception: ', ''));
     }
   }
 

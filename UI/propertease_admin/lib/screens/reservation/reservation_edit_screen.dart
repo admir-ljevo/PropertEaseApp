@@ -109,8 +109,8 @@ class _ReservationEditScreenState extends State<ReservationEditScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Greška pri ažuriranju rezervacije: $e'),
+          const SnackBar(
+            content: Text('Greška pri ažuriranju rezervacije. Pokušajte ponovo.'),
             backgroundColor: Colors.red,
           ),
         );

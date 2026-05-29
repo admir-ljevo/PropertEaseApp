@@ -34,6 +34,9 @@ namespace PropertEase.Services.Services.PropertyTypeService
         public async Task<List<PropertyTypeDto>> GetByNameAsync(string name)
             => await _unitOfWork.PropertyTypeRepository.GetByName(name);
 
+        public async Task<(List<PropertyTypeDto> items, int totalCount)> GetFilteredAsync(string? search, int page, int pageSize)
+            => await _unitOfWork.PropertyTypeRepository.GetFilteredAsync(search, page, pageSize);
+
         public async Task<PropertyTypeDto> AddAsync(PropertyTypeDto entityDto)
         {
             await _unitOfWork.PropertyTypeRepository.AddAsync(entityDto);

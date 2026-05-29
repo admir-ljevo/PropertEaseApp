@@ -22,5 +22,6 @@ namespace PropertEase.Services.Services.PropertyReservationService
         public Task<PropertyReservationDto> ConfirmReservationAsync(int id, int actorId);
         public Task SyncPropertyAvailabilityAsync(int propertyId);
         public Task<(double totalPrice, int numberOfDays, int numberOfMonths)> CalculatePriceAsync(int propertyId, DateTime start, DateTime end);
+        public Task<List<(DateTime Start, DateTime End)>> GetOccupiedRangesAsync(int propertyId);
     }
 }

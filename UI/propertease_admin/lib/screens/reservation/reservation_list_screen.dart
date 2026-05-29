@@ -109,10 +109,7 @@ class ReservationListWidgetState extends State<ReservationListWidget> {
         if (_statusFilter != null) 'status': _statusFilter,
         'page': _currentPage,
         'pageSize': _pageSize,
-        if (Authorization.isAdmin && _selectedRenter != null)
-          'renterId': _selectedRenter!.id
-        else if (!Authorization.isAdmin)
-          'renterId': Authorization.userId,
+        if (_selectedRenter != null) 'renterId': _selectedRenter!.id,
       });
 
       if (mounted) {
@@ -229,150 +226,159 @@ class ReservationListWidgetState extends State<ReservationListWidget> {
 
   Widget _buildSearch(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: Row(
+      padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+      child: Column(
         children: [
-          Expanded(
-            child: TextFormField(
-              decoration: const InputDecoration(
-                labelText: 'Property name',
-                prefixIcon: Icon(Icons.search),
+          Row(
+            children: [
+              Expanded(
+                child: TextFormField(
+                  decoration: const InputDecoration(
+                    labelText: 'Property name',
+                    prefixIcon: Icon(Icons.search),
+                  ),
+                  controller: _nameController,
+                  onChanged: (_) => _debounce.run(_fetchReservations),
+                ),
               ),
-              controller: _nameController,
-              onChanged: (_) => _debounce.run(_fetchReservations),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: DropdownButtonFormField<PropertyType?>(
-              value: _selectedPropertyType,
-              onChanged: (PropertyType? newValue) async {
-                setState(() {
-                  _selectedPropertyType = newValue;
-                  _propertyTypeId = newValue?.id;
-                });
-                await _fetchReservations();
-              },
-              items: _propertyTypes
-                  .map<DropdownMenuItem<PropertyType?>>(
-                    (pt) => DropdownMenuItem<PropertyType?>(
-                      value: pt,
-                      child: Text(pt.name ?? 'Undefined'),
-                    ),
-                  )
-                  .toList(),
-              decoration: const InputDecoration(labelText: 'Property type'),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: TextButton(
-              onPressed: () => _selectDateStart(context),
-              child: Text(
-                _selectedDateStart != null
-                    ? DateFormat('dd.MM.yyyy').format(_selectedDateStart!)
-                    : 'Reservation start',
+              const SizedBox(width: 16),
+              Expanded(
+                child: DropdownButtonFormField<PropertyType?>(
+                  value: _selectedPropertyType,
+                  onChanged: (PropertyType? newValue) async {
+                    setState(() {
+                      _selectedPropertyType = newValue;
+                      _propertyTypeId = newValue?.id;
+                    });
+                    await _fetchReservations();
+                  },
+                  items: _propertyTypes
+                      .map<DropdownMenuItem<PropertyType?>>(
+                        (pt) => DropdownMenuItem<PropertyType?>(
+                          value: pt,
+                          child: Text(pt.name ?? 'Undefined'),
+                        ),
+                      )
+                      .toList(),
+                  decoration: const InputDecoration(labelText: 'Property type'),
+                ),
               ),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: TextButton(
-              onPressed: () => _selectDateEnd(context),
-              child: Text(
-                _selectedDateEnd != null
-                    ? DateFormat('dd.MM.yyyy').format(_selectedDateEnd!)
-                    : 'Reservation end',
+              const SizedBox(width: 16),
+              Expanded(
+                child: TextButton(
+                  onPressed: () => _selectDateStart(context),
+                  child: Text(
+                    _selectedDateStart != null
+                        ? DateFormat('dd.MM.yyyy').format(_selectedDateStart!)
+                        : 'Reservation start',
+                  ),
+                ),
               ),
-            ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: TextButton(
+                  onPressed: () => _selectDateEnd(context),
+                  child: Text(
+                    _selectedDateEnd != null
+                        ? DateFormat('dd.MM.yyyy').format(_selectedDateEnd!)
+                        : 'Reservation end',
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: TextFormField(
-              decoration:
-                  const InputDecoration(labelText: 'Price range from'),
-              keyboardType: TextInputType.number,
-              controller: _minPriceController,
-              onChanged: (_) => _debounce.run(_fetchReservations),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: TextFormField(
-              decoration: const InputDecoration(labelText: 'Price range to'),
-              keyboardType: TextInputType.number,
-              controller: _maxPriceController,
-              onChanged: (_) => _debounce.run(_fetchReservations),
-            ),
-          ),
-          if (Authorization.isAdmin) ...[
-            const SizedBox(width: 16),
-            Expanded(
-              child: DropdownButtonFormField<ApplicationUser?>(
-                value: _selectedRenter,
-                onChanged: (v) {
-                  setState(() => _selectedRenter = v);
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: TextFormField(
+                  decoration:
+                      const InputDecoration(labelText: 'Price range from'),
+                  keyboardType: TextInputType.number,
+                  controller: _minPriceController,
+                  onChanged: (_) => _debounce.run(_fetchReservations),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: TextFormField(
+                  decoration: const InputDecoration(labelText: 'Price range to'),
+                  keyboardType: TextInputType.number,
+                  controller: _maxPriceController,
+                  onChanged: (_) => _debounce.run(_fetchReservations),
+                ),
+              ),
+              if (Authorization.isAdmin) ...[
+                const SizedBox(width: 16),
+                Expanded(
+                  child: DropdownButtonFormField<ApplicationUser?>(
+                    value: _selectedRenter,
+                    onChanged: (v) {
+                      setState(() => _selectedRenter = v);
+                      _fetchReservations();
+                    },
+                    items: [
+                      const DropdownMenuItem<ApplicationUser?>(
+                        value: null,
+                        child: Text('Svi iznajmljivači'),
+                      ),
+                      ..._renters.map((u) => DropdownMenuItem<ApplicationUser?>(
+                            value: u,
+                            child: Text(
+                              '${u.person?.firstName ?? ''} ${u.person?.lastName ?? ''}'.trim().isNotEmpty
+                                  ? '${u.person?.firstName ?? ''} ${u.person?.lastName ?? ''}'.trim()
+                                  : u.userName ?? '',
+                            ),
+                          )),
+                    ],
+                    decoration: const InputDecoration(labelText: 'Iznajmljivač'),
+                  ),
+                ),
+              ],
+              const SizedBox(width: 16),
+              Expanded(
+                child: DropdownButtonFormField<int?>(
+                  value: _statusFilter,
+                  onChanged: (int? newValue) {
+                    setState(() => _statusFilter = newValue);
+                    _fetchReservations();
+                  },
+                  items: const [
+                    DropdownMenuItem<int?>(value: null, child: Text('Svi statusi')),
+                    DropdownMenuItem<int?>(value: 0, child: Text('Na čekanju')),
+                    DropdownMenuItem<int?>(value: 1, child: Text('Potvrđena')),
+                    DropdownMenuItem<int?>(value: 4, child: Text('Plaćena')),
+                    DropdownMenuItem<int?>(value: 2, child: Text('Završena')),
+                    DropdownMenuItem<int?>(value: 3, child: Text('Otkazana')),
+                  ],
+                  decoration: const InputDecoration(labelText: 'Status'),
+                ),
+              ),
+              const SizedBox(width: 15),
+              ElevatedButton.icon(
+                onPressed: () {
+                  setState(() {
+                    _selectedPropertyType = null;
+                    _selectedRenter = null;
+                    _statusFilter = null;
+                    _propertyTypeId = null;
+                    _selectedDateStart = null;
+                    _selectedDateEnd = null;
+                    _formattedStartDate = null;
+                    _formattedEndDate = null;
+                    _currentPage = 1;
+                  });
+                  _maxPriceController.clear();
+                  _minPriceController.clear();
+                  _nameController.clear();
                   _fetchReservations();
                 },
-                items: [
-                  const DropdownMenuItem<ApplicationUser?>(
-                    value: null,
-                    child: Text('Svi iznajmljivači'),
-                  ),
-                  ..._renters.map((u) => DropdownMenuItem<ApplicationUser?>(
-                        value: u,
-                        child: Text(
-                          '${u.person?.firstName ?? ''} ${u.person?.lastName ?? ''}'.trim().isNotEmpty
-                              ? '${u.person?.firstName ?? ''} ${u.person?.lastName ?? ''}'.trim()
-                              : u.userName ?? '',
-                        ),
-                      )),
-                ],
-                decoration: const InputDecoration(labelText: 'Iznajmljivač'),
+                icon: const Icon(Icons.clear),
+                label: const Text('Clear filters'),
               ),
-            ),
-          ],
-          const SizedBox(width: 16),
-          Expanded(
-            child: DropdownButtonFormField<int?>(
-              value: _statusFilter,
-              onChanged: (int? newValue) {
-                setState(() => _statusFilter = newValue);
-                _fetchReservations();
-              },
-              items: const [
-                DropdownMenuItem<int?>(value: null, child: Text('Svi statusi')),
-                DropdownMenuItem<int?>(value: 0, child: Text('Na čekanju')),
-                DropdownMenuItem<int?>(value: 1, child: Text('Potvrđena')),
-                DropdownMenuItem<int?>(value: 4, child: Text('Plaćena')),
-                DropdownMenuItem<int?>(value: 2, child: Text('Završena')),
-                DropdownMenuItem<int?>(value: 3, child: Text('Otkazana')),
-              ],
-              decoration: const InputDecoration(labelText: 'Status'),
-            ),
+            ],
           ),
-          const SizedBox(width: 15),
-          ElevatedButton.icon(
-            onPressed: () {
-              setState(() {
-                _selectedPropertyType = null;
-                _selectedRenter = null;
-                _statusFilter = null;
-                _propertyTypeId = null;
-                _selectedDateStart = null;
-                _selectedDateEnd = null;
-                _formattedStartDate = null;
-                _formattedEndDate = null;
-                _currentPage = 1;
-              });
-              _maxPriceController.clear();
-              _minPriceController.clear();
-              _nameController.clear();
-              _fetchReservations();
-            },
-            icon: const Icon(Icons.clear),
-            label: const Text('Clear filters'),
-          ),
+          const SizedBox(height: 8),
         ],
       ),
     );
@@ -520,7 +526,7 @@ class ReservationListWidgetState extends State<ReservationListWidget> {
                       child: const Icon(Icons.edit, color: Colors.blue),
                     ),
                   ),
-                  if (e.status == ReservationStatus.completed || e.status == ReservationStatus.cancelled) ...[
+                  if (Authorization.isAdmin && (e.status == ReservationStatus.completed || e.status == ReservationStatus.cancelled)) ...[
                     const SizedBox(width: 8),
                     Tooltip(
                       message: 'Obriši',

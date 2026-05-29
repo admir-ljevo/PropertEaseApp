@@ -37,6 +37,7 @@ class UserEditScreenState extends State<UserEditScreen> {
   final _jmbgController = TextEditingController();
   String? profilePhoto;
   late DateTime selectedDate;
+  String? _usernameError;
 
   @override
   void initState() {
@@ -87,7 +88,22 @@ class UserEditScreenState extends State<UserEditScreen> {
     editedUser.person?.jmbg = _jmbgController.text;
     editedUser.person?.placeOfResidenceId = selectedCity?.id;
 
-    await _userProvider.updateClient(editedUser, editedUser.id!);
+    setState(() => _usernameError = null);
+    try {
+      await _userProvider.updateClient(editedUser, editedUser.id!);
+    } catch (e) {
+      if (!mounted) return;
+      final msg = e.toString().replaceFirst('Exception: ', '');
+      if (msg.contains('zauzeto')) {
+        setState(() => _usernameError = 'Korisničko ime je zauzeto');
+        _formKey.currentState!.validate();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(msg), backgroundColor: Colors.red),
+        );
+      }
+      return;
+    }
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -256,15 +272,20 @@ class UserEditScreenState extends State<UserEditScreen> {
                   children: [
                     Row(children: [
                       Expanded(
-                          child: _field('Username', _userNameController,
-                              validator: (v) {
-                        if (v == null || v.isEmpty) return 'Required.';
-                        if (v.length < 3) return 'At least 3 characters.';
-                        if (!RegExp(r'^[a-zA-Z0-9_.\-]+$').hasMatch(v)) {
-                          return 'Only letters, numbers and _.-';
-                        }
-                        return null;
-                      })),
+                          child: TextFormField(
+                            controller: _userNameController,
+                            decoration: const InputDecoration(labelText: 'Username'),
+                            onChanged: (_) {
+                              if (_usernameError != null) setState(() => _usernameError = null);
+                            },
+                            validator: (v) {
+                              if (v == null || v.isEmpty) return 'Required.';
+                              if (v.length < 3) return 'At least 3 characters.';
+                              if (!RegExp(r'^[a-zA-Z0-9_.\-]+$').hasMatch(v)) return 'Only letters, numbers and _.-';
+                              if (_usernameError != null) return _usernameError;
+                              return null;
+                            },
+                          )),
                       const SizedBox(width: 16),
                       Expanded(
                           child: _field('Email', _emailController,

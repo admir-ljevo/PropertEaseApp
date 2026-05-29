@@ -42,7 +42,7 @@ namespace PropertEase.Services.Services.PropertyReservationService
             var remainingDays = totalDays - (totalMonths * 30);
 
             entityDto.NumberOfDays   = Math.Max(totalDays, 1);
-            entityDto.NumberOfMonths = Math.Max(totalMonths, 1);
+            entityDto.NumberOfMonths = Math.Max(totalMonths, 0);
 
             if (property.IsDaily)
                 entityDto.TotalPrice = (double)(property.DailyPrice * entityDto.NumberOfDays);
@@ -305,7 +305,7 @@ namespace PropertEase.Services.Services.PropertyReservationService
             var months        = (int)Math.Floor(days / 30.0);
             var remainingDays = days - (months * 30);
             entity.NumberOfDays   = Math.Max(days, 1);
-            entity.NumberOfMonths = Math.Max(months, 1);
+            entity.NumberOfMonths = Math.Max(months, 0);
 
             var property = await db.Properties.FindAsync(entity.PropertyId);
             if (property != null)
@@ -436,7 +436,7 @@ namespace PropertEase.Services.Services.PropertyReservationService
 
             var toComplete = await db.PropertyReservations
                 .Where(r => (r.Status == ReservationStatus.Confirmed || r.Status == ReservationStatus.Paid)
-                         && r.DateOfOccupancyEnd <= DateTime.Now
+                         && r.DateOfOccupancyEnd <= DateTime.UtcNow
                          && !r.IsDeleted)
                 .Select(r => new
                 {
@@ -499,7 +499,18 @@ namespace PropertEase.Services.Services.PropertyReservationService
             if (property.IsMonthly)
                 totalPrice = (double)(property.MonthlyPrice * months + (property.MonthlyPrice / 30.0) * remainingDays);
 
-            return (totalPrice, Math.Max(days, 1), Math.Max(months, 1));
+            return (totalPrice, Math.Max(days, 1), Math.Max(months, 0));
+        }
+
+        public async Task<List<(DateTime Start, DateTime End)>> GetOccupiedRangesAsync(int propertyId)
+        {
+            var db = unitOfWork.GetDatabaseContext();
+            return await db.PropertyReservations
+                .Where(r => r.PropertyId == propertyId
+                         && !r.IsDeleted
+                         && (r.Status == ReservationStatus.Confirmed || r.Status == ReservationStatus.Paid))
+                .Select(r => ValueTuple.Create(r.DateOfOccupancyStart, r.DateOfOccupancyEnd))
+                .ToListAsync();
         }
     }
 }

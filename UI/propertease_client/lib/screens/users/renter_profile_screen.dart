@@ -8,7 +8,6 @@ import 'package:propertease_client/models/property.dart';
 import 'package:propertease_client/models/user_rating.dart';
 import 'package:propertease_client/providers/application_user_provider.dart';
 import 'package:propertease_client/providers/property_provider.dart';
-import 'package:propertease_client/providers/property_reservation_provider.dart';
 import 'package:propertease_client/providers/user_rating_provider.dart';
 import 'package:propertease_client/screens/property/property_details.dart';
 
@@ -32,11 +31,6 @@ class _RenterProfileScreenState extends State<RenterProfileScreen> {
   int _propsPage = 1;
   int _propsTotalCount = 0;
 
-  List<ReservationSummary> _reservations = [];
-  bool _resLoading = true;
-  int _resPage = 1;
-  int _resTotalCount = 0;
-
   List<UserRating> _ratings = [];
   bool _ratingsLoading = true;
   int _ratingsPage = 1;
@@ -53,7 +47,6 @@ class _RenterProfileScreenState extends State<RenterProfileScreen> {
         widget.renter!.email?.isNotEmpty == true;
     if (!hasFullData) _loadRenter();
     _loadProperties(page: 1);
-    _loadReservations(page: 1);
     _loadRatings(page: 1);
   }
 
@@ -96,30 +89,6 @@ class _RenterProfileScreenState extends State<RenterProfileScreen> {
       }
     } catch (_) {
       if (mounted) setState(() => _propsLoading = false);
-    }
-  }
-
-  Future<void> _loadReservations({required int page}) async {
-    final id = _effectiveRenterId;
-    if (id == null) {
-      if (mounted) setState(() => _resLoading = false);
-      return;
-    }
-    if (mounted) setState(() => _resLoading = true);
-    try {
-      final result = await context
-          .read<PropertyReservationProvider>()
-          .getRenterSummaries(id, page: page, pageSize: _kPageSize);
-      if (mounted) {
-        setState(() {
-          _reservations = result.items;
-          _resTotalCount = result.totalCount;
-          _resPage = page;
-          _resLoading = false;
-        });
-      }
-    } catch (_) {
-      if (mounted) setState(() => _resLoading = false);
     }
   }
 
@@ -217,8 +186,6 @@ class _RenterProfileScreenState extends State<RenterProfileScreen> {
             _buildRatingsCard(),
             const SizedBox(height: 12),
             _buildPropertiesCard(),
-            const SizedBox(height: 12),
-            _buildReservationsCard(),
             const SizedBox(height: 80),
           ],
         ),
@@ -481,72 +448,6 @@ class _RenterProfileScreenState extends State<RenterProfileScreen> {
               context,
               MaterialPageRoute(
                   builder: (_) => PropertyDetailsScreen(property: p))),
-        );
-      }).toList(),
-    );
-  }
-
-  Widget _buildReservationsCard() {
-    final totalPages = (_resTotalCount / _kPageSize).ceil();
-    return _SectionCard(
-      icon: Icons.receipt_long,
-      title: 'Historija rezervacija',
-      count: _resLoading ? null : _resTotalCount,
-      loading: _resLoading,
-      empty: !_resLoading && _reservations.isEmpty,
-      emptyText: 'Nema rezervacija.',
-      pagination: _resTotalCount > _kPageSize
-          ? _PaginationRow(
-              page: _resPage,
-              totalPages: totalPages,
-              onPrev:
-                  _resPage > 1 ? () => _loadReservations(page: _resPage - 1) : null,
-              onNext: _resPage < totalPages
-                  ? () => _loadReservations(page: _resPage + 1)
-                  : null,
-            )
-          : null,
-      children: _reservations.map((r) {
-        final fmt = DateFormat('dd.MM.yy');
-        final dateRange =
-            r.dateOfOccupancyStart != null && r.dateOfOccupancyEnd != null
-                ? '${fmt.format(r.dateOfOccupancyStart!)} – ${fmt.format(r.dateOfOccupancyEnd!)}'
-                : null;
-        return ListTile(
-          contentPadding: EdgeInsets.zero,
-          leading: CircleAvatar(
-            backgroundColor:
-                r.isActive == true ? Colors.green.shade50 : Colors.grey.shade100,
-            child: Icon(Icons.receipt_long,
-                color: r.isActive == true ? Colors.green : Colors.grey,
-                size: 20),
-          ),
-          title: Text(r.propertyName ?? '—',
-              style:
-                  const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-          subtitle: dateRange != null
-              ? Text(dateRange,
-                  style: const TextStyle(fontSize: 12, color: Colors.grey))
-              : null,
-          trailing: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                '${r.totalPrice?.toStringAsFixed(0) ?? '—'} USD',
-                style: const TextStyle(
-                    color: _kPrimary,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 12),
-              ),
-              Text(
-                r.isActive == true ? 'Aktivna' : 'Završena',
-                style: TextStyle(
-                    fontSize: 11,
-                    color: r.isActive == true ? Colors.green : Colors.grey),
-              ),
-            ],
-          ),
         );
       }).toList(),
     );

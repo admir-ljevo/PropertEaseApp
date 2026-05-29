@@ -42,7 +42,7 @@ class RenterAddScreenState extends State<RenterAddScreen> {
   final _confirmPasswordController = TextEditingController();
   final _nationalityController = TextEditingController();
   final _citizenShipController = TextEditingController();
-
+  String? _usernameError;
   int selectedGender = 0;
   DateTime selectedDate = DateTime.now();
   bool _obscurePassword = true;
@@ -94,6 +94,7 @@ class RenterAddScreenState extends State<RenterAddScreen> {
     newUser.person?.placeOfResidenceId = selectedCity?.id;
     newUser.person?.citizenship = _citizenShipController.text.trim();
     newUser.person?.nationality = _nationalityController.text.trim();
+    setState(() => _usernameError = null);
     try {
       await _userProvider.addEmployee(newUser, _passwordController.text);
       if (mounted) {
@@ -105,11 +106,15 @@ class RenterAddScreenState extends State<RenterAddScreen> {
         Navigator.of(context).pop();
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Greška pri dodavanju izdavača: $e'),
-          backgroundColor: Colors.red,
-        ));
+      if (!mounted) return;
+      final msg = e.toString().replaceFirst('Exception: ', '');
+      if (msg.contains('zauzeto')) {
+        setState(() => _usernameError = 'Korisničko ime je zauzeto');
+        _formKey.currentState!.validate();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(msg), backgroundColor: Colors.red),
+        );
       }
     }
   }
@@ -266,8 +271,19 @@ class RenterAddScreenState extends State<RenterAddScreen> {
                 child: Column(
                   children: [
                     Row(children: [
-                      Expanded(child: _field('Korisničko ime', _userNameController,
-                          validator: AppValidators.username)),
+                      Expanded(child: TextFormField(
+                        controller: _userNameController,
+                        decoration: const InputDecoration(labelText: 'Korisničko ime', border: OutlineInputBorder()),
+                        onChanged: (_) {
+                          if (_usernameError != null) setState(() => _usernameError = null);
+                        },
+                        validator: (v) {
+                          final base = AppValidators.username(v);
+                          if (base != null) return base;
+                          if (_usernameError != null) return _usernameError;
+                          return null;
+                        },
+                      )),
                       const SizedBox(width: 16),
                       Expanded(child: _field('Email', _emailController,
                           validator: AppValidators.email)),

@@ -102,11 +102,10 @@ class PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
 
   Future<void> addConversation() async {
     try {
-      final existing = await _conversationProvider.getByPropertyAndRenter(
-        _property!.id!,
-        _property!.applicationUserId!,
-      );
-      final mine = existing.where((c) => c.clientId == userId).firstOrNull;
+      final result = await _conversationProvider.getByClient(userId!);
+      final mine = result.result.where((c) =>
+          c.propertyId == _property!.id &&
+          c.renterId == _property!.applicationUserId).firstOrNull;
       if (mine != null) {
         newConversation = mine;
         return;
@@ -123,12 +122,10 @@ class PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
       } catch (_) {}
 
       if (newConversation == null || (newConversation!.id ?? 0) == 0) {
-        final afterCreate = await _conversationProvider.getByPropertyAndRenter(
-          _property!.id!,
-          _property!.applicationUserId!,
-        );
-        newConversation =
-            afterCreate.where((c) => c.clientId == userId).firstOrNull;
+        final afterCreate = await _conversationProvider.getByClient(userId!);
+        newConversation = afterCreate.result.where((c) =>
+            c.propertyId == _property!.id &&
+            c.renterId == _property!.applicationUserId).firstOrNull;
       }
     } catch (e) {
       debugPrint(e.toString());

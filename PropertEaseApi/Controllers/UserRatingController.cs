@@ -1,9 +1,11 @@
 using AutoMapper;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PropertEase.Core.Dto.UserRating;
 using PropertEase.Core.Filters;
 using PropertEase.Core.SearchObjects;
 using PropertEase.Services.Services.UserRatingService;
+using System.Security.Claims;
 
 namespace PropertEase.Controllers
 {
@@ -23,6 +25,14 @@ namespace PropertEase.Controllers
         [NonAction] public override Task<UserRatingDto> Get(int id) => throw new NotSupportedException();
         [NonAction] public override Task<UserRatingDto> Put(int id, UserRatingUpsertDto updateEntity) => throw new NotSupportedException();
         [NonAction] public override Task<IActionResult> Delete(int id) => throw new NotSupportedException();
+
+        [Authorize]
+        [HttpPost]
+        public override async Task<UserRatingDto> Post(UserRatingUpsertDto insertEntity)
+        {
+            insertEntity.ReviewerId = int.TryParse(User.FindFirstValue("Id"), out var id) ? id : 0;
+            return await base.Post(insertEntity);
+        }
 
         [HttpGet("GetFilteredData")]
         public async Task<IActionResult> GetFilteredData([FromQuery] UserRatingFilter filter)

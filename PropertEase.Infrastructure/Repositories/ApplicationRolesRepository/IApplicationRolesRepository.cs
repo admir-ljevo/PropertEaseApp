@@ -13,5 +13,6 @@ namespace PropertEase.Infrastructure.Repositories.ApplicationRolesRepository
     {
         Task<ApplicationRoleDto> GetByRoleLevelOrName(int roleLevelId, string roleName);
         new Task<List<ApplicationRoleDto>> GetAllAsync();
+        Task<(List<ApplicationRoleDto> items, int totalCount)> GetFilteredAsync(string? search, int page, int pageSize);
     }
 }

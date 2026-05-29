@@ -25,28 +25,28 @@ public class AssociationRulesEngine : IRecommendationEngine
 
     public async Task<IReadOnlyList<int>> GetRecommendationsAsync(int userId)
     {
-        var allReservations = await _uow.PropertyReservationRepository.GetAllAsync();
+        // Fetch only (ClientId, PropertyId) pairs — no full DTO load
+        var pairs = await _uow.PropertyReservationRepository.GetTransactionPairsAsync();
 
-        var transactions = allReservations
-            .GroupBy(r => r.ClientId)
-            .Select(g => g.Select(r => r.PropertyId).Distinct().ToHashSet())
+        var transactions = pairs
+            .GroupBy(p => p.ClientId)
+            .Select(g => g.Select(p => p.PropertyId).ToHashSet())
             .ToList();
 
         int totalTransactions = transactions.Count;
         if (totalTransactions == 0)
             return Array.Empty<int>();
 
-        var userPropertyIds = allReservations
-            .Where(r => r.ClientId == userId)
-            .Select(r => r.PropertyId)
-            .Distinct()
+        var userPropertyIds = pairs
+            .Where(p => p.ClientId == userId)
+            .Select(p => p.PropertyId)
             .ToHashSet();
 
         if (userPropertyIds.Count == 0)
         {
             // Cold start: return most popular properties
-            return allReservations
-                .GroupBy(r => r.PropertyId)
+            return pairs
+                .GroupBy(p => p.PropertyId)
                 .OrderByDescending(g => g.Count())
                 .Take(_config.MaxRecommendations)
                 .Select(g => g.Key)
@@ -84,7 +84,6 @@ public class AssociationRulesEngine : IRecommendationEngine
                     if (candidateSupport < _config.MinSupport) continue;
 
                     // Confidence = support(A ∪ B) / support(A)
-                    // We approximate support(A ∪ B) by co-occurrence count
                     candidateScores.TryGetValue(candidate, out var score);
                     candidateScores[candidate] = score + 1;
                 }

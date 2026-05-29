@@ -113,10 +113,10 @@ class _PayPalScreenState extends State<PayPalScreen> {
       if (mounted) {
         setState(() => _processingPayment = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Payment failed: $e'),
+          const SnackBar(
+            content: Text('Plaćanje nije završeno. Pokušajte ponovo.'),
             backgroundColor: Colors.red,
-            duration: const Duration(seconds: 5),
+            duration: Duration(seconds: 5),
           ),
         );
       }

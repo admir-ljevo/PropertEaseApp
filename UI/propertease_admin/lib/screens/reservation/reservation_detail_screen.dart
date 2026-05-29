@@ -75,7 +75,7 @@ class _ReservationDetailsScreenState extends State<ReservationDetailsScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Greška: $e'), backgroundColor: Colors.red),
+        const SnackBar(content: Text('Greška. Pokušajte ponovo.'), backgroundColor: Colors.red),
       );
     } finally {
       if (mounted) setState(() => _confirming = false);
@@ -176,8 +176,8 @@ class _ReservationDetailsScreenState extends State<ReservationDetailsScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Greška: ${e.toString()}'),
+        const SnackBar(
+          content: Text('Greška. Pokušajte ponovo.'),
           backgroundColor: Colors.red,
         ),
       );

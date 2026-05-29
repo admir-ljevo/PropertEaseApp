@@ -34,6 +34,9 @@ namespace PropertEase.Services.Services.CityService
         public async Task<List<CityDto>> GetByNameAsync(string name)
             => await _unitOfWork.CityRepository.GetByName(name);
 
+        public async Task<(List<CityDto> items, int totalCount)> GetFilteredAsync(string? search, int page, int pageSize)
+            => await _unitOfWork.CityRepository.GetFilteredAsync(search, page, pageSize);
+
         public async Task<CityDto> AddAsync(CityDto entityDto)
         {
             await _unitOfWork.CityRepository.AddAsync(entityDto);

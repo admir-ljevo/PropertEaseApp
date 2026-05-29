@@ -33,8 +33,18 @@ class UserProvider with ChangeNotifier {
 
   bool _isValid(Response response) {
     if (response.statusCode < 300) return true;
-    if (response.statusCode == 401) throw Exception('Wrong credentials');
-    throw Exception('Server error ${response.statusCode}');
+    if (response.statusCode == 401) throw Exception('Sesija je istekla. Prijavite se ponovo.');
+    throw Exception(_extractMessage(response.body, response.statusCode));
+  }
+
+  String _extractMessage(String body, int statusCode) {
+    try {
+      final decoded = jsonDecode(body);
+      if (decoded is Map) {
+        return (decoded['message'] ?? decoded['title'] ?? decoded['detail'] ?? 'Greška.').toString();
+      }
+    } catch (_) {}
+    return body.isNotEmpty ? body : 'Greška.';
   }
 
   Future<Map<String, dynamic>?> signIn(String userName, String password) async {
@@ -59,10 +69,10 @@ class UserProvider with ChangeNotifier {
 
       final roleId = data['roleId'] as int?;
       final role = data['role'] as String?;
-      final isClient = roleId == 3 ||
-          role?.toLowerCase() == 'client' ||
-          role?.toLowerCase() == 'korisnik';
-      if (!isClient) return null;
+      final userRoles = (user['userRoles'] as List<dynamic>?) ?? [];
+      final hasClientRole = userRoles.any((ur) =>
+          (ur['role']?['name'] as String?)?.toLowerCase() == 'client');
+      if (!hasClientRole) return null;
 
       final person = user['person'] as Map<String, dynamic>?;
       final photoBytes =
@@ -105,7 +115,7 @@ class UserProvider with ChangeNotifier {
       }
       return 'Greška pri promjeni lozinke.';
     } catch (e) {
-      return 'Greška mreže: $e';
+      return 'Greška mreže. Pokušajte ponovo.';
     }
   }
 
@@ -118,9 +128,9 @@ class UserProvider with ChangeNotifier {
         body: jsonEncode({'email': email}),
       );
       if (response.statusCode == 200) return null;
-      return 'Greška: ${response.statusCode}';
+      return _extractMessage(response.body, response.statusCode);
     } catch (e) {
-      return 'Greška mreže: $e';
+      return 'Greška mreže. Pokušajte ponovo.';
     }
   }
 
@@ -150,7 +160,7 @@ class UserProvider with ChangeNotifier {
       }
       return body['message'] as String? ?? 'Greška pri resetovanju lozinke.';
     } catch (e) {
-      return 'Greška mreže: $e';
+      return 'Greška mreže. Pokušajte ponovo.';
     }
   }
 
@@ -184,7 +194,14 @@ class UserProvider with ChangeNotifier {
     final streamed = await _ioClient.send(request);
     final response = await http.Response.fromStream(streamed);
     if (response.statusCode != 200) {
-      throw Exception('addClient failed: ${response.statusCode} ${response.body}');
+      String message;
+      try {
+        final body = jsonDecode(response.body);
+        message = (body['message'] as String?)?.trim() ?? 'Greška pri registraciji.';
+      } catch (_) {
+        message = 'Greška pri registraciji.';
+      }
+      throw Exception(message);
     }
   }
 
@@ -200,7 +217,7 @@ class UserProvider with ChangeNotifier {
     final streamed = await _ioClient.send(request);
     final response = await http.Response.fromStream(streamed);
     if (response.statusCode != 200) {
-      throw Exception('updateClient failed: ${response.statusCode} ${response.body}');
+      throw Exception(_extractMessage(response.body, response.statusCode));
     }
   }
 
@@ -235,9 +252,8 @@ class UserProvider with ChangeNotifier {
   Future<void> deleteById(int? id) async {
     final url = Uri.parse('${_baseUrl}$_endpoint/$id');
     final response = await _ioClient.delete(url, headers: _headers());
-    if (response.statusCode == 404) throw Exception('User not found');
     if (response.statusCode >= 300) {
-      throw Exception('Delete failed: ${response.statusCode}');
+      throw Exception(_extractMessage(response.body, response.statusCode));
     }
   }
 }

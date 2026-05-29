@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 using PropertEase.Core.Dto.ApplicationRole;
 using PropertEase.Core.Entities.Identity;
 using PropertEase.Infrastructure.Repositories.BaseRepository;
@@ -24,8 +25,17 @@ namespace PropertEase.Infrastructure.Repositories.ApplicationRolesRepository
         }
         public async Task<List<ApplicationRoleDto>> GetAllAsync()
         {
-           return await ProjectToListAsync<ApplicationRoleDto>(DatabaseContext.Roles.Where(x=>!x.IsDeleted));
-            
+            return await ProjectToListAsync<ApplicationRoleDto>(DatabaseContext.Roles.Where(x => !x.IsDeleted));
+        }
+
+        public async Task<(List<ApplicationRoleDto> items, int totalCount)> GetFilteredAsync(string? search, int page, int pageSize)
+        {
+            var query = DatabaseContext.Roles.Where(x => !x.IsDeleted);
+            if (!string.IsNullOrWhiteSpace(search))
+                query = query.Where(x => x.Name != null && x.Name.Contains(search));
+            var totalCount = await query.CountAsync();
+            var items = await ProjectToListAsync<ApplicationRoleDto>(query.OrderBy(x => x.Name).Skip((page - 1) * pageSize).Take(pageSize));
+            return (items, totalCount);
         }
     }
 }

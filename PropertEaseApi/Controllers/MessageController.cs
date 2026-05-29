@@ -31,8 +31,11 @@ namespace PropertEase.Controllers
             this.conversationService = conversationService;
         }
 
+        [NonAction] public override Task<List<MessageDto>> Get(int page = 1, int pageSize = 20) => throw new NotSupportedException();
         [NonAction] public override Task<MessageDto> Get(int id) => throw new NotSupportedException();
         [NonAction] public override Task<MessageDto> Post(MessageUpsertDto insertEntity) => throw new NotSupportedException();
+        [NonAction] public override Task<MessageDto> Put(int id, MessageUpsertDto updateEntity) => throw new NotSupportedException();
+        [NonAction] public override Task<IActionResult> Delete(int id) => throw new NotSupportedException();
 
         private int GetCallerId() => int.TryParse(User.FindFirstValue("Id"), out var id) ? id : 0;
 

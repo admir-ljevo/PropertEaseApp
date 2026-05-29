@@ -62,7 +62,7 @@ class _PaymentListScreenState extends State<PaymentListScreen> {
       });
       if (mounted) setState(() { _items = result.result; _totalCount = result.totalCount; });
     } catch (e) {
-      _showError('Failed to load payments: $e');
+      _showError('Nije moguće učitati uplate.');
     } finally {
       if (mounted) setState(() => _loading = false);
     }

@@ -21,80 +21,31 @@ namespace PropertEase.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAllAsync()
         {
-            try
-            {
-                var roles = await applicationRolesService.GetAllAsync();
-                return Ok(roles.Take(100));
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
-            }
+            var roles = await applicationRolesService.GetAllAsync();
+            return Ok(roles.Take(100));
         }
 
         [HttpGet("GetFilteredData")]
         public async Task<IActionResult> GetFilteredData([FromQuery] string? search, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
         {
-            try
-            {
-                var all = await applicationRolesService.GetAllAsync();
-                var filtered = string.IsNullOrWhiteSpace(search)
-                    ? all
-                    : all.Where(x => x.Name != null && x.Name.Contains(search, StringComparison.OrdinalIgnoreCase)).ToList();
-                var totalCount = filtered.Count;
-                var items = filtered.Skip((page - 1) * pageSize).Take(pageSize).ToList();
-                return Ok(new { items, totalCount });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
-            }
+            var (items, totalCount) = await applicationRolesService.GetFilteredAsync(search, page, pageSize);
+            return Ok(new { items, totalCount });
         }
 
         [Authorize(Roles = AppRoles.Admin)]
         [HttpPost]
         public async Task<IActionResult> Post([FromBody] ApplicationRoleDto roleDto)
         {
-            try
-            {
-                var result = await applicationRolesService.AddAsync(roleDto);
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
-            }
-        }
-
-        [Authorize(Roles = AppRoles.Admin)]
-        [HttpPut("{id}")]
-        public async Task<IActionResult> Put(int id, [FromBody] ApplicationRoleDto dto)
-        {
-            try
-            {
-                dto.Id = id;
-                var result = await applicationRolesService.UpdateAsync(dto);
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
-            }
+            var result = await applicationRolesService.AddAsync(roleDto);
+            return Ok(result);
         }
 
         [Authorize(Roles = AppRoles.Admin)]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
-            try
-            {
-                await applicationRolesService.RemoveByIdAsync(id);
-                return Ok();
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
-            }
+            await applicationRolesService.RemoveByIdAsync(id);
+            return Ok();
         }
     }
 }

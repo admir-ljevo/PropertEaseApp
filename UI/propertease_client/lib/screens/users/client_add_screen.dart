@@ -40,8 +40,10 @@ class ClientAddScreenState extends State<ClientAddScreen> {
 
   int selectedGender = 0;
   DateTime selectedDate = DateTime.now();
+  String? _usernameError;
 
   Future<void> addClient() async {
+    setState(() => _usernameError = null);
     if (!_formKey.currentState!.validate()) return;
 
     newUser.id = 0;
@@ -58,7 +60,21 @@ class ClientAddScreenState extends State<ClientAddScreen> {
     newUser.person?.birthDate = selectedDate;
     newUser.person?.placeOfResidenceId = selectedCity?.id;
 
-    await _userProvider.addClient(newUser, _passwordController.text);
+    try {
+      await _userProvider.addClient(newUser, _passwordController.text);
+    } catch (e) {
+      if (!mounted) return;
+      final msg = e.toString().replaceFirst('Exception: ', '');
+      if (msg.contains('zauzeto')) {
+        setState(() => _usernameError = 'Korisničko ime je zauzeto');
+        _formKey.currentState!.validate();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(msg), backgroundColor: Colors.red),
+        );
+      }
+      return;
+    }
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -222,6 +238,9 @@ class ClientAddScreenState extends State<ClientAddScreen> {
                             fontWeight: FontWeight.bold, fontSize: 16)),
                     TextFormField(
                       controller: _userNameController,
+                      onChanged: (_) {
+                        if (_usernameError != null) setState(() => _usernameError = null);
+                      },
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'This field is required.';
@@ -232,6 +251,7 @@ class ClientAddScreenState extends State<ClientAddScreen> {
                         if (!RegExp(r'^[a-zA-Z0-9_.\-]+$').hasMatch(value)) {
                           return 'Only letters, numbers and _.-';
                         }
+                        if (_usernameError != null) return _usernameError;
                         return null;
                       },
                     ),

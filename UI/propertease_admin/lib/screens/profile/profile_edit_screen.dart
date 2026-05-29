@@ -50,6 +50,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   bool _pwObscureCurrent = true;
   bool _pwObscureNew = true;
   bool _pwObscureConfirm = true;
+  String? _usernameError;
 
 
   @override
@@ -135,16 +136,18 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     _user!.person!.birthDate = _selectedDate;
     _user!.person!.placeOfResidenceId = _selectedCity?.id;
 
+    setState(() => _usernameError = null);
     try {
       await _userProvider.updateProfile(_user!);
     } catch (e) {
-      if (mounted) {
+      if (!mounted) return;
+      final msg = e.toString().replaceFirst('Exception: ', '');
+      if (msg.contains('zauzeto')) {
+        setState(() => _usernameError = 'Korisničko ime je zauzeto');
+        _formKey.currentState!.validate();
+      } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Greška: $e'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 10),
-          ),
+          SnackBar(content: Text(msg), backgroundColor: Colors.red),
         );
       }
       return;
@@ -424,11 +427,22 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                           title: 'Podaci naloga',
                           icon: Icons.manage_accounts,
                           children: [
-                            _field(
+                            TextFormField(
                               controller: _userNameController,
-                              label: 'Korisničko ime',
-                              icon: Icons.alternate_email,
-                              validator: AppValidators.username,
+                              decoration: const InputDecoration(
+                                labelText: 'Korisničko ime',
+                                prefixIcon: Icon(Icons.alternate_email),
+                                border: OutlineInputBorder(),
+                              ),
+                              onChanged: (_) {
+                                if (_usernameError != null) setState(() => _usernameError = null);
+                              },
+                              validator: (v) {
+                                final base = AppValidators.username(v);
+                                if (base != null) return base;
+                                if (_usernameError != null) return _usernameError;
+                                return null;
+                              },
                             ),
                           ],
                         ),

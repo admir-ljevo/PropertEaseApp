@@ -151,7 +151,14 @@ abstract class BaseProvider<T> with ChangeNotifier {
       throw Exception("Sesija je istekla. Prijavite se ponovo.");
     } else {
       debugPrint("API Error ${response.statusCode}: ${response.body}");
-      throw Exception("HTTP ${response.statusCode}: ${response.body}");
+      String message;
+      try {
+        final body = jsonDecode(response.body);
+        message = (body['message'] as String?)?.trim() ?? response.body;
+      } catch (_) {
+        message = response.body.isNotEmpty ? response.body : 'HTTP ${response.statusCode}';
+      }
+      throw Exception(message);
     }
   }
 

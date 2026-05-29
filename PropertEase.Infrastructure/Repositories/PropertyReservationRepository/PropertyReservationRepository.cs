@@ -272,6 +272,16 @@ namespace PropertEase.Infrastructure.Repositories.PropertyReservationRepository
             return (totalClientCount, propertyClientIds.Count, coOccurrences);
         }
 
+        public async Task<List<(int ClientId, int PropertyId)>> GetTransactionPairsAsync()
+        {
+            var raw = await DatabaseContext.PropertyReservations
+                .Where(r => !r.IsDeleted)
+                .Select(r => new { r.ClientId, r.PropertyId })
+                .Distinct()
+                .ToListAsync();
+            return raw.Select(r => (r.ClientId, r.PropertyId)).ToList();
+        }
+
         public async Task<List<PropertyReservationDto>> GetForReportAsync(int? ownerId, DateTime? from, DateTime? to)
         {
             var query = DatabaseContext.PropertyReservations
@@ -352,7 +362,7 @@ namespace PropertEase.Infrastructure.Repositories.PropertyReservationRepository
             return await DatabaseContext.PropertyReservations
                 .Where(r => (r.Status == PropertEase.Core.Enumerations.ReservationStatus.Confirmed
                           || r.Status == PropertEase.Core.Enumerations.ReservationStatus.Paid)
-                         && r.DateOfOccupancyEnd <= DateTime.Now
+                         && r.DateOfOccupancyEnd <= DateTime.UtcNow
                          && !r.IsDeleted)
                 .ExecuteUpdateAsync(s => s.SetProperty(r => r.Status, PropertEase.Core.Enumerations.ReservationStatus.Completed));
         }

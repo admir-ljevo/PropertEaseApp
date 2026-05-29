@@ -46,11 +46,11 @@ namespace PropertEase.Infrastructure
 
                 if (entry.State == EntityState.Added)
                 {
-                    entity.CreatedAt = DateTime.Now;
+                    entity.CreatedAt = DateTime.UtcNow;
                 }
                 else if (entry.State == EntityState.Modified)
                 {
-                    entity.ModifiedAt = DateTime.Now;
+                    entity.ModifiedAt = DateTime.UtcNow;
                 }
             }
         }

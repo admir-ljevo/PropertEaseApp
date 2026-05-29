@@ -30,30 +30,38 @@ namespace PropertEase.Controllers
         {
             var callerId = int.TryParse(User.FindFirstValue("Id"), out var parsed) ? parsed : 0;
 
-            if (User.IsInRole(AppRoles.Client))
+            if (!User.IsInRole(AppRoles.Admin))
             {
-                if (filter.clientId.HasValue && filter.clientId != callerId)
-                    return Forbid();
-                filter.clientId = callerId;
-            }
-            else if (User.IsInRole(AppRoles.Renter))
-            {
-                if (filter.renterId.HasValue && filter.renterId != callerId)
-                    return Forbid();
-                filter.renterId = callerId;
+                if (User.IsInRole(AppRoles.Client))
+                {
+                    if (filter.clientId.HasValue && filter.clientId != callerId)
+                        return Forbid();
+                    filter.clientId = callerId;
+                }
+                else if (User.IsInRole(AppRoles.Renter))
+                {
+                    if (filter.renterId.HasValue && filter.renterId != callerId)
+                        return Forbid();
+                    filter.renterId = callerId;
+                }
             }
 
             var propertyReservations = await _reservationService.GetFiltered(filter);
             return Ok(propertyReservations);
         }
 
-        [Authorize(Roles = AppRoles.Admin + "," + AppRoles.Renter)]
+        [Authorize(Roles = AppRoles.Admin + "," + AppRoles.Renter + "," + AppRoles.Client)]
         [HttpGet("client/{clientId}/summary")]
         public async Task<IActionResult> GetClientSummaries(int clientId, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
         {
+            var callerId = int.TryParse(User.FindFirstValue("Id"), out var parsed) ? parsed : 0;
+
+            if (!User.IsInRole(AppRoles.Admin) && User.IsInRole(AppRoles.Client) && callerId != clientId)
+                return Forbid();
+
             int? renterId = null;
-            if (User.IsInRole(AppRoles.Renter))
-                renterId = int.TryParse(User.FindFirstValue("Id"), out var parsed) ? parsed : 0;
+            if (!User.IsInRole(AppRoles.Admin) && User.IsInRole(AppRoles.Renter))
+                renterId = callerId;
 
             var result = await _reservationService.GetClientSummariesAsync(clientId, page, pageSize, renterId);
             return Ok(result);
@@ -74,6 +82,34 @@ namespace PropertEase.Controllers
             return Ok(result);
         }
 
+        [NonAction] public override Task<List<PropertyReservationDto>> Get(int page = 1, int pageSize = 20) => throw new NotSupportedException();
+        [NonAction] public override Task<PropertyReservationDto> Get(int id) => throw new NotSupportedException();
+        [HttpDelete("{id}")]
+        [Authorize(Roles = AppRoles.Admin)]
+        public override async Task<IActionResult> Delete(int id)
+        {
+            await _reservationService.RemoveByIdAsync(id);
+            return Ok();
+        }
+
+        [HttpGet("{id}")]
+        [Authorize]
+        public async Task<IActionResult> GetById(int id)
+        {
+            var callerId = int.TryParse(User.FindFirstValue("Id"), out var parsed) ? parsed : 0;
+            var reservation = await _reservationService.GetByIdAsync(id);
+            if (reservation == null) return NotFound();
+
+            if (!User.IsInRole(AppRoles.Admin))
+            {
+                if (User.IsInRole(AppRoles.Client) && reservation.ClientId != callerId)
+                    return Forbid();
+                if (User.IsInRole(AppRoles.Renter) && reservation.RenterId != callerId)
+                    return Forbid();
+            }
+
+            return Ok(reservation);
+        }
         [NonAction]
         public override Task<PropertyReservationDto> Post(PropertyReservationUpsertDto insertEntity) => base.Post(insertEntity);
 
@@ -129,10 +165,19 @@ namespace PropertEase.Controllers
                     await _reservationService.CalculatePriceAsync(propertyId, startDate, endDate);
                 return Ok(new { totalPrice, numberOfDays, numberOfMonths });
             }
-            catch (KeyNotFoundException ex)
+            catch (KeyNotFoundException)
             {
-                return NotFound(ex.Message);
+                return NotFound();
             }
+        }
+
+        [HttpGet("availability/{propertyId}")]
+        [Authorize]
+        public async Task<IActionResult> GetAvailability(int propertyId)
+        {
+            var ranges = await _reservationService.GetOccupiedRangesAsync(propertyId);
+            var result = ranges.Select(r => new { start = r.Start, end = r.End });
+            return Ok(result);
         }
 
         [HttpPost("{id}/confirm")]
@@ -141,7 +186,7 @@ namespace PropertEase.Controllers
         {
             var callerId = int.TryParse(User.FindFirstValue("Id"), out var parsed) ? parsed : 0;
 
-            if (User.IsInRole(AppRoles.Renter))
+            if (!User.IsInRole(AppRoles.Admin) && User.IsInRole(AppRoles.Renter))
             {
                 var reservation = await _reservationService.GetByIdAsync(id);
                 if (reservation == null || reservation.RenterId != callerId)

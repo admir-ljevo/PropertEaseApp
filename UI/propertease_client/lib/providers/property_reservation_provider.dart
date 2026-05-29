@@ -119,7 +119,27 @@ class PropertyReservationProvider extends BaseProvider<PropertyReservation> {
     if (response.statusCode == 200) {
       return jsonDecode(response.body) as Map<String, dynamic>;
     }
-    throw Exception('Price preview failed: ${response.statusCode}');
+    throw Exception('Nije moguće učitati pregled cijene.');
+  }
+
+  Future<List<({DateTime start, DateTime end})>> getAvailability(int propertyId) async {
+    final url = Uri.parse(
+        '${BaseProvider.baseUrl}PropertyReservation/availability/$propertyId');
+    final response = await http.get(url, headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ${Authorization.token}',
+    });
+    if (response.statusCode == 200) {
+      final list = jsonDecode(response.body) as List;
+      return list.map((e) {
+        final map = e as Map<String, dynamic>;
+        return (
+          start: DateTime.parse(map['start'] as String),
+          end: DateTime.parse(map['end'] as String),
+        );
+      }).toList();
+    }
+    throw Exception('Nije moguće učitati dostupnost (${ response.statusCode})');
   }
 
   Future<SummaryPage> getClientSummaries(int clientId,

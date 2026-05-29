@@ -54,6 +54,9 @@ namespace PropertEase.Services.Services.CountryService
             return entity;
         }
 
+        public async Task<(List<CountryDto> items, int totalCount)> GetFilteredAsync(string? search, int page, int pageSize)
+            => await _unitOfWork.CountryRepository.GetFilteredAsync(search, page, pageSize);
+
         public async Task RemoveByIdAsync(int id, bool isSoft = true)
         {
             var hasCities = _unitOfWork.GetDatabaseContext().Cities

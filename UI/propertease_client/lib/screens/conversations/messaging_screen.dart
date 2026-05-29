@@ -302,8 +302,8 @@ class MessageListScreenState extends State<MessageListScreen> {
       });
       _messageController.text = content;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text('Failed to send: $e'),
+        const SnackBar(
+            content: Text('Greška pri slanju poruke. Pokušajte ponovo.'),
             backgroundColor: Colors.red),
       );
     }

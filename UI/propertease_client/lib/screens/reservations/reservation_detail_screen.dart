@@ -113,7 +113,7 @@ class _ReservationDetailScreenState extends State<ReservationDetailsScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Greška: $e'), backgroundColor: Colors.red),
+        const SnackBar(content: Text('Greška. Pokušajte ponovo.'), backgroundColor: Colors.red),
       );
     } finally {
       if (mounted) setState(() => _cancelling = false);
@@ -158,8 +158,8 @@ class _ReservationDetailScreenState extends State<ReservationDetailsScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Greška: ${e.toString()}'),
+        const SnackBar(
+          content: Text('Greška. Pokušajte ponovo.'),
           backgroundColor: Colors.red,
         ),
       );
@@ -464,126 +464,29 @@ class _ReservationDetailScreenState extends State<ReservationDetailsScreen> {
   }
 
   Future<void> _showRenterRatingSheet(int renterId, int reservationId) async {
-    int selectedStars =
-        (_existingUserRating?.rating ?? 5).round().clamp(1, 5);
-    final commentCtrl =
-        TextEditingController(text: _existingUserRating?.description ?? '');
-    bool submitting = false;
     final isUpdate = _existingUserRating != null;
 
-    await showModalBottomSheet(
+    final saved = await showModalBottomSheet<UserRating>(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setSheetState) => Padding(
-          padding: EdgeInsets.only(
-            left: 20,
-            right: 20,
-            top: 20,
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(isUpdate ? 'Edit Renter Rating' : 'Rate the Renter',
-                  style:
-                      const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  const Text('Stars: '),
-                  const SizedBox(width: 12),
-                  DropdownButton<int>(
-                    value: selectedStars,
-                    items: [1, 2, 3, 4, 5]
-                        .map((n) => DropdownMenuItem(
-                            value: n, child: Text('$n ★')))
-                        .toList(),
-                    onChanged: (v) =>
-                        setSheetState(() => selectedStars = v ?? 5),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: commentCtrl,
-                maxLines: 3,
-                decoration: const InputDecoration(
-                  labelText: 'Comment (optional)',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: submitting
-                      ? null
-                      : () async {
-                          setSheetState(() => submitting = true);
-                          try {
-                            final rating = UserRating(
-                              id: _existingUserRating?.id ?? 0,
-                              renterId: renterId,
-                              reviewerId: Authorization.userId,
-                              reviewerName:
-                                  '${Authorization.firstName ?? ''} ${Authorization.lastName ?? ''}'
-                                      .trim(),
-                              rating: selectedStars.toDouble(),
-                              description: commentCtrl.text.trim().isEmpty
-                                  ? null
-                                  : commentCtrl.text.trim(),
-                              reservationId: reservationId,
-                            );
-                            await context
-                                .read<UserRatingProvider>()
-                                .addRating(rating);
-                            if (!ctx.mounted) return;
-                            Navigator.of(ctx).pop();
-                            if (mounted) {
-                              setState(() {
-                                _existingUserRating = rating;
-                              });
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(isUpdate
-                                      ? 'Renter rating updated'
-                                      : 'Renter rated successfully'),
-                                  backgroundColor: Colors.green,
-                                ),
-                              );
-                            }
-                          } catch (e) {
-                            setSheetState(() => submitting = false);
-                            if (ctx.mounted) {
-                              ScaffoldMessenger.of(ctx).showSnackBar(
-                                SnackBar(
-                                  content: Text('Error: $e'),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
-                            }
-                          }
-                        },
-                  child: submitting
-                      ? const SizedBox(
-                          height: 18,
-                          width: 18,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Colors.white),
-                        )
-                      : Text(isUpdate ? 'Update' : 'Submit'),
-                ),
-              ),
-            ],
-          ),
-        ),
+      builder: (_) => _RenterRatingSheet(
+        renterId: renterId,
+        reservationId: reservationId,
+        existingRating: _existingUserRating,
       ),
     );
-    WidgetsBinding.instance.addPostFrameCallback((_) => commentCtrl.dispose());
+
+    if (saved != null && mounted) {
+      setState(() => _existingUserRating = saved);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(isUpdate ? 'Renter rating updated' : 'Renter rated successfully'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
   }
 
   Widget _sectionTitle(String title) => Padding(
@@ -641,4 +544,123 @@ class _ReservationDetailScreenState extends State<ReservationDetailsScreen> {
         color: Colors.grey.shade200,
         child: const Icon(Icons.home, size: 80, color: Colors.grey),
       );
+}
+
+class _RenterRatingSheet extends StatefulWidget {
+  final int renterId;
+  final int reservationId;
+  final UserRating? existingRating;
+
+  const _RenterRatingSheet({
+    required this.renterId,
+    required this.reservationId,
+    this.existingRating,
+  });
+
+  @override
+  State<_RenterRatingSheet> createState() => _RenterRatingSheetState();
+}
+
+class _RenterRatingSheetState extends State<_RenterRatingSheet> {
+  late int _selectedStars;
+  late TextEditingController _commentCtrl;
+  bool _submitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedStars = (widget.existingRating?.rating ?? 5).round().clamp(1, 5);
+    _commentCtrl = TextEditingController(text: widget.existingRating?.description ?? '');
+  }
+
+  @override
+  void dispose() {
+    _commentCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    setState(() => _submitting = true);
+    try {
+      final rating = UserRating(
+        id: widget.existingRating?.id ?? 0,
+        renterId: widget.renterId,
+        reviewerId: Authorization.userId,
+        reviewerName:
+            '${Authorization.firstName ?? ''} ${Authorization.lastName ?? ''}'.trim(),
+        rating: _selectedStars.toDouble(),
+        description: _commentCtrl.text.trim().isEmpty ? null : _commentCtrl.text.trim(),
+        reservationId: widget.reservationId,
+      );
+      await context.read<UserRatingProvider>().addRating(rating);
+      if (mounted) Navigator.of(context).pop(rating);
+    } catch (_) {
+      if (mounted) {
+        setState(() => _submitting = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Greška. Pokušajte ponovo.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isUpdate = widget.existingRating != null;
+    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+
+    return Padding(
+      padding: EdgeInsets.only(left: 20, right: 20, top: 20, bottom: bottomInset + 24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            isUpdate ? 'Edit Renter Rating' : 'Rate the Renter',
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              const Text('Stars: '),
+              const SizedBox(width: 12),
+              DropdownButton<int>(
+                value: _selectedStars,
+                items: [1, 2, 3, 4, 5]
+                    .map((n) => DropdownMenuItem(value: n, child: Text('$n ★')))
+                    .toList(),
+                onChanged: (v) => setState(() => _selectedStars = v ?? 5),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _commentCtrl,
+            maxLines: 3,
+            decoration: const InputDecoration(
+              labelText: 'Comment (optional)',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _submitting ? null : _submit,
+              child: _submitting
+                  ? const SizedBox(
+                      height: 18,
+                      width: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : Text(isUpdate ? 'Update' : 'Submit'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

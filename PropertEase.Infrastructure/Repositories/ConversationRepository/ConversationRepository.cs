@@ -311,7 +311,7 @@ namespace PropertEase.Infrastructure.Repositories.ConversationRepository
                 .Where(c => c.Id == conversationId)
                 .ExecuteUpdateAsync(s => s
                     .SetProperty(c => c.LastMessage, content)
-                    .SetProperty(c => c.LastSent, DateTime.Now));
+                    .SetProperty(c => c.LastSent, DateTime.UtcNow));
         }
 
         public async Task<ConversationDto> GetLastByClient(int clientId)

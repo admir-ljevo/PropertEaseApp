@@ -94,8 +94,8 @@ class _RenterReservationReportScreenState
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Greška: $e'),
+          const SnackBar(
+            content: Text('Greška pri učitavanju izvještaja. Pokušajte ponovo.'),
             backgroundColor: Colors.red,
           ),
         );

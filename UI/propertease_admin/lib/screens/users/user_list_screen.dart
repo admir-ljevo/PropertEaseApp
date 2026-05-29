@@ -370,7 +370,7 @@ class UserListWidgetState extends State<UserListWidget> {
         _totalCount = result.totalCount;
       });
     } catch (error) {
-      print("Error fetching data: $error");
+      debugPrint("Error fetching data: $error");
     }
   }
 
@@ -378,16 +378,19 @@ class UserListWidgetState extends State<UserListWidget> {
     try {
       await _userProvider.deleteById(userId);
       await fetchUsers();
-      Navigator.of(context).pop();
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('User deleted successfully'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      if (mounted) { Navigator.of(context).pop(); }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Korisnik je uspješno obrisan.'), backgroundColor: Colors.green),
+        );
+      }
     } catch (e) {
-      print("Error deleting user: $e ");
+      if (mounted) { Navigator.of(context).pop(); }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString().replaceFirst('Exception: ', '')), backgroundColor: Colors.red),
+        );
+      }
     }
   }
 
@@ -435,8 +438,8 @@ class UserListWidgetState extends State<UserListWidget> {
                 } catch (e) {
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Error: $e'),
+                      const SnackBar(
+                        content: Text('Greška. Pokušajte ponovo.'),
                         backgroundColor: Colors.red,
                       ),
                     );
@@ -460,7 +463,7 @@ class UserListWidgetState extends State<UserListWidget> {
       await usersFuture;
       fetchedCities = await citiesFuture;
     } catch (error) {
-      print("Error fetching data: $error");
+      debugPrint("Error fetching data: $error");
     }
     setState(() {
       cities = fetchedCities?.result ?? [];

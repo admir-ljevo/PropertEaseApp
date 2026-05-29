@@ -2,7 +2,6 @@
 import 'package:flutter_calendar_carousel/flutter_calendar_carousel.dart';
 import 'package:flutter_calendar_carousel/classes/event.dart';
 import 'package:propertease_client/config/app_config.dart';
-import 'package:propertease_client/models/property_reservation.dart';
 import 'package:propertease_client/providers/property_reservation_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:propertease_client/utils/authorization.dart';
@@ -26,7 +25,7 @@ class ReservationAddScreenState extends State<ReservationAddScreen> {
   final TextEditingController _descriptionController = TextEditingController();
 
   late PropertyReservationProvider _reservationProvider;
-  List<PropertyReservation>? _reservations;
+  List<({DateTime start, DateTime end})>? _reservations;
   int selectedGuests = 1;
   double totalPrice = 0;
   DateTime? startDate;
@@ -102,10 +101,10 @@ class ReservationAddScreenState extends State<ReservationAddScreen> {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Greška: $e'),
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Greška pri kreiranju rezervacije. Pokušajte ponovo.'),
         backgroundColor: Colors.red,
-        duration: const Duration(seconds: 5),
+        duration: Duration(seconds: 5),
       ));
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
@@ -165,8 +164,8 @@ class ReservationAddScreenState extends State<ReservationAddScreen> {
   bool _isDateSelectable(DateTime date) {
     if (_reservations != null) {
       for (final reservation in _reservations!) {
-        if (!date.isBefore(reservation.dateOfOccupancyStart!) &&
-            date.isBefore(reservation.dateOfOccupancyEnd!)) {
+        if (!date.isBefore(reservation.start) &&
+            date.isBefore(reservation.end)) {
           return false;
         }
       }
@@ -233,11 +232,8 @@ class ReservationAddScreenState extends State<ReservationAddScreen> {
     if (date.isBefore(minEndDate)) return false;
     if (_reservations == null || startDate == null) return true;
     for (final r in _reservations!) {
-      final rStart = r.dateOfOccupancyStart;
-      final rEnd = r.dateOfOccupancyEnd;
-      if (rStart == null || rEnd == null) continue;
-      // Block if [startDate, date] would overlap [rStart, rEnd)
-      if (startDate!.isBefore(rEnd) && date.isAfter(rStart)) return false;
+      // Block if [startDate, date] would overlap [r.start, r.end)
+      if (startDate!.isBefore(r.end) && date.isAfter(r.start)) return false;
     }
     return true;
   }
@@ -269,10 +265,10 @@ class ReservationAddScreenState extends State<ReservationAddScreen> {
   Future<void> fetchReservations() async {
     setState(() => isLoading = true);
     try {
-      final tempReservations = await _reservationProvider
-          .getFiltered(filter: {"propertyId": widget.property!.id, "isActive": true});
+      final ranges = await _reservationProvider
+          .getAvailability(widget.property!.id!);
       setState(() {
-        _reservations = tempReservations.result;
+        _reservations = ranges;
         isLoading = false;
       });
     } catch (e) {

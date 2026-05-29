@@ -389,15 +389,9 @@ class ReviewListScreenState extends State<ReviewListScreen> {
                                   final isUpdate = _existingRating != null;
                                   setState(() {
                                     _existingRating = newRating;
-                                    if (isUpdate) {
-                                      final idx = _ratings.indexWhere((r) => r.id == newRating.id);
-                                      if (idx >= 0) _ratings[idx] = newRating;
-                                    } else {
-                                      _ratings.insert(0, newRating);
-                                      _totalCount++;
-                                    }
                                     _submitting = false;
                                   });
+                                  await _fetchRatings();
                                   if (mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
@@ -413,10 +407,10 @@ class ReviewListScreenState extends State<ReviewListScreen> {
                                   if (!mounted) return;
                                   setState(() => _submitting = false);
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text('Failed to add review: $e'),
+                                    const SnackBar(
+                                      content: Text('Greška pri dodavanju recenzije. Pokušajte ponovo.'),
                                       backgroundColor: Colors.red,
-                                      duration: const Duration(seconds: 3),
+                                      duration: Duration(seconds: 3),
                                     ),
                                   );
                                 }

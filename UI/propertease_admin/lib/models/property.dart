@@ -46,6 +46,7 @@ class Property {
   double? longitude;
   double? averageRating;
   bool? isAvailable;
+  String? reason;
   DateTime? availableFrom;
   PropertyType? propertyType;
   City? city;
@@ -91,6 +92,7 @@ class Property {
     this.longitude = 0,
     this.averageRating = 0,
     this.isAvailable = true,
+    this.reason,
   });
 
   factory Property.fromJson(Map<String, dynamic> json) =>

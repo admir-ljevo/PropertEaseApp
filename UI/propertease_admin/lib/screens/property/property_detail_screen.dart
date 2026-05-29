@@ -530,7 +530,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
     return _SectionCard(
       title: 'Slične nekretnine',
       child: SizedBox(
-        height: 130,
+        height: 165,
         child: ListView.builder(
           scrollDirection: Axis.horizontal,
           itemCount: _recommended.length,
@@ -589,14 +589,25 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                     const SizedBox(height: 4),
                     Text(
                       rec.isMonthly == true
-                          ? '${rec.monthlyPrice?.round() ?? 0} KM/mj.'
-                          : '${rec.dailyPrice?.round() ?? 0} KM/dan',
+                          ? '${rec.monthlyPrice?.round() ?? 0} USD/mj.'
+                          : '${rec.dailyPrice?.round() ?? 0} USD/dan',
                       style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                         color: Colors.blue,
                       ),
                     ),
+                    if (rec.reason != null && rec.reason!.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          rec.reason!,
+                          style: TextStyle(
+                              fontSize: 10, color: Colors.blue.shade400),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                   ],
                 ),
               ),

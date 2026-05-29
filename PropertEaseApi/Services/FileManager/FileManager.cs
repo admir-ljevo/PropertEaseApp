@@ -1,4 +1,5 @@
-﻿using SixLabors.ImageSharp;
+﻿using PropertEase.Api.Utils;
+using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
 
 namespace PropertEase.Services.FileManager
@@ -51,6 +52,16 @@ namespace PropertEase.Services.FileManager
 
         public async Task<string> UploadThumbnailPhoto(IFormFile file)
         {
+            if (!AllowedMimeTypes.Contains(file.ContentType))
+                throw new InvalidOperationException($"Tip fajla '{file.ContentType}' nije dozvoljen.");
+
+            var ext = Path.GetExtension(file.FileName);
+            if (!AllowedExtensions.Contains(ext))
+                throw new InvalidOperationException($"Ekstenzija '{ext}' nije dozvoljena.");
+
+            if (!FileValidator.IsValidImage(file))
+                throw new InvalidOperationException("Fajl nije validna slika.");
+
             var filePath = GetFilePath(file);
             using var image = await Image.LoadAsync(file.OpenReadStream());
             image.Mutate(x => x.Resize(100, 100));

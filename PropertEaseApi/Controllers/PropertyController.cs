@@ -22,6 +22,28 @@ namespace PropertEase.Controllers
             propertyService = baseService;
         }
 
+        [Authorize(Roles = AppRoles.Renter + "," + AppRoles.Admin)]
+        [HttpPost]
+        public override async Task<PropertyDto> Post(PropertyUpsertDto insertEntity)
+        {
+            insertEntity.ApplicationUserId = int.TryParse(User.FindFirstValue("Id"), out var id) ? id : 0;
+            return await base.Post(insertEntity);
+        }
+
+        [Authorize(Roles = AppRoles.Renter + "," + AppRoles.Admin)]
+        [HttpPut("{id}")]
+        public override async Task<PropertyDto> Put(int id, PropertyUpsertDto updateEntity)
+        {
+            if (!User.IsInRole(AppRoles.Admin))
+            {
+                var callerId = int.TryParse(User.FindFirstValue("Id"), out var parsed) ? parsed : 0;
+                var property = await propertyService.GetByIdAsync(id);
+                if (property == null || property.ApplicationUserId != callerId)
+                    throw new UnauthorizedAccessException();
+            }
+            return await base.Put(id, updateEntity);
+        }
+
         [AllowAnonymous]
         [HttpGet("GetFilteredData")]
         [SwaggerOperation(OperationId = "GetFilteredData")]

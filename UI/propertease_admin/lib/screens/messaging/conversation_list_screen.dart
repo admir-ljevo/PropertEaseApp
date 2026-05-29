@@ -269,7 +269,7 @@ class _ConversationListScreenState extends State<ConversationListScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Greška: $e')));
+            .showSnackBar(const SnackBar(content: Text('Greška. Pokušajte ponovo.')));
       }
     }
   }
@@ -296,7 +296,7 @@ class _ConversationListScreenState extends State<ConversationListScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Greška pri kreiranju razgovora: $e')));
+            const SnackBar(content: Text('Greška pri kreiranju razgovora. Pokušajte ponovo.')));
       }
     }
   }

@@ -32,8 +32,7 @@ namespace PropertEase.Infrastructure.Repositories.ApplicationUserRolesRepository
             if (existing != null)
             {
                 existing.IsDeleted = false;
-                existing.ModifiedAt = DateTime.Now;
-                DatabaseContext.UserRoles.Update(existing);
+                existing.ModifiedAt = DateTime.UtcNow;
             }
             else
             {
@@ -41,7 +40,7 @@ namespace PropertEase.Infrastructure.Repositories.ApplicationUserRolesRepository
                 {
                     UserId = userId,
                     RoleId = roleId,
-                    CreatedAt = DateTime.Now,
+                    CreatedAt = DateTime.UtcNow,
                     IsDeleted = false
                 };
                 await DatabaseContext.UserRoles.AddAsync(entity);
@@ -55,8 +54,7 @@ namespace PropertEase.Infrastructure.Repositories.ApplicationUserRolesRepository
                 .FirstOrDefaultAsync(ur => ur.Id == userRoleId);
             if (entity == null) return;
             entity.IsDeleted = true;
-            entity.ModifiedAt = DateTime.Now;
-            DatabaseContext.UserRoles.Update(entity);
+            entity.ModifiedAt = DateTime.UtcNow;
             await DatabaseContext.SaveChangesAsync();
         }
 
@@ -68,8 +66,7 @@ namespace PropertEase.Infrastructure.Repositories.ApplicationUserRolesRepository
 
             if (entity == null) throw new KeyNotFoundException("Role assignment not found.");
             entity.IsDeleted = true;
-            entity.ModifiedAt = DateTime.Now;
-            DatabaseContext.UserRoles.Update(entity);
+            entity.ModifiedAt = DateTime.UtcNow;
             await DatabaseContext.SaveChangesAsync();
         }
 

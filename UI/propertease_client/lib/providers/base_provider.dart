@@ -80,11 +80,8 @@ abstract class BaseProvider<T> with ChangeNotifier {
       headers: createHeaders(),
       body: jsonEncode(toJson(data)),
     );
-    if (isValidResponse(response)) {
-      return fromJson(jsonDecode(response.body));
-    }
-    throw Exception(
-        'Failed to insert. Status: ${response.statusCode}, Body: ${response.body}');
+    isValidResponse(response);
+    return fromJson(jsonDecode(response.body));
   }
 
   Future<T> updateAsync(int? id, T data) async {
@@ -94,20 +91,15 @@ abstract class BaseProvider<T> with ChangeNotifier {
       headers: createHeaders(),
       body: jsonEncode(toJson(data)),
     );
-    if (isValidResponse(response)) {
-      return fromJson(jsonDecode(response.body));
-    }
-    throw Exception('Failed to update. Status: ${response.statusCode}');
+    isValidResponse(response);
+    return fromJson(jsonDecode(response.body));
   }
 
   Future<void> deleteById(int? id) async {
     final url = '$baseUrl$_endpoint/$id';
     final response =
         await http!.delete(Uri.parse(url), headers: createHeaders());
-    if (response.statusCode == 404) throw Exception('Not found');
-    if (response.statusCode >= 300) {
-      throw Exception('Failed to delete. Status: ${response.statusCode}');
-    }
+    isValidResponse(response);
   }
 
   T fromJson(data) => throw UnimplementedError('fromJson not implemented');
@@ -122,7 +114,14 @@ abstract class BaseProvider<T> with ChangeNotifier {
       throw Exception('Sesija je istekla. Prijavite se ponovo.');
     }
     if (response.statusCode == 403) throw Exception('Forbidden');
-    throw Exception('HTTP ${response.statusCode}: ${response.body}');
+    String message;
+    try {
+      final body = jsonDecode(response.body);
+      message = (body['message'] as String?)?.trim() ?? response.body;
+    } catch (_) {
+      message = response.body.isNotEmpty ? response.body : 'HTTP ${response.statusCode}';
+    }
+    throw Exception(message);
   }
 
   Map<String, String> createHeaders() {

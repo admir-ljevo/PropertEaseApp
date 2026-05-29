@@ -20,8 +20,25 @@ namespace PropertEase.Controllers
             this.conversationService = conversationService;
         }
 
+        [NonAction] public override Task<List<ConversationDto>> Get(int page = 1, int pageSize = 20) => throw new NotSupportedException();
         [NonAction] public override Task<ConversationDto> Get(int id) => throw new NotSupportedException();
         [NonAction] public override Task<ConversationDto> Put(int id, ConversationUpsertDto updateEntity) => throw new NotSupportedException();
+        [NonAction] public override Task<IActionResult> Delete(int id) => throw new NotSupportedException();
+
+        [HttpPost]
+        [Authorize(Roles = AppRoles.Client + "," + AppRoles.Renter + "," + AppRoles.Admin)]
+        public override async Task<ConversationDto> Post(ConversationUpsertDto insertEntity)
+        {
+            var callerId = GetCallerId();
+            if (!User.IsInRole(AppRoles.Admin))
+            {
+                if (User.IsInRole(AppRoles.Client))
+                    insertEntity.ClientId = callerId;
+                else if (User.IsInRole(AppRoles.Renter))
+                    insertEntity.ClientId = callerId;
+            }
+            return await base.Post(insertEntity);
+        }
 
         private int GetCallerId() => int.TryParse(User.FindFirstValue("Id"), out var id) ? id : 0;
 
@@ -66,6 +83,7 @@ namespace PropertEase.Controllers
         }
 
         [HttpGet("GetAdmins")]
+        [Authorize(Roles = $"{AppRoles.Client},{AppRoles.Renter},{AppRoles.Admin}")]
         public async Task<IActionResult> GetAdmins()
         {
             var admins = await conversationService.GetAdmins();

@@ -151,6 +151,7 @@ namespace PropertEase.Infrastructure.Repositories.ApplicationUsersRepository
                         Nationality = u.Person.Nationality,
                         Citizenship = u.Person.Citizenship,
                         PlaceOfResidenceId = u.Person.PlaceOfResidenceId,
+                        PostCode = u.Person.PostCode,
                         PlaceOfResidence = u.Person.PlaceOfResidence == null ? null : new CityDto
                         {
                             Id = u.Person.PlaceOfResidence.Id,

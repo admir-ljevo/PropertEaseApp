@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 using PropertEase.Core.Dto.PropertyType;
 using PropertEase.Core.Entities;
 using PropertEase.Infrastructure.Repositories.BaseRepository;
@@ -32,9 +33,17 @@ namespace PropertEase.Infrastructure.Repositories.PropertyTypeRepository
 
         public async Task<List<PropertyTypeDto>> GetAllAsync()
         {
-            List<PropertyTypeDto> propertyTypeDtos;
-            propertyTypeDtos = await ProjectToListAsync<PropertyTypeDto>(DatabaseContext.PropertyTypes.Where(pt => !pt.IsDeleted));
-            return propertyTypeDtos;
+            return await ProjectToListAsync<PropertyTypeDto>(DatabaseContext.PropertyTypes.Where(pt => !pt.IsDeleted));
+        }
+
+        public async Task<(List<PropertyTypeDto> items, int totalCount)> GetFilteredAsync(string? search, int page, int pageSize)
+        {
+            var query = DatabaseContext.PropertyTypes.Where(pt => !pt.IsDeleted);
+            if (!string.IsNullOrWhiteSpace(search))
+                query = query.Where(pt => pt.Name != null && pt.Name.Contains(search));
+            var totalCount = await query.CountAsync();
+            var items = await ProjectToListAsync<PropertyTypeDto>(query.OrderBy(pt => pt.Name).Skip((page - 1) * pageSize).Take(pageSize));
+            return (items, totalCount);
         }
     }
 }

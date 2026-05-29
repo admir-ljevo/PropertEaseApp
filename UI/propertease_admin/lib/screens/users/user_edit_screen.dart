@@ -46,6 +46,7 @@ class UserEditScreenState extends State<UserEditScreen> {
   final _jmbgController = TextEditingController();
   DateTime selectedDate = DateTime.now();
 
+  String? _usernameError;
   bool _changePassword = false;
   final _newPwController = TextEditingController();
   final _confirmPwController = TextEditingController();
@@ -102,8 +103,8 @@ class UserEditScreenState extends State<UserEditScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text('Greška pri učitavanju uloga: $e'),
+          const SnackBar(
+              content: Text('Greška pri učitavanju uloga. Pokušajte ponovo.'),
               backgroundColor: Colors.orange),
         );
       }
@@ -118,7 +119,7 @@ class UserEditScreenState extends State<UserEditScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Greška: $e'), backgroundColor: Colors.red),
+          const SnackBar(content: Text('Greška. Pokušajte ponovo.'), backgroundColor: Colors.red),
         );
       }
     }
@@ -140,8 +141,8 @@ class UserEditScreenState extends State<UserEditScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text('Greška pri uklanjanju uloge: $e'),
+          const SnackBar(
+              content: Text('Greška pri uklanjanju uloge. Pokušajte ponovo.'),
               backgroundColor: Colors.red),
         );
       }
@@ -179,6 +180,7 @@ class UserEditScreenState extends State<UserEditScreen> {
     editedUser.person?.jmbg = _jmbgController.text.trim();
     editedUser.email = _emailController.text.trim();
 
+    setState(() => _usernameError = null);
     try {
       final roleName = widget.user?.userRoles?.isNotEmpty == true
           ? widget.user!.userRoles![0].role?.name
@@ -204,11 +206,15 @@ class UserEditScreenState extends State<UserEditScreen> {
         Navigator.of(context).pop();
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Greška pri izmjeni: $e'),
-          backgroundColor: Colors.red,
-        ));
+      if (!mounted) return;
+      final msg = e.toString().replaceFirst('Exception: ', '');
+      if (msg.contains('zauzeto')) {
+        setState(() => _usernameError = 'Korisničko ime je zauzeto');
+        _formKey.currentState!.validate();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(msg), backgroundColor: Colors.red),
+        );
       }
     }
   }
@@ -382,10 +388,19 @@ class UserEditScreenState extends State<UserEditScreen> {
                     child: Column(
                       children: [
                         Row(children: [
-                          Expanded(
-                              child: _field(
-                                  'Korisničko ime', _userNameController,
-                                  validator: AppValidators.username)),
+                          Expanded(child: TextFormField(
+                            controller: _userNameController,
+                            decoration: const InputDecoration(labelText: 'Korisničko ime', border: OutlineInputBorder()),
+                            onChanged: (_) {
+                              if (_usernameError != null) setState(() => _usernameError = null);
+                            },
+                            validator: (v) {
+                              final base = AppValidators.username(v);
+                              if (base != null) return base;
+                              if (_usernameError != null) return _usernameError;
+                              return null;
+                            },
+                          )),
                           const SizedBox(width: 16),
                           Expanded(
                               child: _field('Email', _emailController,

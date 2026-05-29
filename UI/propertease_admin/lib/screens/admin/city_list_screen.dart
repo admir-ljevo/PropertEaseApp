@@ -57,7 +57,7 @@ class _CityListScreenState extends State<CityListScreen> {
         });
       }
     } catch (e) {
-      _showError('Failed to load: $e');
+      _showError('Nije moguće učitati podatke.');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -73,7 +73,7 @@ class _CityListScreenState extends State<CityListScreen> {
       });
       if (mounted) setState(() { _cities = result.result; _totalCount = result.totalCount; });
     } catch (e) {
-      _showError('Failed to load cities: $e');
+      _showError('Nije moguće učitati gradove.');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -148,7 +148,7 @@ class _CityListScreenState extends State<CityListScreen> {
       }
       await _loadCities();
     } catch (e) {
-      _showError('Error: $e');
+      _showError(e.toString().replaceFirst('Exception: ', ''));
     }
   }
 
@@ -174,7 +174,7 @@ class _CityListScreenState extends State<CityListScreen> {
       if (_cities.length == 1 && _currentPage > 1) setState(() => _currentPage--);
       await _loadCities();
     } catch (e) {
-      _showError('Error deleting: $e');
+      _showError(e.toString().replaceFirst('Exception: ', ''));
     }
   }
 

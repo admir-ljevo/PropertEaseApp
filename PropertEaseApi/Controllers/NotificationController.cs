@@ -75,15 +75,8 @@ namespace PropertEase.Controllers
         [SwaggerOperation(OperationId = "GetFilteredData")]
         public async Task<IActionResult> GetDataByFilter([FromQuery] NotificationFilter filter)
         {
-            try
-            {
-                var properties = await notificationService.GetFiltered(filter);
-                return Ok(properties);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
-            }
+            var properties = await notificationService.GetFiltered(filter);
+            return Ok(properties);
         }
 
 

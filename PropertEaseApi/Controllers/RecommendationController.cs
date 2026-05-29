@@ -24,4 +24,5 @@ public class RecommendationController : ControllerBase
         var propertyIds = await _engine.GetRecommendationsAsync(userId);
         return Ok(propertyIds);
     }
+
 }

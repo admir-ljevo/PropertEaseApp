@@ -14,5 +14,6 @@ namespace PropertEase.Infrastructure.Repositories.CityRepository
         new Task<List<CityDto>> GetAllAsync();
         Task<List<CityDto>> GetByName(string name);
         Task<CityDto> GetByIdAsync(int id);
+        Task<(List<CityDto> items, int totalCount)> GetFilteredAsync(string? search, int page, int pageSize);
     }
 }
