@@ -267,7 +267,7 @@ class _ReservationDetailsScreenState extends State<ReservationDetailsScreen> {
               title: 'Cijena i status',
               icon: Icons.attach_money,
               children: [
-                _row('Ukupna cijena', r.totalPrice != null ? '${r.totalPrice} USD' : null),
+                _row('Ukupna cijena', r.totalPrice != null ? '${r.totalPrice!.toStringAsFixed(2)} USD' : null),
                 _rowBool('Dnevna rezervacija', r.isDaily),
                 _rowBool('Mjesečna rezervacija', r.isMonthly),
                 _rowWidget('Status', ReservationStatus.chip(r.status)),

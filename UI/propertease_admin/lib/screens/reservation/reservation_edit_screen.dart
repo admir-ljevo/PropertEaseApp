@@ -249,7 +249,7 @@ class _ReservationEditScreenState extends State<ReservationEditScreen> {
                 children: [
                   InputDecorator(
                     decoration: const InputDecoration(
-                      labelText: 'Ukupna cijena (BAM)',
+                      labelText: 'Ukupna cijena (USD)',
                       prefixIcon: Icon(Icons.attach_money),
                       border: OutlineInputBorder(),
                       filled: true,
@@ -261,9 +261,9 @@ class _ReservationEditScreenState extends State<ReservationEditScreen> {
                             child: CircularProgressIndicator(strokeWidth: 2))
                         : Text(
                             _previewPrice != null
-                                ? '${_previewPrice!.toStringAsFixed(2)} BAM'
+                                ? '${_previewPrice!.toStringAsFixed(2)} USD'
                                 : (widget.reservation?.totalPrice ?? 0) > 0
-                                    ? '${widget.reservation!.totalPrice!.toStringAsFixed(2)} BAM'
+                                    ? '${widget.reservation!.totalPrice!.toStringAsFixed(2)} USD'
                                     : '—',
                             style: const TextStyle(fontSize: 14),
                           ),

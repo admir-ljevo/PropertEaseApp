@@ -490,7 +490,7 @@ class ReservationListWidgetState extends State<ReservationListWidget> {
                   .format(e.dateOfOccupancyStart ?? DateTime.now()))),
               DataCell(Text(DateFormat('dd-MM-yyyy')
                   .format(e.dateOfOccupancyEnd ?? DateTime.now()))),
-              DataCell(Text(e.totalPrice?.toString() ?? '0')),
+              DataCell(Text('${e.totalPrice?.toStringAsFixed(2) ?? '0.00'} USD')),
               DataCell(ReservationStatus.chip(e.status)),
               DataCell(Row(
                 mainAxisSize: MainAxisSize.min,
